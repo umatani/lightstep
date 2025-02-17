@@ -10,14 +10,15 @@
          (only-in "set.rkt" ∅ ∅? ∈ set set-add)
          (only-in "transformers.rkt"
                   PowerO ID StateT FailT NondetT define-monad with-monad
-                  run-StateT))
+                  run-StateT)
+         (only-in "reduction/bindings.rkt" ReduceT))
 (provide define-reduction inst-reduction apply-reduction*)
 
 
 ;;=============================================================================
 ;; nondet-match
 
-(define (ReduceT M) (FailT (NondetT M)))
+;(define (ReduceT M) (FailT (NondetT M)))
 
 (define-syntax (nondet-match stx)
   (syntax-parse stx

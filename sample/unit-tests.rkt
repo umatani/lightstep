@@ -1,6 +1,6 @@
 #lang racket
-(require lightstep/reduction lightstep/set
-         rackunit)
+(require lightstep/reduction lightstep/set lightstep/reduction/bindings
+         (except-in rackunit fail))
 
  ;; test-reduction
 (define-reduction (r1 p)
@@ -125,6 +125,25 @@
 (define u43-2 (inst-reduction r43 (invoke-unit (inst-reduction -->₂))))
 (define reducer43-2 (invoke-unit u43-2))
 (check-equal? (reducer43-2 0) (set 2 20 200))
+
+
+(define-reduction (r44)
+  [x
+   (cons (? number? n) (? number? m)) ≔ x
+   (+ n m)]
+  [x
+   (? number? n) ← (return x)
+   (* n n)]
+  [x
+   #t ← (return x)
+   'TRUE]
+  [x x])
+
+(define reducer44 (invoke-unit (inst-reduction r44)))
+(check-equal? (reducer44 8) (set 8 64))
+(check-equal? (reducer44 'foo) (set 'foo))
+(check-equal? (reducer44 (cons 3 7)) (set (cons 3 7) 10))
+(check-equal? (reducer44 #t) (set #t 'TRUE))
 
 ;;=============================================================================
 ;; test-unit

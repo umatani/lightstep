@@ -130,15 +130,18 @@
        #'(begin
            (define M′ M)
            (match-define (monad return bind effects properties) M′)
+           ;; assumes NondetT
            (define-syntax do
              (syntax-rules (← ≔)
                [(do xM) xM]
                [(do p ← xM . bs)
                 (bind xM (match-λ
-                          [p (do . bs)]))]
+                          [p (do . bs)]
+                          [_ mzero]))]
                [(do p ≔ b . bs)
-                (match-let ([p b])
-                  (do . bs))]
+                (match b
+                  [p (do . bs)]
+                  [_ mzero])]
                [(do #:when b . bs)
                 (if b
                   (do . bs)

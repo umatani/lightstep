@@ -1,5 +1,5 @@
 #lang scribble/manual
-@require[@for-label[lightstep
+@require[@for-label[@except-in[lightstep do]
                     racket/base]]
 
 @title{lightstep}
