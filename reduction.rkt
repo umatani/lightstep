@@ -1,5 +1,5 @@
 #lang racket/base
-(require (for-syntax racket/base syntax/parse
+(require (for-syntax racket/base racket/syntax syntax/parse
                      (only-in racket/match match-define)
                      (only-in syntax/stx stx-map)
                      (only-in "set.rkt" list→set ∈))
@@ -10,20 +10,24 @@
          (only-in "set.rkt" ∅ ∅? ∈ set set-add)
          (only-in "transformers.rkt"
                   PowerO ID StateT FailT NondetT define-monad with-monad
-                  run-StateT)
-         (only-in "reduction/bindings.rkt" ReduceT))
-(provide define-reduction inst-reduction apply-reduction*)
+                  run-StateT))
+(provide ReduceM define-reduction inst-reduction apply-reduction*)
 
 
 ;;=============================================================================
 ;; nondet-match
 
-;(define (ReduceT M) (FailT (NondetT M)))
+(define ReduceM (NondetT ID))
 
 (define-syntax (nondet-match stx)
   (syntax-parse stx
-    [(_ x #:default dclause [pat body ... e] ...)
-     #:with nexts #'(with-monad (ReduceT ID)
+    [(_ M:id x #:default dclause [pat body ... e] ...)
+     ;; M must be an identifier to transport lexical context. why?
+     #:with do      (format-id #'M "do")
+     #:with return  (format-id #'M "return")
+     #:with mzero   (format-id #'M "mzero")
+     #:with mconcat (format-id #'M "mconcat")
+     #:with nexts #'(with-monad M
                       (mconcat (match x
                                  [pat (do body ... (return e))]
                                  [_ mzero])
@@ -32,56 +36,71 @@
        (with-syntax ([[pat body ... e] #'dclause])
          #'(let ([ςs nexts])
              (if (∅? ςs)
-               (with-monad (ReduceT ID)
+               (with-monad M
                  (match x
                    [pat (do body ... (return e))]
                    [_ mzero]))
                ςs)))
        #'nexts)]
-    [(_ x [pat body ... e] ...)
-     #'(nondet-match x #:default #f [pat body ... e] ...)]))
+    [(_ M x [pat body ... e] ...)
+     #'(nondet-match M x #:default #f [pat body ... e] ...)]))
+
 
 (module+ test ;;test-nondet-match
   (require rackunit)
 
-  (check-equal? (nondet-match '(1 2 3)
+  (check-equal? (nondet-match ReduceM '(1 2 3)
                               [x x]
                               [(list a b c) (+ a b c)])
                 (set 6 '(1 2 3)))
   
-  (check-equal? (nondet-match (set 1 2 3)
+  (check-equal? (nondet-match ReduceM  (set 1 2 3)
                               [x x]
                               [(set a b c) (set (set a b) c)]
                               [(set a ...) (apply + a)])
                 (set (set 1 (set 2 3)) (set 1 3 2) 6))
 
-  (check-equal? (nondet-match (set 1 2 3)
-                              [x (nondet-match x [(set a b c)
-                                                  (set (set a b) c)])]
-                              [x (nondet-match x [(set a ...) (apply + a)])])
+  (check-equal? (nondet-match ReduceM (set 1 2 3)
+                              [x (nondet-match ReduceM x
+                                               [(set a b c)
+                                                (set (set a b) c)])]
+                              [x (nondet-match ReduceM x
+                                               [(set a ...) (apply + a)])])
                 (set (set 6) (set (set 1 (set 2 3)))))
-  (check-equal? (nondet-match '(1 2 3)
+  (check-equal? (nondet-match ReduceM '(1 2 3)
                               [`(,x ...) x])
                 (set '(1 2 3)))
 
-  (check-equal? (nondet-match '(1 2 3)
+  (check-equal? (nondet-match ReduceM '(1 2 3)
                               [(list a b) (+ a b)])
                 ∅)
-  (check-equal? (nondet-match '(1 2 3)
+  (check-equal? (nondet-match ReduceM '(1 2 3)
                               #:default [xs xs]
                               [(list a b) (+ a b)])
                 (set '(1 2 3)))
-  (check-equal? (nondet-match '(1 2 3)
+  (check-equal? (nondet-match ReduceM '(1 2 3)
                               #:default [xs xs]
                               [(list a b c) (+ a b c)])
-                (set 6)))
+                (set 6))
+
+  (define SRM (StateT #f ReduceM))
+  (check-equal? (run-StateT ∅ (nondet-match SRM '(1 2 3)
+                                            [x
+                                             `(,_ ,y ...) ← (return x)
+                                             y]
+                                            [(list a b c) (+ a b c)]))
+                (set (cons 6 ∅) (cons '(2 3) ∅))))
 
 ;;=============================================================================
 ;; define-reduction
 
 (begin-for-syntax
   (define-splicing-syntax-class options
-    (pattern (~seq (~alt (~optional (~seq #:super (sname:id sarg ...))
+    (pattern (~seq (~alt (~optional (~seq #:monad m)
+                                    #:name "#:monad option")
+                         (~optional (~seq #:mrun mr)
+                                    #:name "#:mrun option")
+                         (~optional (~seq #:super (sname:id sarg ...))
                                     #:name "#:super option")
                          (~optional (~seq #:import [sig-spec ...])
                                     #:name "#:import option")
@@ -89,6 +108,8 @@
                                     #:name "#:do option")
                          (~optional (~seq #:default [pat body ... e])
                                     #:name "#:default option")) ...)
+             #:with monad     #'(~? m                #f)
+             #:with mrun      #'(~? mr               #f)
              #:with sup-name  #'(~? sname            #f)
              #:with sup-args  #'(~? (sarg ...)       ())
              #:with imports   #'(~? (sig-spec ...)   ())
@@ -125,7 +146,9 @@
                                 (list #'nondet-match)
                                 def-cxt)
       #:datum-literals [let-values nondet-match]
-      [(let-values () do-body ... (nondet-match _ #:default drule rule ...))
+      [(let-values ()
+         do-body ...
+         (_ (nondet-match _ _ #:default drule rule ...)))
        #`(#,import-sig-stx
           (rule ...)
           (do-body ...)
@@ -152,6 +175,15 @@
                  [(_ _ _ rnam _ ...)
                   (∈ (syntax-e #'rnam) rnams)])))]
 
+     #:with M (if (syntax-e #'opts.monad)
+                #'opts.monad
+                #'ReduceM)
+     #:with M′ (format-id #'rid "~a" (gensym 'M))
+
+     #:with mrun (if (syntax-e #'opts.mrun)
+                   #'opts.mrun
+                   #'(λ (x) x))
+
      #:with (imports-of-super
              rules-of-super
              do-bodies-of-super
@@ -170,7 +202,7 @@
 
      #:with (rule ...) (stx-map rescope-and-escape-elipsis
                                 #'(sup-rule ...
-                                   [pat _ ≔ rnam body ... e] ...))
+                                            [pat _ ≔ rnam body ... e] ...))
 
      #:with (do-body ...) (stx-map rescope-and-escape-elipsis
                                    #`(#,@#'do-bodies-of-super
@@ -184,10 +216,11 @@
                          (syntax-parse stx
                            [(_ param ... ς)
                             #'(let ()
+                                (define M′ M)
                                 do-body ...
-                                (nondet-match ς
-                                              #:default default-clause
-                                              rule ...))]))
+                                (mrun (nondet-match M′ ς
+                                                    #:default default-clause
+                                                    rule ...)))]))
      
      #'(define-syntax rid (reduction-desc #'imports #'expander))]))
 
@@ -208,7 +241,8 @@
            ((define-syntaxes (inst) #,(escape-elipsis expander-stx))))
 
          (invoke-unit
-          (compound-unit (import) (export)
+          (compound-unit
+           (import) (export)
            (link (([m : M^]) (unit (import) (export M^)))
                  (() (unit (import M^) (export)
                        (define (reducer ς) (inst arg ... ς))

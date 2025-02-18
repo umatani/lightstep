@@ -1,5 +1,6 @@
 #lang racket
-(require lightstep/reduction lightstep/set lightstep/reduction/bindings
+(require lightstep/reduction lightstep/set
+         (only-in lightstep/transformers run-StateT StateT NondetT ID)
          (except-in rackunit fail))
 
  ;; test-reduction
@@ -269,6 +270,25 @@
                     (link (([g : gege^]) gege@)
                           (() u82 g)))))
 (check-equal? (reducer82 888) (set '(gege 1221)))
+
+;;=============================================================================
+;; test-monad
+
+(define-reduction (r91)
+  #:monad (StateT #f (NondetT ID))
+  #:mrun (λ (x) (run-StateT (set 'a 'b 'c) x))
+  [x
+   `(,_ ,y ...) ← (return x)
+   σ ← get
+   (put (for/set ([v σ]) (cons v v)))
+   (list y σ)]
+  [(list a b c) (+ a b c)])
+(define reducer91 (invoke-unit (inst-reduction
+                                r91)))
+(check-equal? (reducer91 '(1 2 3))
+              (set (cons 6 (set 'a 'b 'c))
+                   (cons (list '(2 3) (set 'a 'b 'c))
+                         (set (cons 'a 'a) (cons 'b 'b) (cons 'c 'c)))))
 
 ;;=============================================================================
 ;; test-scope
