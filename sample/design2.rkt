@@ -1,5 +1,5 @@
 #lang racket
-(require lightstep/reduction lightstep/set
+(require lightstep/base
          (only-in "design1.rkt" -->₂-rule -->PCF₃-rule val? EC))
 (provide -->PCF₄-rule subst)
 
@@ -22,7 +22,9 @@
 
 (module+ test
   (printf "----- -->₃ ------------\n")
-  (define -->₃ (invoke-unit (inst-reduction -->₃-rule)))
+  (define -->₃ (call-with-values
+                (λ () (invoke-unit (inst-reduction -->₃-rule)))
+                (λ (mrun reducer) (compose1 mrun reducer))))
   (check-equal? (-->₃ '(g a)) (set '(<= 0 a))) ;; as usual
   (check-equal? (-->₃ '(f a)) (set '(+ a a))))
 
@@ -51,7 +53,9 @@
    e′ ← (-->PCF₄ e) ;; override (PCF₃ -> PCF₄)
    (EC e′)
    "EC"])
-(define -->PCF₄ (invoke-unit (inst-reduction -->PCF₄-rule)))
+(define -->PCF₄ (call-with-values
+                 (λ () (invoke-unit (inst-reduction -->PCF₄-rule)))
+                 (λ (mrun reducer) (compose1 mrun reducer))))
 
 (module+ test
   (printf "----- PCF₄ ------------\n")

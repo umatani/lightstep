@@ -143,12 +143,11 @@
                   [p (do . bs)]
                   [_ mzero])]
                [(do #:when b . bs)
-                (if b
-                  (do . bs)
-                  mzero)]
+                (do #t ≔ b . bs)]
+               [(do #:unless b . bs)
+                (do #f ≔ b . bs)]
                [(do xM . bs)
-                (bind xM (λ (_x)
-                           (do . bs)))]))
+                (bind xM (λ (_) (do . bs)))]))
            (define monoid-functor (hash-ref properties 'monoid-functor #f))
            (match-define (monad-reader ask local)
              (hash-ref effects 'reader (monad-reader #f #f)))
@@ -238,15 +237,14 @@
 
 (define-signature monoid^ (O))
 
-
-
-
 (define-unit AddO@    (import) (export monoid^) (define O AddO))
 (define-unit ListO@   (import) (export monoid^) (define O ListO))
 (define-unit MaxO@    (import) (export monoid^) (define O MaxO))
 (define-unit PowerO@  (import) (export monoid^) (define O PowerO))
 (define-unit FinMapO@ (import) (export monoid^) (define O FinMapO))
 (define-unit PairO@   (import) (export monoid^) (define O PairO))
+
+(define-signature monad^ (M mrun))
 
 ;;=============================================================================
 ;; Identity monad
@@ -1028,7 +1026,6 @@
                (return x))
              fail)))
    (set (cons (failure) 0) (cons 1 0) (cons 2 0) (cons 3 0))))
-
 
 (module+ additional-test
   ;; (with-monad (WriterT AddO ID)

@@ -130,11 +130,11 @@
        #'(a′ ...)]
       [a #'a]))
 
-  (struct reduction-desc (import-sig expander))
+  (struct reduction-desc (mrun import-sig expander))
 
   (define (inst-reduction-info rid args)
     (match-define
-      (reduction-desc import-sig-stx expander-stx)
+      (reduction-desc _ import-sig-stx expander-stx)
       (syntax-local-value rid))
 
     (define def-cxt (syntax-local-make-definition-context))
@@ -148,7 +148,7 @@
       #:datum-literals [let-values nondet-match]
       [(let-values ()
          do-body ...
-         (_ (nondet-match _ _ #:default drule rule ...)))
+         (nondet-match _ _ #:default drule rule ...))
        #`(#,import-sig-stx
           (rule ...)
           (do-body ...)
@@ -182,7 +182,7 @@
 
      #:with mrun (if (syntax-e #'opts.mrun)
                    #'opts.mrun
-                   #'(λ (x) x))
+                   #'(λ (m) m))
 
      #:with (imports-of-super
              rules-of-super
@@ -218,11 +218,11 @@
                             #'(let ()
                                 (define M′ M)
                                 do-body ...
-                                (mrun (nondet-match M′ ς
-                                                    #:default default-clause
-                                                    rule ...)))]))
+                                (nondet-match M′ ς
+                                              #:default default-clause
+                                              rule ...))]))
      
-     #'(define-syntax rid (reduction-desc #'imports #'expander))]))
+     #'(define-syntax rid (reduction-desc #'mrun #'imports #'expander))]))
 
 ;;=============================================================================
 ;; inst-reduction
@@ -231,7 +231,7 @@
   (syntax-parse stx
     [(_ rid:id arg ...)
      #:do [(match-define
-             (reduction-desc import-sigs expander-stx)
+             (reduction-desc mrun import-sigs expander-stx)
              (syntax-local-value #'rid))]
 
      #`(unit
@@ -246,7 +246,7 @@
            (link (([m : M^]) (unit (import) (export M^)))
                  (() (unit (import M^) (export)
                        (define (reducer ς) (inst arg ... ς))
-                       reducer)
+                       (values #,mrun reducer))
                      m)))))]))
 
 ;;=============================================================================

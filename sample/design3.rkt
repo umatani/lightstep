@@ -1,5 +1,5 @@
 #lang racket
-(require lightstep/reduction lightstep/set
+(require lightstep/base
          (only-in racket/random random-ref)
          (for-syntax syntax/parse)
          (only-in "design1.rkt" val? cxt))
@@ -82,7 +82,10 @@
    "EC"])
 
 ;; One benefit of parameterization over non-lexical extension is ...
-(define -->PCF₅ (invoke-unit (inst-reduction -->PCF₅-rule -->PCF₅ ≔ ≔)))
+(define-values (-->PCF₅ reducer-PCF₅)
+  (call-with-values
+   (λ () (invoke-unit (inst-reduction -->PCF₅-rule reducer-PCF₅ ≔ ≔)))
+   (λ (mrun reducer) (values (compose1 mrun reducer) reducer))))
 
 (module+ test
   (printf "----- PCF₅ ------------\n")

@@ -1,5 +1,5 @@
 #lang racket
-(require lightstep/reduction lightstep/set
+(require lightstep/base
          (only-in "design1.rkt" val?)
          (only-in "design3.rkt" subst EC -->PCF₅-rule))
 
@@ -14,10 +14,13 @@
 (define-reduction (-->PCF₆-rule --> ≔<1> ≔<2>)
   #:super (-->PCF₅-rule --> ≔<1> ≔<2>))
 
-(define -->PCF₆ (invoke-unit (inst-reduction -->PCF₆-rule -->PCF₆ ≔ ←)))
+(define-values (-->PCF₆ reducer-PCF₆)
+  (call-with-values
+   (λ () (invoke-unit (inst-reduction -->PCF₆-rule reducer-PCF₆ ≔ ←)))
+   (λ (mrun reducer) (values (compose1 mrun reducer) reducer))))
 
 (module+ test
-  ;;(printf "----- PCF6 ------------\n")
+  (printf "----- PCF6 ------------\n")
   (check-equal? (car (apply-reduction* -->PCF₆ '(amb 1 2 3 4 5)))
                 (set 1 2 3 4 5))
   (check-equal? (car (apply-reduction* -->PCF₆
@@ -30,10 +33,13 @@
 (define-reduction (-->PCF₆-v2-rule -->)
   #:super (-->PCF₅-rule --> ≔ ←))
 
-(define -->PCF₆-v2 (invoke-unit (inst-reduction -->PCF₆-v2-rule -->PCF₆-v2)))
+(define-values (-->PCF₆-v2 reducer-PCF₆-v2)
+  (call-with-values
+   (λ () (invoke-unit (inst-reduction -->PCF₆-v2-rule reducer-PCF₆-v2)))
+   (λ (mrun reducer) (values (compose1 mrun reducer) reducer))))
 
 (module+ test
-  ;;(printf "----- PCF6-v2 ------------\n")
+  (printf "----- PCF6-v2 ------------\n")
   (check-equal? (car (apply-reduction* -->PCF₆-v2 '(amb 1 2 3 4 5)))
                 (set 1 2 3 4 5))
   (check-equal? (car (apply-reduction* -->PCF₆-v2

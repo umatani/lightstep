@@ -1,5 +1,5 @@
 #lang racket
-(require lightstep/reduction lightstep/set
+(require lightstep/base
          (only-in "design3.rkt" EC))
 
 (module+ test (require rackunit))
@@ -82,13 +82,14 @@
 
 (module+ test
   (printf "----- PCF₇ ------------\n")
-  (define -->PCF₇ (letrec ([u1 (inst-reduction -->PCF₇-rule r1)]
-                           [r1 (invoke-unit
-                                (compound-unit (import) (export)
-                                 (link (([d : delta^]) delta1@)
-                                       (([m : misc^ ]) misc1@ d)
-                                       (() u1 m d))))])
-                    r1))
+  (define -->PCF₇ (letrec-values
+                      ([(u1) (inst-reduction -->PCF₇-rule r1)]
+                       [(m1 r1) (invoke-unit
+                                 (compound-unit (import) (export)
+                                                (link (([d : delta^]) delta1@)
+                                                      (([m : misc^ ]) misc1@ d)
+                                                      (() u1 m d))))])
+                    (compose1 m1 r1)))
 
   (check-equal? (car (apply-reduction* -->PCF₇ '(+ 1 2))) (set 3))
   (check-equal? (car (apply-reduction* -->PCF₇ '(+ (+ 1 2) 3))) (set 6))

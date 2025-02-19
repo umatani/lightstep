@@ -1,5 +1,5 @@
 #lang racket
-(require lightstep/reduction lightstep/set
+(require  lightstep/base
          (for-syntax syntax/parse syntax/stx))
 (provide -->PCF₃-rule -->₂-rule
          val? subst EC cxt)
@@ -14,7 +14,8 @@
   [(cons x y) x "car"])
 
 ;; parameterized rule set のため (引数ありは後述2) TODO
-(define -->₀ (invoke-unit (inst-reduction -->₀-rule)))
+(define-values (mrun₀ reducer₀) (invoke-unit (inst-reduction -->₀-rule)))
+(define -->₀ (compose1 mrun₀ reducer₀))
 
 (module+ test
   (printf "---- cons -------------\n")
@@ -24,8 +25,7 @@
   ;; apply-reduction-relation* は multi-step
   ;;   set of irreducible term を返す
   ;;   irreducible = どのルールにもマッチしなかった state
-  (check-equal?
-   (-->₀ (cons (cons 1 2) 3)) (set '(1 . 2)))
+  (check-equal? (-->₀ (cons (cons 1 2) 3)) (set '(1 . 2)))
 
   (check-equal?
    (car (apply-reduction* -->₀ (cons (cons 1 2) 3)))
@@ -36,7 +36,8 @@
   [(cons x y) x "car"]
   [(cons x y) y "cdr"])
 
-(define -->₁ (invoke-unit (inst-reduction -->₁-rule)))
+(define-values (mrun₁ reducer₁) (invoke-unit (inst-reduction -->₁-rule)))
+(define -->₁ (compose1 mrun₁ reducer₁))
 
 (module+ test
   (check-equal? (-->₁ (cons (cons 1 2) 3)) (set 3 '(1 . 2)))
@@ -60,7 +61,9 @@
 (define-reduction (-->LAM₀-rule)
   [`((λ (,x) ,e₁) ,e₂) (subst e₁ x e₂) "β"])
 
-(define -->LAM₀ (invoke-unit (inst-reduction -->LAM₀-rule)))
+(define-values (mrun-LAM₀ reducer-LAM₀)
+  (invoke-unit (inst-reduction -->LAM₀-rule)))
+(define -->LAM₀ (compose1 mrun-LAM₀ reducer-LAM₀))
 
 (module+ test
   (printf "---- LAM₀ -------------\n")
@@ -103,7 +106,9 @@
    `((λ (,x) ,e) (λ (,y) ((fix (λ (,x) ,e)) ,y)))
    "fix"])
 
-(define -->PCF₀ (invoke-unit (inst-reduction -->PCF₀-rule)))
+(define-values (mrun-PCF₀ reducer-PCF₀)
+  (invoke-unit (inst-reduction -->PCF₀-rule)))
+(define -->PCF₀ (compose1 mrun-PCF₀ reducer-PCF₀))
 
 (module+ test
   (printf "---- PCF₀ -------------\n")
@@ -139,12 +144,14 @@
    `(if ,e₁′ ,e₂ ,e₃)
    "ECif"])
 
-(define -->PCF₁ (invoke-unit (inst-reduction -->PCF₁-rule)))
+(define-values (mrun-PCF₁ reducer-PCF₁)
+  (invoke-unit (inst-reduction -->PCF₁-rule)))
+(define -->PCF₁ (compose1 mrun-PCF₁ reducer-PCF₁))
 
 (module+ test
   (printf "---- PCF₁ -------------\n")
   ;; 継承してないので上4つはできない．
-  (check-equal? (car (apply-reduction*  -->PCF₁ '(+ 1 2)))
+  (check-equal? (car (apply-reduction* -->PCF₁ '(+ 1 2)))
                 (set '(+ 1 2)))
   (check-equal? (car (apply-reduction* -->PCF₁ '(+ (+ 1 2) 3)))
                 (set '(+ (+ 1 2) 3)))
@@ -223,11 +230,13 @@
    `(fix ,e′)
    "EC-fix"])
 
-(define -->PCF₂ (invoke-unit (inst-reduction -->PCF₂-rule)))
+(define-values (mrun-PCF₂ reducer-PCF₂)
+  (invoke-unit (inst-reduction -->PCF₂-rule)))
+(define -->PCF₂ (compose1 mrun-PCF₂ reducer-PCF₂))
 
 (module+ test
   (printf "----- PCF₂ ------------\n")
-  (check-equal? (car (apply-reduction*  -->PCF₂ '(+ 1 2))) (set 3))
+  (check-equal? (car (apply-reduction* -->PCF₂ '(+ 1 2))) (set 3))
   (check-equal? (car (apply-reduction* -->PCF₂ '(+ (+ 1 2) 3))) (set 6))
   (check-equal? (car (apply-reduction* -->PCF₂ '(+ (+ 1 2) (+ 3 (+ 4 5)))))
                 (set 15))
@@ -396,7 +405,9 @@
    (EC e′)
    "EC"])
 
-(define -->PCF₃ (invoke-unit (inst-reduction -->PCF₃-rule)))
+(define-values (mrun-PCF₃ reducer-PCF₃)
+  (invoke-unit (inst-reduction -->PCF₃-rule)))
+(define -->PCF₃ (compose1 mrun-PCF₃ reducer-PCF₃))
 
 (module+ test
   (printf "----- PCF₃ ------------\n")
@@ -467,5 +478,6 @@
 
 (module+ test
   (printf "----- -->₂ ------------\n")
-  (define -->₂ (invoke-unit (inst-reduction -->₂-rule)))
+  (define-values (mrun₂ reducer₂) (invoke-unit (inst-reduction -->₂-rule)))
+  (define -->₂ (compose1 mrun₂ reducer₂))
   (check-equal? (-->₂ '(f a)) (set '(+ a 1))))
