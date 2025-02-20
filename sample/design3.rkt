@@ -3,7 +3,7 @@
          (only-in racket/random random-ref)
          (for-syntax syntax/parse)
          (only-in "design1.rkt" val? cxt))
-(provide subst EC -->PCF₅-rule)
+(provide subst EC (reduction-out -->PCF₅-rule))
 
 ;;;;;;;;;; 拡張性のためのさらなる機能(つづき)
 
@@ -84,12 +84,11 @@
 ;; One benefit of parameterization over non-lexical extension is ...
 (define-values (-->PCF₅ reducer-PCF₅)
   (call-with-values
-   (λ () (invoke-unit (inst-reduction -->PCF₅-rule reducer-PCF₅ ≔ ≔)))
+   (λ () (invoke-unit (-->PCF₅-rule reducer-PCF₅ ≔ ≔)))
    (λ (mrun reducer) (values (compose1 mrun reducer) reducer))))
+(define -->>PCF₅ (repeated -->PCF₅))
 
 (module+ test
   (printf "----- PCF₅ ------------\n")
-  (apply-reduction* -->PCF₅ '(amb 1 2 3 4 5))
-  (apply-reduction* -->PCF₅
-                    '(+ (amb 1 2 3 4)
-                        (amb 10 20 30 40))))
+  (-->>PCF₅ '(amb 1 2 3 4 5))
+  (-->>PCF₅ '(+ (amb 1 2 3 4) (amb 10 20 30 40))))

@@ -3,8 +3,8 @@
 (require (only-in "reduction.rkt"
                   ReduceM
                   define-reduction
-                  inst-reduction
-                  apply-reduction*))
+                  repeated
+                  reduction-in reduction-out))
 (provide (all-from-out "reduction.rkt"))
 
 (require "set.rkt")

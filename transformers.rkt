@@ -25,6 +25,8 @@
 (define ((monoid-oconcat O) os)
   (sequence-fold (monoid-oplus O) (monoid-ozero O) os))
 
+(define-signature monoid^ (O))
+
 ;;=============================================================================
 ;; Monad
 
@@ -41,6 +43,8 @@
 ;; effect-name ∈ {reader, writer, state, fail, nondet}
 ;; effect-for : effect-name → type
 (struct monad (return bind effects properties) #:transparent)
+
+(define-signature monad^ (M mrun))
 
 ;;=============================================================================
 ;; Effects
@@ -235,16 +239,12 @@
        (cons (with-monoid O₁ (oplus o₁₁ o₁₂))
              (with-monoid O₂ (oplus o₂₁ o₂₂)))))))
 
-(define-signature monoid^ (O))
-
 (define-unit AddO@    (import) (export monoid^) (define O AddO))
 (define-unit ListO@   (import) (export monoid^) (define O ListO))
 (define-unit MaxO@    (import) (export monoid^) (define O MaxO))
 (define-unit PowerO@  (import) (export monoid^) (define O PowerO))
 (define-unit FinMapO@ (import) (export monoid^) (define O FinMapO))
 (define-unit PairO@   (import) (export monoid^) (define O PairO))
-
-(define-signature monad^ (M mrun))
 
 ;;=============================================================================
 ;; Identity monad

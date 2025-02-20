@@ -1,7 +1,8 @@
 #lang racket
 (require  lightstep/base
          (for-syntax syntax/parse syntax/stx))
-(provide -->PCF₃-rule -->₂-rule
+(provide (reduction-out -->PCF₃-rule)
+         (reduction-out -->₂-rule)
          val? subst EC cxt)
 
 (module+ test (require rackunit))
@@ -14,7 +15,7 @@
   [(cons x y) x "car"])
 
 ;; parameterized rule set のため (引数ありは後述2) TODO
-(define-values (mrun₀ reducer₀) (invoke-unit (inst-reduction -->₀-rule)))
+(define-values (mrun₀ reducer₀) (invoke-unit (-->₀-rule)))
 (define -->₀ (compose1 mrun₀ reducer₀))
 
 (module+ test
@@ -28,7 +29,7 @@
   (check-equal? (-->₀ (cons (cons 1 2) 3)) (set '(1 . 2)))
 
   (check-equal?
-   (car (apply-reduction* -->₀ (cons (cons 1 2) 3)))
+   (car ((repeated -->₀) (cons (cons 1 2) 3)))
    (set 1)))
 
 ;; 非決定的である例
@@ -36,13 +37,13 @@
   [(cons x y) x "car"]
   [(cons x y) y "cdr"])
 
-(define-values (mrun₁ reducer₁) (invoke-unit (inst-reduction -->₁-rule)))
+(define-values (mrun₁ reducer₁) (invoke-unit (-->₁-rule)))
 (define -->₁ (compose1 mrun₁ reducer₁))
 
 (module+ test
   (check-equal? (-->₁ (cons (cons 1 2) 3)) (set 3 '(1 . 2)))
 
-  (check-equal? (car (apply-reduction* -->₁ (cons (cons 1 2) 3)))
+  (check-equal? (car ((repeated -->₁) (cons (cons 1 2) 3)))
                 (set 1 2 3)))
 
 ;; 例：ここまでの機能で untyped pure λ-calculus の β
@@ -61,9 +62,9 @@
 (define-reduction (-->LAM₀-rule)
   [`((λ (,x) ,e₁) ,e₂) (subst e₁ x e₂) "β"])
 
-(define-values (mrun-LAM₀ reducer-LAM₀)
-  (invoke-unit (inst-reduction -->LAM₀-rule)))
+(define-values (mrun-LAM₀ reducer-LAM₀) (invoke-unit (-->LAM₀-rule)))
 (define -->LAM₀ (compose1 mrun-LAM₀ reducer-LAM₀))
+(define -->>LAM₀ (repeated -->LAM₀))
 
 (module+ test
   (printf "---- LAM₀ -------------\n")
@@ -71,12 +72,12 @@
   ;; (-->LAM₀ '((λ (x) x) (λ (z) (z z))))
   ;; (-->LAM₀ '((λ (x) (λ (z) (x z))) (λ (z) (x z))))
   (check-equal?
-   (car (apply-reduction* -->LAM₀ '((λ (x) x) (λ (z) (z z)))))
+   (car (-->>LAM₀ '((λ (x) x) (λ (z) (z z)))))
    (set '(λ (z) (z z))))
 
   #;
   (check-equal?
-   (apply-reduction-relation* -->LAM₀ '((λ (x) (λ (z) (x z))) (λ (z) (x z))))
+   (-->>LAM₀ '((λ (x) (λ (z) (x z))) (λ (z) (x z))))
    (set '(λ (z685121) ((λ (z) (x z)) z685121))))
 
   (check-equal?
@@ -84,7 +85,7 @@
    (set '((λ (z) (z z)) (λ (z) (z z)))))
   ;; cycleもちゃんと検出
   (check-equal?
-   (car (apply-reduction* -->LAM₀ '((λ (x) (x x)) (λ (z) (z z)))))
+   (car (-->>LAM₀ '((λ (x) (x x)) (λ (z) (z z)))))
    (set)))
 
 ;;;; PCF に移行して reduction の拡張
@@ -106,19 +107,19 @@
    `((λ (,x) ,e) (λ (,y) ((fix (λ (,x) ,e)) ,y)))
    "fix"])
 
-(define-values (mrun-PCF₀ reducer-PCF₀)
-  (invoke-unit (inst-reduction -->PCF₀-rule)))
+(define-values (mrun-PCF₀ reducer-PCF₀) (invoke-unit (-->PCF₀-rule)))
 (define -->PCF₀ (compose1 mrun-PCF₀ reducer-PCF₀))
+(define -->>PCF₀ (repeated -->PCF₀))
 
 (module+ test
   (printf "---- PCF₀ -------------\n")
   ;; superの機能維持
   (check-equal?
-   (car (apply-reduction* -->PCF₀ '((λ (x) x) (λ (z) (z z)))))
+   (car (-->>PCF₀ '((λ (x) x) (λ (z) (z z)))))
    (set '(λ (z) (z z))))
   #;
   (check-equal?
-   (apply-reduction* -->PCF₀ '((λ (x) (λ (z) (x z))) (λ (z) (x z))))
+   (-->>PCF₀ '((λ (x) (λ (z) (x z))) (λ (z) (x z))))
    (set '(λ (z787758) ((λ (z) (x z)) z787758))))
   ;;
   (check-equal? (-->PCF₀ '(+ 1 2)) (set 3))
@@ -144,30 +145,30 @@
    `(if ,e₁′ ,e₂ ,e₃)
    "ECif"])
 
-(define-values (mrun-PCF₁ reducer-PCF₁)
-  (invoke-unit (inst-reduction -->PCF₁-rule)))
+(define-values (mrun-PCF₁ reducer-PCF₁) (invoke-unit (-->PCF₁-rule)))
 (define -->PCF₁ (compose1 mrun-PCF₁ reducer-PCF₁))
+(define -->>PCF₁ (repeated -->PCF₁))
 
 (module+ test
   (printf "---- PCF₁ -------------\n")
   ;; 継承してないので上4つはできない．
-  (check-equal? (car (apply-reduction* -->PCF₁ '(+ 1 2)))
+  (check-equal? (car (-->>PCF₁ '(+ 1 2)))
                 (set '(+ 1 2)))
-  (check-equal? (car (apply-reduction* -->PCF₁ '(+ (+ 1 2) 3)))
+  (check-equal? (car (-->>PCF₁ '(+ (+ 1 2) 3)))
                 (set '(+ (+ 1 2) 3)))
-  (check-equal? (car (apply-reduction* -->PCF₁ '(<= 1 2))) (set '(<= 1 2)))
-  (check-equal? (car (apply-reduction* -->PCF₁ '(<= 3 2))) (set '(<= 3 2)))
+  (check-equal? (car (-->>PCF₁ '(<= 1 2))) (set '(<= 1 2)))
+  (check-equal? (car (-->>PCF₁ '(<= 3 2))) (set '(<= 3 2)))
   (check-equal? (-->PCF₁ '(if #f 3 2)) (set))
   (check-equal? (-->PCF₁ '(if #t 3 2)) (set))
   (check-equal? (-->PCF₁ '(if 8 3 2)) (set))
   (check-equal? (-->PCF₁ '(if (<= 10 8) 3 2)) (set '(if #f 3 2)))
-  (check-equal? (car (apply-reduction* -->PCF₁ '(if #f 3 2)))
+  (check-equal? (car (-->>PCF₁ '(if #f 3 2)))
                 (set '(if #f 3 2)))
-  (check-equal? (car (apply-reduction* -->PCF₁ '(if #t 3 2)))
+  (check-equal? (car (-->>PCF₁ '(if #t 3 2)))
                 (set '(if #t 3 2)))
-  (check-equal? (car (apply-reduction* -->PCF₁ '(if 8 3 2)))
+  (check-equal? (car (-->>PCF₁ '(if 8 3 2)))
                 (set '(if 8 3 2)))
-  (check-equal? (car (apply-reduction* -->PCF₁ '(if (<= 10 8) 3 2)))
+  (check-equal? (car (-->>PCF₁ '(if (<= 10 8) 3 2)))
                 (set '(if #f 3 2))))
 
 ;; 自分自身を埋め込めることで，evaluation-contextの再帰構造をシンプルに表現できる
@@ -230,47 +231,47 @@
    `(fix ,e′)
    "EC-fix"])
 
-(define-values (mrun-PCF₂ reducer-PCF₂)
-  (invoke-unit (inst-reduction -->PCF₂-rule)))
+(define-values (mrun-PCF₂ reducer-PCF₂) (invoke-unit (-->PCF₂-rule)))
 (define -->PCF₂ (compose1 mrun-PCF₂ reducer-PCF₂))
+(define -->>PCF₂ (repeated -->PCF₂))
 
 (module+ test
   (printf "----- PCF₂ ------------\n")
-  (check-equal? (car (apply-reduction* -->PCF₂ '(+ 1 2))) (set 3))
-  (check-equal? (car (apply-reduction* -->PCF₂ '(+ (+ 1 2) 3))) (set 6))
-  (check-equal? (car (apply-reduction* -->PCF₂ '(+ (+ 1 2) (+ 3 (+ 4 5)))))
+  (check-equal? (car (-->>PCF₂ '(+ 1 2))) (set 3))
+  (check-equal? (car (-->>PCF₂ '(+ (+ 1 2) 3))) (set 6))
+  (check-equal? (car (-->>PCF₂ '(+ (+ 1 2) (+ 3 (+ 4 5)))))
                 (set 15))
-  (check-equal? (car (apply-reduction* -->PCF₂ '(<= 1 2))) (set #t))
-  (check-equal? (car (apply-reduction* -->PCF₂ '(<= 3 2))) (set #f))
+  (check-equal? (car (-->>PCF₂ '(<= 1 2))) (set #t))
+  (check-equal? (car (-->>PCF₂ '(<= 3 2))) (set #f))
   (check-equal? (-->PCF₂ '(if #f 3 2)) (set 2))
   (check-equal? (-->PCF₂ '(if #t 3 2)) (set 3))
   (check-equal? (-->PCF₂ '(if 8 3 2)) (set 3))
   (check-equal? (-->PCF₂ '(if (<= 10 8) 3 2)) (set '(if #f 3 2)))
-  (check-equal? (car (apply-reduction* -->PCF₂ '(if #f 3 2))) (set 2))
-  (check-equal? (car (apply-reduction* -->PCF₂ '(if #t 3 2))) (set 3))
-  (check-equal? (car (apply-reduction* -->PCF₂ '(if 8 3 2))) (set 3))
-  (check-equal? (car (apply-reduction* -->PCF₂ '(if (<= 10 8) 3 2))) (set 2))
-  (check-equal? (car (apply-reduction* -->PCF₂ '(if (+ 10 8) 3 2))) (set 3))
-  (check-equal? (car (apply-reduction* -->PCF₂ '(if (<= 10 108) 3 2)))
+  (check-equal? (car (-->>PCF₂ '(if #f 3 2))) (set 2))
+  (check-equal? (car (-->>PCF₂ '(if #t 3 2))) (set 3))
+  (check-equal? (car (-->>PCF₂ '(if 8 3 2))) (set 3))
+  (check-equal? (car (-->>PCF₂ '(if (<= 10 8) 3 2))) (set 2))
+  (check-equal? (car (-->>PCF₂ '(if (+ 10 8) 3 2))) (set 3))
+  (check-equal? (car (-->>PCF₂ '(if (<= 10 108) 3 2)))
                 (set 3))
   (check-equal?
-   (car (apply-reduction* -->PCF₂ '(if (if (<= 10 108) #f #t)
+   (car (-->>PCF₂ '(if (if (<= 10 108) #f #t)
                                      (+ (+ 1 2) 3)
                                      (+ (+ 1 2) (+ 3 (+ 4 5))))))
    (set 15))
   (check-equal?
-   (car (apply-reduction* -->PCF₂ '(((if (if (<= 10 108) #f #t)
+   (car (-->>PCF₂ '(((if (if (<= 10 108) #f #t)
                                        (λ (x) (λ (y) x))
                                        (λ (x) (λ (y) y))) 1) 2)))
    (set 2))
   ;; ↓substをオーバーライドしてないから動かない！
   #;
-  (car (apply-reduction* -->PCF₂ '(((if (if (<= 108 10) #f #t)
+  (car (-->>PCF₂ '(((if (if (<= 108 10) #f #t)
                                       (λ (x) (λ (y) x))
                                       (λ (x) (λ (y) y))) 1) 2)))
   #;
   (check-equal?
-   (car (apply-reduction* -->PCF₂ '(fix ((λ (x) x) (λ (y) y)))))
+   (car (-->>PCF₂ '(fix ((λ (x) x) (λ (y) y)))))
    (set '(λ (y1701765) ((fix (λ (y) y)) y1701765))))
   )
 
@@ -405,47 +406,47 @@
    (EC e′)
    "EC"])
 
-(define-values (mrun-PCF₃ reducer-PCF₃)
-  (invoke-unit (inst-reduction -->PCF₃-rule)))
+(define-values (mrun-PCF₃ reducer-PCF₃) (invoke-unit (-->PCF₃-rule)))
 (define -->PCF₃ (compose1 mrun-PCF₃ reducer-PCF₃))
+(define -->>PCF₃ (repeated -->PCF₃))
 
 (module+ test
   (printf "----- PCF₃ ------------\n")
-  (check-equal? (car (apply-reduction* -->PCF₃ '(+ 1 2))) (set 3))
-  (check-equal? (car (apply-reduction* -->PCF₃ '(+ (+ 1 2) 3))) (set 6))
-  (check-equal? (car (apply-reduction* -->PCF₃ '(+ (+ 1 2) (+ 3 (+ 4 5)))))
+  (check-equal? (car (-->>PCF₃ '(+ 1 2))) (set 3))
+  (check-equal? (car (-->>PCF₃ '(+ (+ 1 2) 3))) (set 6))
+  (check-equal? (car (-->>PCF₃ '(+ (+ 1 2) (+ 3 (+ 4 5)))))
                 (set 15))
-  (check-equal? (car (apply-reduction* -->PCF₃ '(<= 1 2))) (set #t))
-  (check-equal? (car (apply-reduction* -->PCF₃ '(<= 3 2))) (set #f))
+  (check-equal? (car (-->>PCF₃ '(<= 1 2))) (set #t))
+  (check-equal? (car (-->>PCF₃ '(<= 3 2))) (set #f))
   (check-equal? (-->PCF₃ '(if #f 3 2)) (set 2))
   (check-equal? (-->PCF₃ '(if #t 3 2)) (set 3))
   (check-equal? (-->PCF₃ '(if 8 3 2)) (set 3))
   (check-equal? (-->PCF₃ '(if (<= 10 8) 3 2)) (set '(if #f 3 2)))
-  (check-equal? (car (apply-reduction* -->PCF₃ '(if #f 3 2))) (set 2))
-  (check-equal? (car (apply-reduction* -->PCF₃ '(if #t 3 2))) (set 3))
-  (check-equal? (car (apply-reduction* -->PCF₃ '(if 8 3 2))) (set 3))
-  (check-equal? (car (apply-reduction* -->PCF₃ '(if (<= 10 8) 3 2))) (set 2))
-  (check-equal? (car (apply-reduction* -->PCF₃ '(if (+ 10 8) 3 2))) (set 3))
-  (check-equal? (car (apply-reduction* -->PCF₃ '(if (<= 10 108) 3 2)))
+  (check-equal? (car (-->>PCF₃ '(if #f 3 2))) (set 2))
+  (check-equal? (car (-->>PCF₃ '(if #t 3 2))) (set 3))
+  (check-equal? (car (-->>PCF₃ '(if 8 3 2))) (set 3))
+  (check-equal? (car (-->>PCF₃ '(if (<= 10 8) 3 2))) (set 2))
+  (check-equal? (car (-->>PCF₃ '(if (+ 10 8) 3 2))) (set 3))
+  (check-equal? (car (-->>PCF₃ '(if (<= 10 108) 3 2)))
                 (set 3))
   (check-equal?
-   (car (apply-reduction* -->PCF₃ '(if (if (<= 10 108) #f #t)
-                                     (+ (+ 1 2) 3)
-                                     (+ (+ 1 2) (+ 3 (+ 4 5))))))
+   (car (-->>PCF₃ '(if (if (<= 10 108) #f #t)
+                     (+ (+ 1 2) 3)
+                     (+ (+ 1 2) (+ 3 (+ 4 5))))))
    (set 15))
   (check-equal?
-   (car (apply-reduction* -->PCF₃ '(((if (if (<= 10 108) #f #t)
-                                       (λ (x) (λ (y) x))
-                                       (λ (x) (λ (y) y))) 1) 2)))
+   (car (-->>PCF₃ '(((if (if (<= 10 108) #f #t)
+                       (λ (x) (λ (y) x))
+                       (λ (x) (λ (y) y))) 1) 2)))
    (set 2))
   ;; ↓substをオーバーライドしてないから動かない！
   #;
-  (car (apply-reduction* -->PCF₃ '(((if (if (<= 108 10) #f #t)
-                                      (λ (x) (λ (y) x))
-                                      (λ (x) (λ (y) y))) 1) 2)))
+  (car (-->>PCF₃ '(((if (if (<= 108 10) #f #t)
+                      (λ (x) (λ (y) x))
+                      (λ (x) (λ (y) y))) 1) 2)))
   #;
   (check-equal?
-   (car (apply-reduction* -->PCF₃ '(fix ((λ (x) x) (λ (y) y)))))
+   (car (-->>PCF₃ '(fix ((λ (x) x) (λ (y) y)))))
    (set '(λ (y1892504) ((fix (λ (y) y)) y1892504))))
   )
 
@@ -456,15 +457,15 @@
 
 (module+ test
   (printf "----- PCF₃ part2 ------------\n")
-  (check-equal? (car (apply-reduction* -->PCF₃ '((λ (x) x) 2))) (set 2)) ; OK
-  ;(apply-reduction* -->PCF₃ '((λ (x) 1) 2))
-  ;(apply-reduction* -->PCF₃ '((λ (x) #t) 2))
-  ;(apply-reduction* -->PCF₃ '((λ (x) (+ x 1)) 2))
-  ;(apply-reduction* -->PCF₃ '((λ (x) (<= 1 x)) 2))
-  ;(apply-reduction* -->PCF₃ '((λ (x) (if x x 0)) 2))
+  (check-equal? (car (-->>PCF₃ '((λ (x) x) 2))) (set 2)) ; OK
+  ;(-->>PCF₃ '((λ (x) 1) 2))
+  ;(-->>PCF₃ '((λ (x) #t) 2))
+  ;(-->>PCF₃ '((λ (x) (+ x 1)) 2))
+  ;(-->>PCF₃ '((λ (x) (<= 1 x)) 2))
+  ;(-->>PCF₃ '((λ (x) (if x x 0)) 2))
   #;
   (check-equal?
-   (car (apply-reduction* -->PCF₃ '((λ (x) (fix x)) (λ (y) y))))
+   (car (-->>PCF₃ '((λ (x) (fix x)) (λ (y) y))))
    (set '(λ (y1947664) ((fix (λ (y) y)) y1947664)))) ; appと誤認識
   )
 
@@ -478,6 +479,6 @@
 
 (module+ test
   (printf "----- -->₂ ------------\n")
-  (define-values (mrun₂ reducer₂) (invoke-unit (inst-reduction -->₂-rule)))
+  (define-values (mrun₂ reducer₂) (invoke-unit (-->₂-rule)))
   (define -->₂ (compose1 mrun₂ reducer₂))
   (check-equal? (-->₂ '(f a)) (set '(+ a 1))))

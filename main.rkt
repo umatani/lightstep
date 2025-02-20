@@ -15,4 +15,5 @@
   (require (submod lightstep/sample/winskel/imp-state test))
   (require (submod lightstep/sample/winskel/imp-state left-first-sequential))
   (require (submod lightstep/sample/winskel/imp-state parallel-or))
+  (require (submod lightstep/sample/redex/b test))
   )

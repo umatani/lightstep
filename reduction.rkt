@@ -3,15 +3,17 @@
                      (only-in racket/match match-define)
                      (only-in syntax/stx stx-map)
                      (only-in "set.rkt" list→set ∈))
+         racket/require-syntax racket/provide-syntax
          (only-in racket/unit
                   define-signature unit import export link
                   compound-unit invoke-unit)
          (only-in racket/match match)
          (only-in "set.rkt" ∅ ∅? ∈ set set-add)
          (only-in "transformers.rkt"
-                  PowerO ID StateT FailT NondetT define-monad with-monad
-                  run-StateT))
-(provide ReduceM define-reduction inst-reduction apply-reduction*)
+                  ID ReaderT WriterT StateT FailT NondetT
+                  run-ReaderT run-StateT
+                  define-monad with-monad PowerO))
+(provide ReduceM define-reduction repeated reduction-in reduction-out)
 
 
 ;;=============================================================================
@@ -152,8 +154,26 @@
        #`(#,import-sig-stx
           (rule ...)
           (do-body ...)
-          drule)])))
+          drule)]))
 
+  (define (derive-mrun M)
+    (syntax-parse M
+      #:literals (ID ReaderT WriterT StateT FailT NondetT ReduceM)
+      [ID      #'(λ (m) m)]
+      [ReduceM #'(λ (m) m)]
+      [(ReaderT M′)
+       #:with (λ (p ...) b) (derive-mrun #'M′)
+       #'(λ (r p ...) (run-ReaderT r ((λ (p ...) b) p ...)))]
+      [(WriterT _ M′)
+       (derive-mrun #'M′)]
+      [(StateT _ M′)
+       #:with (λ (p ...) b) (derive-mrun #'M′)
+       #'(λ (s p ...) (run-StateT s ((λ (p ...) b) p ...)))]
+      [(FailT M′)
+       (derive-mrun #'M′)]
+      [(NondetT M′)
+       (derive-mrun #'M′)]
+      [_ (raise-syntax-error 'derive-mrun "unknown monad" M)])))
 
 (define-syntax (define-reduction stx)
   (define (gen-rnam stx sym)
@@ -182,13 +202,16 @@
 
      #:with mrun (if (syntax-e #'opts.mrun)
                    #'opts.mrun
-                   #'(λ (m) m))
+                   (derive-mrun #'M))
 
+     #:with sup-rdesc (if (syntax-e #'opts.sup-name)
+                        (format-id #'opts.sup-name "~a-info" #'opts.sup-name)
+                        #'#f)
      #:with (imports-of-super
              rules-of-super
              do-bodies-of-super
-             default-of-super)  (if (syntax-e #'opts.sup-name)
-                                  (inst-reduction-info #'opts.sup-name
+             default-of-super)  (if (syntax-e #'sup-rdesc)
+                                  (inst-reduction-info #'sup-rdesc
                                                        #'opts.sup-args)
                                   #'(() () () #f))
 
@@ -222,7 +245,13 @@
                                               #:default default-clause
                                               rule ...))]))
      
-     #'(define-syntax rid (reduction-desc #'mrun #'imports #'expander))]))
+     #:with rdesc (format-id #'rid "~a-info" (syntax-e #'rid))
+     #'(begin
+         (define-syntax rdesc (reduction-desc #'mrun #'imports #'expander))
+         (define-syntax (rid stx)
+           (syntax-parse stx
+             [(_ arg (... ...))
+              #'(inst-reduction rdesc arg (... ...))])))]))
 
 ;;=============================================================================
 ;; inst-reduction
@@ -250,9 +279,9 @@
                      m)))))]))
 
 ;;=============================================================================
-;; apply-reduction*
+;; reflexive and transitive closure
 
-(define (apply-reduction* → ς)
+(define ((repeated →) ς)
   (define-monad (NondetT (StateT PowerO ID)))
   (define (search ς)
     (do Σ′ ≔ (→ ς)
@@ -264,3 +293,20 @@
                 (do (put (set-add Σ ς′))
                     (search ς′)))))))
   (run-StateT (set ς) (search ς)))
+
+
+;;=============================================================================
+;; custom require/provide spec
+
+(define-require-syntax (reduction-in stx)
+  (syntax-parse stx
+    [(_ req-spec rid:id)
+     #:with rdesc (format-id #'rid "~a-info" #'rid)
+     #'(combine-in (only-in req-spec rid)
+                   (only-in req-spec rdesc))]))
+
+(define-provide-syntax (reduction-out stx)
+  (syntax-parse stx
+    [(_ rid:id)
+     #:with rdesc (format-id #'rid "~a-info" #'rid)
+     #'(combine-out rid rdesc)]))
