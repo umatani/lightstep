@@ -48,7 +48,7 @@
   (λ (stx)
     (syntax-case stx ()
       [(_ (x y) ...)
-       #'(? map? (app repl->hash (hash-table (x y) ...)))]))
+       #'(? map? (app repl->hash (hash* (x y) ...)))]))
   (λ (stx)
     (syntax-case stx ()
       [(_ (x y) ...)

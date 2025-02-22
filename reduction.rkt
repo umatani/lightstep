@@ -8,7 +8,7 @@
                   define-signature unit import export link
                   compound-unit invoke-unit)
          (only-in racket/match match)
-         (only-in "set.rkt" ∅ ∅? ∈ set set-add)
+         (only-in "set.rkt" ∅ ∅? ⊆ ∈ set set-add set-subtract)
          (only-in "transformers.rkt"
                   ID ReaderT WriterT StateT FailT NondetT
                   run-ReaderT run-StateT
@@ -285,13 +285,13 @@
   (define-monad (NondetT (StateT PowerO ID)))
   (define (search ς)
     (do Σ′ ≔ (→ ς)
-        (if (∅? Σ′)
-          (return ς)
-          (do Σ ← get
-              (for/monad+ ([ς′ Σ′]
-                           #:unless (∈ ς′ Σ))
-                (do (put (set-add Σ ς′))
-                    (search ς′)))))))
+        Σ ← get
+        (cond
+          [(∅? Σ′) (return ς)]
+          [(⊆ Σ′ Σ) mzero]
+          [(do (for/monad+ ([ς′ (set-subtract Σ′ Σ)])
+                 (do (put (set-add Σ ς′))
+                     (search ς′))))])))
   (run-StateT (set ς) (search ς)))
 
 

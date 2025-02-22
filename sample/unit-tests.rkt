@@ -382,3 +382,21 @@
   (define-values (mrun22 reducer22) (invoke-unit (r22)))
   (define -->22 (compose mrun22 reducer22))
   (check-equal? (-->22 8) (set 108 208)))
+
+;;=============================================================================
+;; test-inject-set-into-nondet
+
+(define-reduction (r100)
+  #:monad (StateT #f (NondetT ID))
+  [x
+   σ ← get
+   s ← (for/monad+ ([s σ]) (return s))
+   (put ∅)
+   (list s x)])
+(define -->100 (call-with-values
+                (λ () (invoke-unit (r100)))
+                (λ (mrun reducer) (λ (σ x) (mrun σ (reducer x))))))
+(check-equal? (-->100 (set 'a 'b 'c) 888)
+              (set (cons '(a 888) ∅)
+                   (cons '(b 888) ∅)
+                   (cons '(c 888) ∅)))
