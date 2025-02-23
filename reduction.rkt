@@ -1,100 +1,29 @@
 #lang racket/base
-(require (for-syntax racket/base racket/syntax syntax/parse
+(require (for-syntax racket/base syntax/parse
+                     (only-in racket/syntax format-id)
                      (only-in racket/match match-define)
                      (only-in syntax/stx stx-map)
                      (only-in "set.rkt" list→set ∈))
-         racket/require-syntax racket/provide-syntax
+         (only-in racket/require-syntax define-require-syntax)
+         (only-in racket/provide-syntax define-provide-syntax)
          (only-in racket/unit
-                  define-signature unit import export link
-                  compound-unit invoke-unit)
-         (only-in "match.rkt" match)
-         (only-in "set.rkt" ∅ ∅? ⊆ ∈ set set-add set-subtract)
+                 define-signature unit import export link
+                 compound-unit invoke-unit)
+         (only-in "set.rkt" set ∅? ⊆ set-add set-subtract)
          (only-in "transformers.rkt"
-                  ID ReaderT WriterT StateT FailT NondetT
-                  run-ReaderT run-StateT
-                  define-monad with-monad PowerO))
+                  PowerO run-StateT define-monad
+                  ID ReaderT WriterT StateT FailT NondetT)
+         (only-in "nondet.rkt" NondetM nondet-match))
 (provide ReduceM define-reduction repeated reduction-in reduction-out)
 
-
-;;=============================================================================
-;; nondet-match
-
-(define ReduceM (NondetT ID))
-
-(define-syntax (nondet-match stx)
-  (syntax-parse stx
-    [(_ M:id x #:default dclause [pat body ... e] ...)
-     ;; M must be an identifier to transport lexical context. why?
-     #:with do      (format-id #'M "do")
-     #:with return  (format-id #'M "return")
-     #:with mzero   (format-id #'M "mzero")
-     #:with mconcat (format-id #'M "mconcat")
-     #:with nexts #'(with-monad M
-                      (mconcat (match x
-                                 [pat (do body ... (return e))]
-                                 [_ mzero])
-                               ...))
-     (if (syntax-e #'dclause)
-       (with-syntax ([[pat body ... e] #'dclause])
-         #'(let ([ςs nexts])
-             (if (∅? ςs)
-               (with-monad M
-                 (match x
-                   [pat (do body ... (return e))]
-                   [_ mzero]))
-               ςs)))
-       #'nexts)]
-    [(_ M x [pat body ... e] ...)
-     #'(nondet-match M x #:default #f [pat body ... e] ...)]))
-
-
-(module+ test ;;test-nondet-match
-  (require rackunit)
-
-  (check-equal? (nondet-match ReduceM '(1 2 3)
-                              [x x]
-                              [(list a b c) (+ a b c)])
-                (set 6 '(1 2 3)))
-  
-  (check-equal? (nondet-match ReduceM  (set 1 2 3)
-                              [x x]
-                              [(set a b c) (set (set a b) c)]
-                              [(set a ...) (apply + a)])
-                (set (set 1 (set 2 3)) (set 1 3 2) 6))
-
-  (check-equal? (nondet-match ReduceM (set 1 2 3)
-                              [x (nondet-match ReduceM x
-                                               [(set a b c)
-                                                (set (set a b) c)])]
-                              [x (nondet-match ReduceM x
-                                               [(set a ...) (apply + a)])])
-                (set (set 6) (set (set 1 (set 2 3)))))
-  (check-equal? (nondet-match ReduceM '(1 2 3)
-                              [`(,x ...) x])
-                (set '(1 2 3)))
-
-  (check-equal? (nondet-match ReduceM '(1 2 3)
-                              [(list a b) (+ a b)])
-                ∅)
-  (check-equal? (nondet-match ReduceM '(1 2 3)
-                              #:default [xs xs]
-                              [(list a b) (+ a b)])
-                (set '(1 2 3)))
-  (check-equal? (nondet-match ReduceM '(1 2 3)
-                              #:default [xs xs]
-                              [(list a b c) (+ a b c)])
-                (set 6))
-
-  (define SRM (StateT #f ReduceM))
-  (check-equal? (run-StateT ∅ (nondet-match SRM '(1 2 3)
-                                            [x
-                                             `(,_ ,y ...) ← (return x)
-                                             y]
-                                            [(list a b c) (+ a b c)]))
-                (set (cons 6 ∅) (cons '(2 3) ∅))))
+(define ReduceM NondetM)
 
 ;;=============================================================================
 ;; define-reduction
+
+;; TODO: local-expandのかわりにsyntax-local-apply-transformer
+;; TODO: inst-xformerをコンパイル時関数にしてescape不要に
+
 
 (begin-for-syntax
   (define-splicing-syntax-class options
@@ -132,18 +61,18 @@
        #'(a′ ...)]
       [a #'a]))
 
-  (struct reduction-desc (mrun import-sig expander))
+  (struct reduction-desc (mrun import-sig inst-xformer))
 
   (define (inst-reduction-info rid args)
     (match-define
-      (reduction-desc _ import-sig-stx expander-stx)
+      (reduction-desc _ import-sig-stx inst-xformer-stx)
       (syntax-local-value rid))
 
     (define def-cxt (syntax-local-make-definition-context))
-    (syntax-local-bind-syntaxes (list #'expander)
-                                (escape-elipsis expander-stx) def-cxt)
+    (syntax-local-bind-syntaxes (list #'inst-xformer)
+                                (escape-elipsis inst-xformer-stx) def-cxt)
 
-    (syntax-parse (local-expand #`(expander #,@args ς)
+    (syntax-parse (local-expand #`(inst-xformer #,@args ς)
                                 'expression
                                 (list #'nondet-match)
                                 def-cxt)
@@ -230,24 +159,25 @@
      #:with (do-body ...) (stx-map rescope-and-escape-elipsis
                                    #`(#,@#'do-bodies-of-super
                                       #,@#'opts.do-bodies))
+     
      #:with default-clause (rescope-and-escape-elipsis
                             (if (syntax-e #'opts.default)
                               #'opts.default
                               #'default-of-super))
 
-     #:with expander #'(λ (stx)
-                         (syntax-parse stx
-                           [(_ param ... ς)
-                            #'(let ()
-                                (define M′ M)
-                                do-body ...
-                                (nondet-match M′ ς
-                                              #:default default-clause
-                                              rule ...))]))
+     #:with inst-xformer #'(λ (stx)
+                             (syntax-parse stx
+                               [(_ param ... ς)
+                                #'(let ()
+                                    (define M′ M)
+                                    do-body ...
+                                    (nondet-match M′ ς
+                                                  #:default default-clause
+                                                  rule ...))]))
      
      #:with rdesc (format-id #'rid "~a-info" (syntax-e #'rid))
      #'(begin
-         (define-syntax rdesc (reduction-desc #'mrun #'imports #'expander))
+         (define-syntax rdesc (reduction-desc #'mrun #'imports #'inst-xformer))
          (define-syntax (rid stx)
            (syntax-parse stx
              [(_ arg (... ...))
@@ -260,14 +190,14 @@
   (syntax-parse stx
     [(_ rid:id arg ...)
      #:do [(match-define
-             (reduction-desc mrun import-sigs expander-stx)
+             (reduction-desc mrun import-sigs inst-xformer-stx)
              (syntax-local-value #'rid))]
 
      #`(unit
          (import #,@import-sigs) (export)
 
          (define-signature M^
-           ((define-syntaxes (inst) #,(escape-elipsis expander-stx))))
+           ((define-syntaxes (inst) #,(escape-elipsis inst-xformer-stx))))
 
          (invoke-unit
           (compound-unit

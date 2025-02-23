@@ -1,5 +1,6 @@
 #lang racket/base
-(require (for-syntax racket/base racket/syntax syntax/parse
+(require (for-syntax racket/base syntax/parse
+                     (only-in racket/syntax format-id)
                      (only-in racket/list splitf-at)
                      (only-in syntax/stx stx-map))
          (only-in racket/match [match r:match]))
@@ -27,14 +28,14 @@
                        [(front back) (splitf-at cs char-upper-case?)])
            (if (and (not (null? front))
                     (andmap (compose1 not char-lower-case?) back))
-             (format-id id "~a?" (list->string front))
+             (format-id id "~a?" (list->string front) #:source id)
              #f))))
 
   (define (convert-category-id pat)
     (syntax-parse pat
       [x:id
        (if (category-id? #'x)
-         #`(? #,(category-id→pred-id #'x) x)
+         (quasisyntax/loc #'x (? #,(category-id→pred-id #'x) x))
          #'x)]
       [((~datum ?) e p ...)
        #'(? e p ...)]

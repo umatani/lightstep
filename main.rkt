@@ -4,7 +4,7 @@
 (provide (all-from-out "base.rkt"))
 
 (module+ test
-  (require (submod lightstep/reduction test))
+  (require (submod lightstep/nondet test))
 
   (require (submod lightstep/sample/unit-tests scope2))
 
