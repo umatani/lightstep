@@ -290,10 +290,10 @@
    σ
    "skip"]
 
-  [`(≔ ,X ,a)
+  [`(≔ ,x ,a)
    m ← (-->a a)
    σ ← get
-   σ′ ≔ (σ X m)
+   σ′ ≔ (σ x m)
    (put σ′)
    σ′
    "assign"]
@@ -586,13 +586,13 @@
   ['skip
    (void)]
 
-  [`(≔ ,X ,a)
+  [`(≔ ,x ,a)
    a′ ← (-->₁a a)
-   `(≔ ,X ,a′)]
+   `(≔ ,x ,a′)]
 
-  [`(≔ ,X ,(? number? m))
+  [`(≔ ,x ,(? number? m))
    σ ← get
-   (put (σ X m))
+   (put (σ x m))
    (void)]
 
   [`(seq ,c₀ ,c₁)

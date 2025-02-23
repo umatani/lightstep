@@ -112,7 +112,7 @@
 
 (define ((eval-r -->) B)
   (match (--> B)
-    [(set (? R? R)) R]
+    [(set R) R]
     [(set _) (error "get stuck")]
     [_ (error "non-deterministic relation")]))
 

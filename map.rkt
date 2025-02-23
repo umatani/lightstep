@@ -1,7 +1,7 @@
 #lang racket/base
 (require (for-syntax racket/base)
-         (only-in racket/match define-match-expander)
          (only-in racket/hash hash-union)
+         (only-in racket/match define-match-expander)
          (only-in "set.rkt" for/set [∈ s:∈]))
 (provide ↦ map? ∅ ∈ ⊔ size map->list hash->map
          keys rng restrict map-remove for/map in-map

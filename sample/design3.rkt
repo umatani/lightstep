@@ -3,7 +3,7 @@
          (only-in racket/random random-ref)
          (for-syntax syntax/parse)
          (only-in "design1.rkt" val? cxt))
-(provide subst EC (reduction-out -->PCF₅-rule))
+(provide subst ECxt (reduction-out -->PCF₅-rule))
 
 ;;;;;;;;;; 拡張性のためのさらなる機能(つづき)
 
@@ -42,10 +42,10 @@
     [`(amb ,es ...) `(amb ,@(map (λ (e) (subst e x e′)) ;; NEW
                                  es))]))
 
-(define-match-expander EC
+(define-match-expander ECxt
   (syntax-parser
-    [(EC p)
-     #'(cxt EC p
+    [(ECxt p)
+     #'(cxt ECxt p
             `(+ ,(? val? v) □)
             `(+ □ ,e₁)
             `(<= ,(? val? v) □)
@@ -76,9 +76,9 @@
    e′ ≔<2> (select es)
    e′
    "amb"]
-  [(EC e)
+  [(ECxt e)
    e′ ← (--> e)
-   (EC e′)
+   (ECxt e′)
    "EC"])
 
 ;; One benefit of parameterization over non-lexical extension is ...

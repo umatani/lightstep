@@ -1,6 +1,6 @@
 #lang racket
 (require lightstep/base
-         (only-in "design3.rkt" EC))
+         (only-in "design3.rkt" ECxt))
 
 (module+ test (require rackunit))
 
@@ -75,9 +75,9 @@
    y ≔ (gensym 'y)
    `((λ (,x) ,e) (λ (,y) ((fix (λ (,x) ,e)) ,y)))
    "fix"]
-  [(EC e)
+  [(ECxt e)
    e′ ← (--> e)
-   (EC e′)
+   (ECxt e′)
    "EC"])
 
 (module+ test

@@ -7,6 +7,9 @@
                   reduction-in reduction-out))
 (provide (all-from-out "reduction.rkt"))
 
+(require "match.rkt")
+(provide (all-from-out "match.rkt"))
+
 (require "set.rkt")
 (define set-∅ ∅)
 (define set-∈ ∈)

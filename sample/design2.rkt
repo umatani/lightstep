@@ -1,6 +1,6 @@
 #lang racket
 (require lightstep/base
-         (only-in "design1.rkt" val? EC)
+         (only-in "design1.rkt" val? ECxt)
          (reduction-in "design1.rkt" -->₂-rule)
          (reduction-in "design1.rkt" -->PCF₃-rule))
 (provide (reduction-out -->PCF₄-rule) subst)
@@ -51,9 +51,9 @@
     ))
 
 (define-reduction (-->PCF₄-rule) #:super (-->PCF₃-rule)
-  [(EC e)
+  [(ECxt e)
    e′ ← (-->PCF₄ e) ;; override (PCF₃ -> PCF₄)
-   (EC e′)
+   (ECxt e′)
    "EC"])
 (define -->PCF₄ (call-with-values
                  (λ () (invoke-unit (-->PCF₄-rule)))

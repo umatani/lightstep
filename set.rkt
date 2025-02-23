@@ -1,7 +1,7 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
-         (only-in racket/match define-match-expander)
-         (prefix-in r: racket/set))
+         (prefix-in r: racket/set)
+         (only-in racket/match define-match-expander))
 (provide set set? ∅ ∅? ∪ set-add set-remove set-subtract ⊆
          set-size set=? set-map ∈ set→list list→set for/set in-set)
 
@@ -92,7 +92,7 @@
 
 
 (module+ test
-  (require (only-in racket/match match))
+  (require (only-in "match.rkt" match))
 
   (define s (set 1 2 3))
   (match s

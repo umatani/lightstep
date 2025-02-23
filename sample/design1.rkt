@@ -3,7 +3,7 @@
          (for-syntax syntax/parse syntax/stx))
 (provide (reduction-out -->PCF₃-rule)
          (reduction-out -->₂-rule)
-         val? subst EC cxt)
+         val? subst ECxt cxt)
 
 (module+ test (require rackunit))
 
@@ -331,10 +331,10 @@
            (cxt C pat h2) ...)]))
 
 ;; この定義は載せる
-(define-match-expander EC
+(define-match-expander ECxt
   (syntax-parser
-    [(EC p)
-     #'(cxt EC p
+    [(ECxt p)
+     #'(cxt ECxt p
         `(+ ,(? val? v) □)
         `(+ □ ,e1)
         `(<= ,(? val? v) □)
@@ -346,48 +346,48 @@
 
 ;; ↑は以下に展開される
 #;
-(define-match-expander EC
+(define-match-expander ECxt
   (lambda (stx)
     (syntax-case stx ()
-      [(EC e) #'(or
-                 (and `(fix ,e)
-                      (app (match-lambda
-                             [`(fix ,_)
-                              (λ (x) `(fix ,x))]) EC))
-                 (and `(+ ,(? val?) ,e)
-                      (app (match-lambda
-                             [`(+ ,(? val? v) ,e)
-                              (λ (x) `(+ ,v ,x))]) EC))
-                 (and `(+ ,e ,_)
-                      (app (match-lambda
-                             [`(+ ,_ ,e1)
-                              (λ (x) `(+ ,x ,e1))]) EC))
-                 (and `(<= ,(? val?) ,e)
-                      (app (match-lambda
-                             [`(<= ,(? val? v) ,e)
-                              (λ (x) `(<= ,v ,x))]) EC))
-                 (and `(<= ,e ,_)
-                      (app (match-lambda
-                             [`(<= ,_ ,e1)
-                              (λ (x) `(<= ,x ,e1))]) EC))
-                 (and `(if ,e ,_ ,_)
-                      (app (match-lambda
-                             [`(if ,_ ,e1 ,e2)
-                              (λ (x) `(if ,x ,e1 ,e2))]) EC))
-                 (and `(,(? val?) ,e)
-                      (app (match-lambda
-                             [`(,(? val? v) ,e)
-                              (λ (x) `(,v ,x))]) EC))
-                 (and `(,e ,_)
-                      (app (match-lambda
-                             [`(,_ ,e1)
-                              (λ (x) `(,x ,e1))]) EC)))])))
+      [(ECxt e) #'(or
+                   (and `(fix ,e)
+                        (app (match-lambda
+                               [`(fix ,_)
+                                (λ (x) `(fix ,x))]) ECxt))
+                   (and `(+ ,(? val?) ,e)
+                        (app (match-lambda
+                               [`(+ ,(? val? v) ,e)
+                                (λ (x) `(+ ,v ,x))]) ECxt))
+                   (and `(+ ,e ,_)
+                        (app (match-lambda
+                               [`(+ ,_ ,e1)
+                                (λ (x) `(+ ,x ,e1))]) ECxt))
+                   (and `(<= ,(? val?) ,e)
+                        (app (match-lambda
+                               [`(<= ,(? val? v) ,e)
+                                (λ (x) `(<= ,v ,x))]) ECxt))
+                   (and `(<= ,e ,_)
+                        (app (match-lambda
+                               [`(<= ,_ ,e1)
+                                (λ (x) `(<= ,x ,e1))]) ECxt))
+                   (and `(if ,e ,_ ,_)
+                        (app (match-lambda
+                               [`(if ,_ ,e1 ,e2)
+                                (λ (x) `(if ,x ,e1 ,e2))]) ECxt))
+                   (and `(,(? val?) ,e)
+                        (app (match-lambda
+                               [`(,(? val? v) ,e)
+                                (λ (x) `(,v ,x))]) ECxt))
+                   (and `(,e ,_)
+                        (app (match-lambda
+                               [`(,_ ,e1)
+                                (λ (x) `(,x ,e1))]) ECxt)))])))
 
 (module+ test
   (printf "----- EC ------------\n")
   (check-equal?
    (match '(if (+ 1 2) (+ 3 4) 5)
-     [(EC e) (EC `(<= ,e ,e))])
+     [(ECxt e) (ECxt `(<= ,e ,e))])
    '(if (<= (+ 1 2) (+ 1 2)) (+ 3 4) 5)))
 
 
@@ -401,9 +401,9 @@
    #:when (and (val? e₁) (not (false? e₁)))
    e₂ "if-true"]  
 
-  [(EC e)
+  [(ECxt e)
    e′ ← (-->PCF₃ e)
-   (EC e′)
+   (ECxt e′)
    "EC"])
 
 (define-values (mrun-PCF₃ reducer-PCF₃) (invoke-unit (-->PCF₃-rule)))

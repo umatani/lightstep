@@ -2,12 +2,12 @@
 (require (for-syntax racket/base
                      (only-in racket/syntax format-id)
                      (only-in syntax/parse syntax-parse))
-         (only-in racket/match match match-define match-let match-λ
-                  define-match-expander)
+         (only-in racket/match match-define define-match-expander)
          (only-in racket/unit define-signature define-unit import export)
          (only-in racket/sequence sequence-fold)
          (only-in rackunit check-equal?)
          (only-in "map.rkt" [∅ m:∅] ⊔)
+         (only-in "match.rkt" match match-let match-λ)
          (only-in "set.rkt" [∅ s:∅] set ∪ set-map list→set))
 (provide (all-defined-out))
 
