@@ -14,7 +14,7 @@
 (define-reduction (-->₀-rule)
   [(cons x y) x "car"])
 
-;; parameterized rule set のため (引数ありは後述2) TODO
+;; parameterized rule set のため (引数ありは後述2)
 (define-values (mrun₀ reducer₀) (invoke-unit (-->₀-rule)))
 (define -->₀ (compose1 mrun₀ reducer₀))
 

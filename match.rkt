@@ -10,6 +10,8 @@
                      (rename-out [category-id→pred-id
                                   category-id->pred-id])))
 
+(module+ test (require rackunit))
+
 ;; ID... is a synonym for (? ID? ID...)
 ;; (Camel cases are reserved for struct names)
 (begin-for-syntax
@@ -19,7 +21,11 @@
                               (symbol->string (syntax->datum id)))]
                        [(front back) (splitf-at cs char-upper-case?)])
            (and (not (null? front))
-                (andmap (compose1 not char-lower-case?) back)))))
+                (andmap (compose1 not
+                                  (λ (c)
+                                    (or (char=? c #\?)
+                                        (char-lower-case? c))))
+                        back)))))
 
   (define (category-id→pred-id id)
     (and (identifier? id)
@@ -35,7 +41,7 @@
     (syntax-parse pat
       [x:id
        (if (category-id? #'x)
-         (quasisyntax/loc #'x (? #,(category-id→pred-id #'x) x))
+         #`(? #,(category-id→pred-id #'x) x)
          #'x)]
       [((~datum ?) e p ...)
        #'(? e p ...)]
@@ -50,6 +56,7 @@
     [(_ expr [pat . rest] ...)
      #:with (pat′ ...) (stx-map convert-category-id #'(pat ...))
      #'(r:match expr [pat′ . rest] ...)]))
+
 
 (define-syntax (match* stx)
   (syntax-parse stx
@@ -72,36 +79,59 @@
   (define NUM? number?)
   (define X? symbol?)
 
-  (match '(1 2 3)
-    [(cons NUM (cons NUM₁ x)) (list NUM x NUM₁)])
+  (check-equal? (match '(1 2 3)
+                  [(cons NUM (cons NUM₁ x)) (list NUM x NUM₁)])
+                '(1 (3) 2))
 
-  (match* ('(1 2)
-           #(1 2 3 4))
-    [((list a b) (vector x ...))
-     (list b a x)])
+  (check-equal? (match '(1 2 3)
+                  [`(,(? number? A) ,□ ,(? number?))
+                   `(,A ,□ ,A)])
+                '(1 2 1))
 
-  ((match-λ [s s]) 3)
+  (check-equal? (match '(1 2 3)
+                  [`(,(? number? A) ,□ ,NUM″)
+                   `(,NUM″ ,□ ,A)])
+                '(3 2 1))
+
+  (check-equal? (match '(1 2 3)
+                  [`(,(? number? A) ,□ ,(? NUM? NUM″))
+                   `(,NUM″ ,□ ,A)])
+                '(3 2 1))
+
+
+
+  (check-equal? (match* ('(1 2)
+                         #(1 2 3 4))
+                  [((list a b) (vector x ...))
+                   (list b a x)])
+                '(2 1 (1 2 3 4)))
+
+  (check-equal? ((match-λ [s s]) 3) 3)
   ;((match-λ [X′ X′]) 3)
-  ((match-λ [X′ X′]) 'foo)
-
-  ((match-λ* [(list (list a b) (vector x ...))
-              (list b a x)])
-   '(1 2)
-   #(1 2 3 4))
+  (check-equal? ((match-λ [X′ X′]) 'foo) 'foo)
   
-  (match-let ([(list a b) '(1 2)]
-              [(vector x ...) #(a b c d)])
-    (list b a x))
+  (check-equal? ((match-λ* [(list (list a b) (vector x ...))
+                            (list b a x)])
+                 '(1 2)
+                 #(1 2 3 4))
+                '(2 1 (1 2 3 4)))
+  
+  (check-equal? (match-let ([(list a b) '(1 2)]
+                            [(vector x ...) #(a b c d)])
+                  (list b a x))
+                '(2 1 (a b c d)))
   ;; (match-let ([(list a b) '(1 2)]
   ;;             [(vector NUM′ ...) #(a b c d)])
   ;;   (list b a NUM′))
-  (match-let ([(list a b) '(1 2)]
-              [(vector NUM′ ...) #(1 2 3 4)])
-    (list b a NUM′))
+  (check-equal? (match-let ([(list a b) '(1 2)]
+                            [(vector NUM′ ...) #(1 2 3 4)])
+                  (list b a NUM′))
+                '(2 1 (1 2 3 4)))
   ;; (match-let ([(list a b) '(1 2)]
   ;;             [(vector X ...) #(1 2 3 4)])
   ;;   (list b a X))
-  (match-let ([(list a b) '(1 2)]
-              [(vector X₁ ...) #(a b c d)])
-    (list b a X₁))
+  (check-equal? (match-let ([(list a b) '(1 2)]
+                            [(vector X₁ ...) #(a b c d)])
+                  (list b a X₁))
+                '(2 1 (a b c d)))
   )

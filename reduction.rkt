@@ -21,10 +21,6 @@
 ;;=============================================================================
 ;; define-reduction
 
-;; TODO: local-expandのかわりにsyntax-local-apply-transformer
-;; TODO: inst-xformerをコンパイル時関数にしてescape不要に
-
-
 (begin-for-syntax
   (define-splicing-syntax-class options
     (pattern (~seq (~alt (~optional (~seq #:monad m)
@@ -65,19 +61,16 @@
 
   (define (inst-reduction-info rid args)
     (match-define
-      (reduction-desc _ import-sig-stx inst-xformer-stx)
+      (reduction-desc _ import-sig-stx inst-xformer)
       (syntax-local-value rid))
 
-    (define def-cxt (syntax-local-make-definition-context))
-    (syntax-local-bind-syntaxes (list #'inst-xformer)
-                                (escape-elipsis inst-xformer-stx) def-cxt)
-
-    (syntax-parse (local-expand #`(inst-xformer #,@args ς)
-                                'expression
-                                (list #'nondet-match)
-                                def-cxt)
-      #:datum-literals [let-values nondet-match]
-      [(let-values ()
+    (syntax-parse
+        ;; both can work
+        ;; (inst-xformer #`(#,@args ς))
+        (syntax-local-apply-transformer inst-xformer rid 'expression #f
+                                        #`(#,@args ς))
+      #:datum-literals [let nondet-match]
+      [(let ()
          do-body ...
          (nondet-match _ _ #:default drule rule ...))
        #`(#,import-sig-stx
@@ -116,8 +109,6 @@
         ...)
      #:do [(define (rescope stx)
              (replace-lexical-context #'rid stx))
-           (define (rescope-and-escape-elipsis stx)
-             (rescope (escape-elipsis stx)))
            (define overridden?
              (let ([rnams (list→set (syntax->datum #'(rnam ...)))])
                (syntax-parser
@@ -152,32 +143,33 @@
                              (filter (compose1 not overridden?)
                                      (syntax->list #'rules-of-super)))
 
-     #:with (rule ...) (stx-map rescope-and-escape-elipsis
+     #:with (rule ...) (stx-map rescope
                                 #'(sup-rule ...
                                             [pat _ ≔ rnam body ... e] ...))
 
-     #:with (do-body ...) (stx-map rescope-and-escape-elipsis
+     #:with (do-body ...) (stx-map rescope
                                    #`(#,@#'do-bodies-of-super
                                       #,@#'opts.do-bodies))
      
-     #:with default-clause (rescope-and-escape-elipsis
+     #:with default-clause (rescope
                             (if (syntax-e #'opts.default)
                               #'opts.default
                               #'default-of-super))
 
-     #:with inst-xformer #'(λ (stx)
-                             (syntax-parse stx
-                               [(_ param ... ς)
-                                #'(let ()
-                                    (define M′ M)
-                                    do-body ...
-                                    (nondet-match M′ ς
-                                                  #:default default-clause
-                                                  rule ...))]))
+     #:with inst-xformer (escape-elipsis
+                          #'(λ (stx)
+                              (syntax-parse stx
+                                [(param ... ς)
+                                 #'(let ()
+                                     (define M′ M)
+                                     do-body ...
+                                     (nondet-match M′ ς
+                                                   #:default default-clause
+                                                   rule ...))])))
      
      #:with rdesc (format-id #'rid "~a-info" (syntax-e #'rid))
      #'(begin
-         (define-syntax rdesc (reduction-desc #'mrun #'imports #'inst-xformer))
+         (define-syntax rdesc (reduction-desc #'mrun #'imports inst-xformer))
          (define-syntax (rid stx)
            (syntax-parse stx
              [(_ arg (... ...))
@@ -190,23 +182,12 @@
   (syntax-parse stx
     [(_ rid:id arg ...)
      #:do [(match-define
-             (reduction-desc mrun import-sigs inst-xformer-stx)
+             (reduction-desc mrun import-sigs inst-xformer)
              (syntax-local-value #'rid))]
-
      #`(unit
          (import #,@import-sigs) (export)
-
-         (define-signature M^
-           ((define-syntaxes (inst) #,(escape-elipsis inst-xformer-stx))))
-
-         (invoke-unit
-          (compound-unit
-           (import) (export)
-           (link (([m : M^]) (unit (import) (export M^)))
-                 (() (unit (import M^) (export)
-                       (define (reducer ς) (inst arg ... ς))
-                       (values #,mrun reducer))
-                     m)))))]))
+         (define (reducer ς) #,(inst-xformer #'(arg ... ς)))
+         (values #,mrun reducer))]))
 
 ;;=============================================================================
 ;; reflexive and transitive closure

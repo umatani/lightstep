@@ -1,38 +1,102 @@
 #lang racket/base
 (require
- (for-syntax racket/base syntax/parse
+ (for-syntax racket/base racket/syntax syntax/parse
              (only-in racket/syntax format-id)
              (only-in syntax/stx stx-map))
  (only-in "set.rkt" set ∅ ∅?)
  (only-in "match.rkt" match)
  (only-in "transformers.rkt" ID StateT NondetT with-monad run-StateT))
-(provide NondetM nondet-match)
+(provide NondetM nondet nondet-match define-nondet-match-expander)
+
+(module+ test   (require rackunit))
+
+;;=============================================================================
+;; define-nondet-match-expander
+
+(define-syntax (define-nondet-match-expander stx)
+  (syntax-parse stx
+    [(_ id:id proc)
+     (syntax/loc #'stx
+       (define-syntax id (nondet-match-expander proc)))]))
+
+(module+ test
+  (define-nondet-match-expander mycons
+    (λ (stx)
+      (syntax-parse stx
+        [(_ a b) #'(cons a b)])))
+
+  (define-nondet-match-expander mytriple
+    (λ (stx)
+      (syntax-parse stx
+        [(_ x y z) #'(mycons x (mycons y (mycons z '())))])))
+
+  (check-equal? (nondet-match NondetM '(1 2 3)
+                              [x x]
+                              [(mycons a b) (apply + a b)])
+                (set 6 '(1 2 3)))
+
+  (check-equal? (nondet-match NondetM '(1 2 3)
+                              [x x]
+                              [(mytriple a b c) (+ a b c)])
+                (set 6 '(1 2 3))))
+
 
 ;;=============================================================================
 ;; nondet-match
 
 (define NondetM (NondetT ID))
 
-(struct nondet-pat (pats) #:transparent)
-
-;; (match '()
-;;   [(nondet-pat x (cons x y) `(,x ,y ...))
-;;    'OK]
-;;   [_ 'NG])
-
-(match '()
-  [(nondet-pat (list x (cons x y) `(,x ,y ...)))
-   'OK]
-  [_ 'NG])
+;; (nondet p ...) pattern
+(define-syntax nondet (λ (stx) (raise-syntax-error
+                                #f "must not be used outside pattern" stx)))
 
 (begin-for-syntax
-  ;; If pat is expander, then do syntax-local-apply-transformer and
-  ;; recurses expand-nondet with the result.
-  ;; If nondet-pat, unfolds to multiple clauses.
-  ;; Otherwise, it returns the result as is.
-  (define (expand-nondet clause)
-    (list clause))
-  )
+  (struct nondet-match-expander (proc))
+
+  (define (parse pat)
+    (syntax-parse pat
+      [(id:id . args)
+        #:do [(define lval (syntax-local-value/record
+                            #'id nondet-match-expander?))]
+        #:when lval
+        (let ([expander (nondet-match-expander-proc lval)])
+          (with-syntax ([pat′ (syntax-local-apply-transformer
+                               expander #'id 'expression #f
+                               #'(id . args))])
+            (parse #'pat′)))]
+      [(p ...)
+       #:with (p′ ...) (stx-map parse #'(p ...))
+       #'(p′ ...)]
+      [p #'p]))
+
+  (define (products ps)
+    (if (null? ps)
+      '(())
+      (for*/list ([ps′ (products (cdr ps))]
+                  [p (syntax->list (car ps))])
+        (cons p ps′))))
+
+  (define (expand-nondet pat)
+    (syntax-parse pat
+      #:literals (nondet)
+
+      [(nondet p ...)
+       #:with ((p′ ...) ...) (stx-map expand-nondet #'(p ...))
+       #'(p′ ... ...)]
+
+      [(p ...)
+       #:with (ps′ ...) (stx-map expand-nondet #'(p ...))
+       #:with (p′ ...) (products (syntax->list #'(ps′ ...)))
+       #'(p′ ...)]
+      
+      [p #'(p)]))
+
+  (define (expand-clause clause)
+    (syntax-parse clause
+      [(pat body ...)
+       #:with pat′ (parse #'pat)
+       #:with (pat″ ...) (expand-nondet #'pat′)
+       #'([pat″ body ...] ...)])))
 
 (define-syntax (nondet-match stx)
   (syntax-parse stx
@@ -43,17 +107,17 @@
      #:with mzero   (format-id #'M "mzero")
      #:with mconcat (format-id #'M "mconcat")
 
-     #:with (((pat′ body′ ... e′) ...) ...) (stx-map expand-nondet
+     #:with (((pat′ body′ ... e′) ...) ...) (stx-map expand-clause
                                                      #'([pat body ...] ...))
      #:with nexts #'(with-monad M
                       (mconcat (match x
-                                 [pat′ (do body′ ... (return e′))] ...
-                                 [_ mzero])
+                                 [pat′ (do body′ ... (return e′))]
+                                 [_ mzero]) ...
                                ...))
      (if (and (attribute dclause) (syntax-e #'dclause))
        (with-syntax ([[pat body ...] #'dclause])
          (define/syntax-parse ((pat′ body′ ... e′) ...)
-           (expand-nondet #'[pat body ...]))
+           (expand-clause #'[pat body ...]))
          #'(let ([ςs nexts])
              (if (∅? ςs)
                (with-monad M
@@ -63,10 +127,7 @@
                ςs)))
        #'nexts)]))
 
-
-(module+ test ;;test-nondet-match
-  (require rackunit)
-
+(module+ test
   (check-equal? (nondet-match NondetM '(1 2 3)
                               [x x]
                               [(list a b c) (+ a b c)])
@@ -110,34 +171,18 @@
                                             [(list a b c) (+ a b c)]))
                 (set (cons 6 ∅) (cons '(2 3) ∅))))
 
-;; TODO: define-nondet-match-expander
-;;   with syntax-local-apply-transformer
-(begin-for-syntax
- (struct nondet-match-expander (proc)))
+(module+ test
+  (check-equal? (nondet-match NondetM '(a 2) [`(,x ,y) x]) (set 'a))
+  (check-equal? (nondet-match NondetM '(a 2) [`(,z ,x) x]) (set 2))
+  (check-equal? (nondet-match NondetM '(a 2)
+                              [`(,x ,y) x]
+                              [`(,z ,x) x])
+                (set 'a 2))
 
-(define-syntax (define-nondet-match-expander stx)
-  (syntax-parse stx
-    [(_ id:id proc)
-     (syntax/loc #'stx
-       (define-syntax id (nondet-match-expander proc)))]))
+  (check-equal? (nondet-match NondetM '(a 2)
+                              [(nondet `(,x ,y) `(,z ,x)) x])
+                (set 'a 2))
 
-(define-nondet-match-expander hoge
-  (λ (stx)
-    (syntax-parse stx
-      [(x ...) #'(x ... x ...)])))
-
-(define-syntax (apply-expander stx)
-  (syntax-parse stx
-    ([_ id expr]
-     (let ([expander (syntax-local-value #'id)])
-       (if (nondet-match-expander? expander)
-         (let ([expander (nondet-match-expander-proc expander)])
-           (with-syntax ([expr′
-                          ;(expander #'expr)
-                          (syntax-local-apply-transformer
-                           expander #f #;#'id 'expression #f
-                           #'expr)])
-             #''expr′))
-         (raise-syntax-error #f "not a nondet-expander" stx #'id))))))
-
-(apply-expander hoge (+ 1 2))
+  (check-equal? (nondet-match NondetM (set 1 2 3)
+                              [(nondet (nondet x (set 1 x 2)) (set x 2 3)) x])
+                (set (set 1 2 3) 3 1)))
