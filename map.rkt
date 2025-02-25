@@ -85,7 +85,7 @@
 (define (map-remove m k)
   (hash->map (hash-remove (repl->hash m) k)))
 
-(define (⊔ m₁ #:combine [cod-⊔ (λ (x _) x)] . mₙ)
+(define (⊔ m₁ #:combine [cod-⊔ (λ (_ x) x)] . mₙ)
   (repl (apply hash-union
                (repl->hash m₁)
                (foldl (λ (m a) (cons (repl->hash m) a)) '() mₙ)

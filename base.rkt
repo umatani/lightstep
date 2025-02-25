@@ -20,3 +20,6 @@
                   repeated
                   reduction-in reduction-out))
 (provide (all-from-out "reduction.rkt"))
+
+(require "syntax.rkt")
+(provide (all-from-out "syntax.rkt"))
