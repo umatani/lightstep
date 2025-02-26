@@ -37,5 +37,5 @@
   (require (submod lightstep/sample/aam/aam3_4 PCFρ))
   (require (submod lightstep/sample/aam/aam3_4 PCFς))
   (require (submod lightstep/sample/aam/aam3_4 PCFσ))
-
-  )
+  (require (submod lightstep/sample/aam/aam3_4 PCFσ/alloc))
+  (require (submod lightstep/sample/aam/aam3_4 PCFσ*)))

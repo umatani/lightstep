@@ -240,7 +240,7 @@
 
 (module+ PCFς
   (require (submod ".." PCFρ))
-  (provide PCFς vρ (reduction-out -->vς-rules) injς)
+  (provide PCFς  (reduction-out -->vς-rules) injς)
 
   (define-language PCFς #:super PCFρ
     [F ∷=
@@ -257,11 +257,11 @@
        `(,C ,C′ ...)]
     [ς ∷= `(,C ,K) V])
 
-  (define vρ (call-with-values
-              (λ () (invoke-unit (vρ-rules)))
-              compose1))
-
   (define-reduction (-->vς-rules)
+    #:do [(define-reduction (rules) #:super (vρ-rules))
+          (define vρ (call-with-values
+                       (λ () (invoke-unit (rules)))
+                       compose1))]
     ; Apply
     [`(,C ,K)
      ; where
@@ -313,40 +313,36 @@
 ;; 3.8 Heap-allocated bindings
 
 (module+ PCFσ
-  
   (require (reduction-in (submod ".." PCFρ) vρ-rules)
            (submod ".." PCFς))
+  (provide PCFσ (reduction-out -->vσ-rules) injσ formals alloc)
 
   (define-language PCFσ #:super PCFς
     [Σ ∷= (? map?)]
     [A ∷= (? (λ (_) #t))]
     [σ ∷= `(,(? ς?) ,Σ) V])
  
-  ;; remove rules manually
-  (define-reduction (vρ′-rules) #:super (vρ-rules)
-    [x #:when #f x "ρ-x"]
-    [x #:when #f x "β"]
-    [x #:when #f x "rec-β"])
-
-  (define vρ′ (call-with-values
-               (λ () (invoke-unit (vρ′-rules)))
-               compose1))
-
-  (define-reduction (-->vς′-rules) #:super (-->vς-rules)
-    ; Apply
-    [`(,C ,K)
-     ; where
-     C′ ← (vρ′ C)
-     ; -->
-     `(,C′ ,K)
-     "ap"])
-
-  (define -->vς′ (call-with-values
-                  (λ () (invoke-unit (-->vς′-rules)))
-                  compose1))
-
-
   (define-reduction (-->vσ-rules)
+    #:do [(define-reduction (-->vς′-rules) #:super (-->vς-rules)
+            #:do[;; remove rules manually
+                 (define-reduction (vρ′-rules) #:super (vρ-rules)
+                   [x #:when #f x "ρ-x"]
+                   [x #:when #f x "β"]
+                   [x #:when #f x "rec-β"])
+                 (define vρ′ (call-with-values
+                                (λ () (invoke-unit (vρ′-rules)))
+                                compose1))]
+            ; Apply
+            [`(,C ,K)
+             ; where
+             C′ ← (vρ′ C)
+             ; -->
+             `(,C′ ,K)
+             "ap"])
+
+          (define -->vς′ (call-with-values
+                           (λ () (invoke-unit (-->vς′-rules)))
+                           compose1))]
     [`(,(? ς? ς) ,Σ)
      ; where
      (? ς? ς′) ← (-->vς′ ς)
@@ -380,8 +376,8 @@
      "β"]
 
     [(and σ `(((,(and f `((μ [,X′ : ,T′]
-                             (λ ([,X : ,T] ...) ,M)) ,(? ρ? ρ))) ,V ...)
-               ,K) ,Σ))
+                               (λ ([,X : ,T] ...) ,M)) ,(? ρ? ρ))) ,V ...)
+                ,K) ,Σ))
      ; where
      `(,A′ ,A ...) ≔ (alloc σ)
      ; -->
@@ -415,4 +411,117 @@
   (check-equal?  (car ((repeated -->vσ) (injσ fact-5))) (set 120)))
 
 ;;-----------------------------------------------------------------------------
-;; 3.8 Heap-allocated bindings
+;; 3.9 Abstracting over alloc
+
+(module+ PCFσ/alloc
+  (require (reduction-in (submod ".." PCFρ) vρ-rules)
+           (reduction-in (submod ".." PCFς) -->vς-rules)
+           (rename-in (submod ".." PCFσ) [PCFσ orig-PCFσ]))
+  (provide (reduction-out -->vσ/alloc-rules))
+
+  (define-language PCFσ #:super orig-PCFσ)
+
+  (define-reduction (-->vσ/alloc-rules alloc) #:super (-->vσ-rules))
+
+  (define -->vσ (call-with-values
+                  (λ () (invoke-unit (-->vσ/alloc-rules alloc)))
+                  compose1))
+
+  (check-equal?  (car ((repeated -->vσ) (injσ fact-5))) (set 120))
+
+  (define (alloc-gensym σ)
+    (match σ
+      [`((((,M ,(? ρ?)) ,V ...) ,K) ,Σ)
+       (map gensym (formals M))]))  
+
+  (let ()
+    (define --> (call-with-values
+                 (λ () (invoke-unit (-->vσ/alloc-rules alloc-gensym)))
+                 compose1))
+    ;(car ((repeated -->) (injσ '((λ ([x : num]) (λ ([y : num]) x)) 100))))
+    (check-equal? (car ((repeated -->) (injσ fact-5))) (set 120)))
+
+  (define (alloc-nat σ)
+    (match σ
+      [`((((,M ,(? ρ?)) ,V ...) ,K) ,Σ)
+       (let ([n (add1 (apply max 0 (set→list (keys Σ))))])
+         (build-list (length (formals M))
+                     (λ (i) (+ i n))))]))  
+
+  (let ()
+    (define --> (call-with-values
+                 (λ () (invoke-unit (-->vσ/alloc-rules alloc-nat)))
+                 compose1))
+    ;(car ((repeated -->) (injσ '((λ ([x : num]) (λ ([y : num]) x)) 100))))
+    (check-equal? (car ((repeated -->) (injσ fact-5))) (set 120))))
+
+;;-----------------------------------------------------------------------------
+;; 3.10 Heap-allocated continuations
+
+(module+ PCFσ*
+  (require (reduction-in (submod ".." PCFρ) vρ-rules)
+           (reduction-in (submod ".." PCFς) -->vς-rules)
+           (only-in (submod ".." PCFσ) PCFσ formals injσ)
+           (submod ".." PCFσ/alloc))
+
+  (define-language PCFσ* #:super PCFσ
+    [K ∷= '() `(,F ,A)]
+    [U ∷= V K])
+
+  ;; TODO: eliminate duplication
+  ;;   define-metafunction?
+  (define (alloc σ)
+    (match σ
+      [`((((,M ,(? ρ?)) ,V ...) ,K) ,Σ) ; K must refer to new definition
+       (map (λ (x) (list x (gensym x))) (formals M))]))
+
+  (define (alloc* σ)
+    (match σ
+      [`(((if0 ,S₀ ,C₁ ,C₂) ,K) ,Σ)
+       `(((if0 □ ,C₁ ,C₂) ,(gensym 'if0)))]
+      [`(((,V ... ,S ,C ...) ,K) ,Σ)
+       `(((,@V □ ,@C) ,(gensym 'app)))]
+      [_ (alloc σ)]))
+
+  ;; (alloc* `(((if0 ((add1 2) ,(↦)) (3 ,(↦)) (4 ,(↦))) ()) ,(↦)))
+  ;; (alloc* `(((((λ ([y : num]) y) ,(↦)) ((add1 2) ,(↦))) ()) ,(↦)))
+  ;; (alloc* `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) ()) ,(↦)))
+
+  (define-reduction (-->vσ*/alloc-rules alloc*)
+    #:super (-->vσ/alloc-rules alloc*)
+
+    ; Eval
+    [(and σ `(((if0 ,S₀ ,C₁ ,C₂) ,K) ,Σ))
+     ; where
+     `(,A) ≔ (alloc* σ)
+     ; -->
+     `((,S₀ ((if0 □ ,C₁ ,C₂) ,A)) ,(mmap-ext Σ `[,A ,K]))
+     "ev-if"]
+
+    [(and σ `(((,V ... ,S ,C ...) ,K) ,Σ))
+     ; where
+     `(,A) ≔ (alloc* σ)
+     ; -->
+     `((,S ((,@V □ ,@C) ,A)) ,(mmap-ext Σ `[,A ,K]))
+     "ev-app"]
+
+    ; Continue
+    [`((,V ((if0 □ ,C₁ ,C₂) ,A)) ,Σ)
+     ; where
+     K ← (mmap-lookup Σ A)
+     ; -->
+     `(((if0 ,V ,C₁ ,C₂) ,K) ,Σ)
+     "co-if"]
+
+    [`((,V ((,V₀ ... □ ,C₀ ...) ,A)) ,Σ)
+     ; where
+     K ← (mmap-lookup Σ A)
+     ; -->
+     `(((,@V₀ ,V ,@C₀) ,K) ,Σ)
+     "co-app"])
+
+  (define -->vσ* (call-with-values
+                   (λ () (invoke-unit (-->vσ*/alloc-rules alloc*)))
+                   compose1))
+
+  (car ((repeated -->vσ*) (injσ fact-5))))
