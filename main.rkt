@@ -24,6 +24,7 @@
 
   ;; redex
   (require (submod lightstep/sample/redex/b test))
+  (require (submod lightstep/sample/redex/lam test))
 
   ;; aam
   (require (submod lightstep/sample/aam/common test))
@@ -35,5 +36,6 @@
   (require (submod lightstep/sample/aam/aam3_4 §3.5 L₁))
   (require (submod lightstep/sample/aam/aam3_4 PCFρ))
   (require (submod lightstep/sample/aam/aam3_4 PCFς))
+  (require (submod lightstep/sample/aam/aam3_4 PCFσ))
 
   )
