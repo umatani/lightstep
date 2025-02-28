@@ -1,7 +1,7 @@
 #lang racket
 (require lightstep/base
          (only-in "design1.rkt" val?)
-         (only-in "design3.rkt" subst ECxt -->PCF₅-rule -->PCF₅-rule-info))
+         (only-in "design3.rkt" subst ECxt -->PCF₅-rule))
 
 (module+ test (require rackunit))
 
@@ -21,7 +21,7 @@
 (define -->>PCF₆ (repeated -->PCF₆))
 
 (module+ test
-  (printf "----- PCF6 ------------\n")
+  ;(printf "----- PCF6 ------------\n")
   (check-equal? (car (-->>PCF₆ '(amb 1 2 3 4 5)))
                 (set 1 2 3 4 5))
   (check-equal? (car (-->>PCF₆ '(+ (amb 1 2 3 4) (amb 10 20 30 40))))
@@ -39,7 +39,7 @@
 (define -->>PCF₆-v2 (repeated -->PCF₆-v2))
 
 (module+ test
-  (printf "----- PCF6-v2 ------------\n")
+  ;(printf "----- PCF6-v2 ------------\n")
   (check-equal? (car (-->>PCF₆-v2 '(amb 1 2 3 4 5)))
                 (set 1 2 3 4 5))
   (check-equal? (car (-->>PCF₆-v2 '(+ (amb 1 2 3 4) (amb 10 20 30 40))))

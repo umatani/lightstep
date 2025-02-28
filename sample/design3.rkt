@@ -3,7 +3,9 @@
          (only-in racket/random random-ref)
          (for-syntax syntax/parse)
          (only-in "design1.rkt" val? cxt))
-(provide subst ECxt (reduction-out -->PCF₅-rule))
+(provide subst ECxt -->PCF₅-rule)
+
+(module+ test (require rackunit))
 
 ;;;;;;;;;; 拡張性のためのさらなる機能(つづき)
 
@@ -89,6 +91,6 @@
 (define -->>PCF₅ (repeated -->PCF₅))
 
 (module+ test
-  (printf "----- PCF₅ ------------\n")
-  (-->>PCF₅ '(amb 1 2 3 4 5))
-  (-->>PCF₅ '(+ (amb 1 2 3 4) (amb 10 20 30 40))))
+  ;(printf "----- PCF₅ ------------\n")
+  (check-not-exn (λ () (-->>PCF₅ '(amb 1 2 3 4 5))))
+  (check-not-exn (λ () (-->>PCF₅ '(+ (amb 1 2 3 4) (amb 10 20 30 40))))))

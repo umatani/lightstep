@@ -1,9 +1,7 @@
 #lang racket
 (require  (except-in lightstep/base cxt)
          (for-syntax syntax/parse syntax/stx))
-(provide (reduction-out -->PCF₃-rule)
-         (reduction-out -->₂-rule)
-         val? subst ECxt cxt)
+(provide -->PCF₃-rule -->₂-rule val? subst ECxt cxt)
 
 (module+ test (require rackunit))
 
@@ -19,7 +17,7 @@
 (define -->₀ (compose1 mrun₀ reducer₀))
 
 (module+ test
-  (printf "---- cons -------------\n")
+  ;(printf "---- cons -------------\n")
   ;; reducer とは (-> state (Setof state))
   (check-equal? (-->₀ (cons 1 2)) (set 1))
 
@@ -67,7 +65,7 @@
 (define -->>LAM₀ (repeated -->LAM₀))
 
 (module+ test
-  (printf "---- LAM₀ -------------\n")
+  ;(printf "---- LAM₀ -------------\n")
   ;; 下と一緒
   ;; (-->LAM₀ '((λ (x) x) (λ (z) (z z))))
   ;; (-->LAM₀ '((λ (x) (λ (z) (x z))) (λ (z) (x z))))
@@ -112,7 +110,7 @@
 (define -->>PCF₀ (repeated -->PCF₀))
 
 (module+ test
-  (printf "---- PCF₀ -------------\n")
+  ;(printf "---- PCF₀ -------------\n")
   ;; superの機能維持
   (check-equal?
    (car (-->>PCF₀ '((λ (x) x) (λ (z) (z z)))))
@@ -150,7 +148,7 @@
 (define -->>PCF₁ (repeated -->PCF₁))
 
 (module+ test
-  (printf "---- PCF₁ -------------\n")
+  ;(printf "---- PCF₁ -------------\n")
   ;; 継承してないので上4つはできない．
   (check-equal? (car (-->>PCF₁ '(+ 1 2)))
                 (set '(+ 1 2)))
@@ -236,7 +234,7 @@
 (define -->>PCF₂ (repeated -->PCF₂))
 
 (module+ test
-  (printf "----- PCF₂ ------------\n")
+  ;(printf "----- PCF₂ ------------\n")
   (check-equal? (car (-->>PCF₂ '(+ 1 2))) (set 3))
   (check-equal? (car (-->>PCF₂ '(+ (+ 1 2) 3))) (set 6))
   (check-equal? (car (-->>PCF₂ '(+ (+ 1 2) (+ 3 (+ 4 5)))))
@@ -384,7 +382,7 @@
                                 (λ (x) `(,x ,e1))]) ECxt)))])))
 
 (module+ test
-  (printf "----- EC ------------\n")
+  ;(printf "----- EC ------------\n")
   (check-equal?
    (match '(if (+ 1 2) (+ 3 4) 5)
      [(ECxt e) (ECxt `(<= ,e ,e))])
@@ -411,7 +409,7 @@
 (define -->>PCF₃ (repeated -->PCF₃))
 
 (module+ test
-  (printf "----- PCF₃ ------------\n")
+  ;(printf "----- PCF₃ ------------\n")
   (check-equal? (car (-->>PCF₃ '(+ 1 2))) (set 3))
   (check-equal? (car (-->>PCF₃ '(+ (+ 1 2) 3))) (set 6))
   (check-equal? (car (-->>PCF₃ '(+ (+ 1 2) (+ 3 (+ 4 5)))))
@@ -456,7 +454,7 @@
 ;;  なんらかの方法で上手くオーバーライドする方法がないと．．．で次節につづく
 
 (module+ test
-  (printf "----- PCF₃ part2 ------------\n")
+  ;(printf "----- PCF₃ part2 ------------\n")
   (check-equal? (car (-->>PCF₃ '((λ (x) x) 2))) (set 2)) ; OK
   ;(-->>PCF₃ '((λ (x) 1) 2))
   ;(-->>PCF₃ '((λ (x) #t) 2))
@@ -478,7 +476,7 @@
   [`(f ,x) (f x) "f"])
 
 (module+ test
-  (printf "----- -->₂ ------------\n")
+  ;(printf "----- -->₂ ------------\n")
   (define-values (mrun₂ reducer₂) (invoke-unit (-->₂-rule)))
   (define -->₂ (compose1 mrun₂ reducer₂))
   (check-equal? (-->₂ '(f a)) (set '(+ a 1))))

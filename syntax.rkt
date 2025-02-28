@@ -18,9 +18,12 @@
   (syntax-parse stx
     [(_ N pat ...)
      #:with N? (format-id #'N "~a?" (syntax-e #'N) #:source #'N)
-     (syntax/loc #'N
+     ;; #'(define (N? x)
+     ;;     (match x [pat #t] ... [_ #f]))
+     (syntax/loc stx
        (define (N? x)
-         (match x [pat #t] ... [_ #f])))]))
+         (match x [pat #t] ... [_ #f])))
+     ]))
 
 ;; TODO: auto generate Gen of rackcheck from the definition
 (define-syntax (define-language stx)
@@ -41,8 +44,13 @@
        (for/list ([(n ps) (map-∈ rules)])
          (list (datum->syntax #'L n) (datum->syntax #'L ps))))
      #`(begin
-         #,(syntax/loc #'stx (define-syntax L (↦ ['N′ '(pat′ ...)] ...)))
-         (define-nonterminal N′ pat′ ...) ...)
+         (define-syntax L (↦ ['N′ '(pat′ ...)] ...))
+         ;#,(syntax/loc stx (define-syntax L (↦ ['N′ '(pat′ ...)] ...)))
+         ;(define-nonterminal N′ pat′ ...) ...
+         #,@(stx-map (λ (c) (quasisyntax/loc stx
+                              (define-nonterminal #,@c)))
+                     #'((N′ pat′ ...) ...))
+         )
      ]))
 
 

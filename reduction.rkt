@@ -4,7 +4,6 @@
                      (only-in racket/match match-define)
                      (only-in syntax/stx stx-map)
                      (only-in "set.rkt" list→set ∈))
-         (only-in racket/provide-syntax define-provide-syntax)
          (only-in racket/unit
                  define-signature unit import export link
                  compound-unit invoke-unit)
@@ -13,7 +12,7 @@
                   PowerO run-StateT define-monad
                   ID ReaderT WriterT StateT FailT NondetT)
          (only-in "nondet.rkt" NondetM nondet-match))
-(provide ReduceM define-reduction repeated reduction-out)
+(provide ReduceM define-reduction repeated)
 
 (define ReduceM NondetM)
 
@@ -61,7 +60,7 @@
   (define (inst-reduction-info rid args)
     (match-define
       (reduction-desc _ import-sig-stx inst-xformer)
-      (syntax-local-value rid))
+      ((syntax-local-value rid) 'DUMMY))
 
     (syntax-parse
         ;; both can work
@@ -125,14 +124,11 @@
                    #'opts.mrun
                    (derive-mrun #'M))
 
-     #:with sup-rdesc (if (syntax-e #'opts.sup-name)
-                        (format-id #'opts.sup-name "~a-info" #'opts.sup-name)
-                        #'#f)
      #:with (imports-of-super
              rules-of-super
              do-bodies-of-super
-             default-of-super)  (if (syntax-e #'sup-rdesc)
-                                  (inst-reduction-info #'sup-rdesc
+             default-of-super)  (if (syntax-e #'opts.sup-name)
+                                  (inst-reduction-info #'opts.sup-name
                                                        #'opts.sup-args)
                                   #'(() () () #f))
 
@@ -167,14 +163,14 @@
                                      (nondet-match M′ ς
                                                    #:default default-clause
                                                    rule ...))])))
-     
-     #:with rdesc (format-id #'rid "~a-info" (syntax-e #'rid))
      #'(begin
-         (define-syntax rdesc (reduction-desc #'mrun #'imports inst-xformer))
          (define-syntax (rid stx)
-           (syntax-parse stx
-             [(_ arg (... ...))
-              #'(inst-reduction rdesc arg (... ...))])))]))
+           (define rdesc (reduction-desc #'mrun #'imports inst-xformer))
+           (if (syntax? stx)
+             (syntax-parse stx
+               [(_ arg (... ...))
+                #'(inst-reduction rid arg (... ...))])
+             rdesc)))]))
 
 ;;=============================================================================
 ;; inst-reduction
@@ -184,7 +180,7 @@
     [(_ rid:id arg ...)
      #:do [(match-define
              (reduction-desc mrun import-sigs inst-xformer)
-             (syntax-local-value #'rid))]
+             ((syntax-local-value #'rid) 'DUMMY))]
      #`(unit
          (import #,@import-sigs) (export)
          (define (reducer ς) #,(inst-xformer #'(arg ... ς)))
@@ -209,13 +205,3 @@
                                     (sub1 limit)
                                     #f)))))]))))
   (run-StateT (set ς) (search ς limit)))
-
-
-;;=============================================================================
-;; custom provide spec
-
-(define-provide-syntax (reduction-out stx)
-  (syntax-parse stx
-    [(_ rid:id)
-     #:with rinfo (format-id #'rid "~a-info" #'rid)
-     #'(combine-out rid rinfo)]))

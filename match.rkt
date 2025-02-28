@@ -3,10 +3,9 @@
                      (only-in racket/syntax format-id)
                      (only-in racket/list splitf-at)
                      (only-in syntax/stx stx-map))
-         (only-in racket/provide-syntax define-provide-syntax)
          (only-in racket/match [match r:match]))
 (provide match match* match-λ match-λ* match-let
-         define/match define/match-out
+         define/match
          (rename-out [match-λ match-lambda] [match-λ* match-lambda*])
          (for-syntax category-id? category-id→pred-id
                      (rename-out [category-id→pred-id
@@ -36,7 +35,7 @@
                        [(front back) (splitf-at cs char-upper-case?)])
            (if (and (not (null? front))
                     (andmap (compose1 not char-lower-case?) back))
-             (format-id id "~a?" (list->string front) #:source id)
+             (format-id id "~a?" (list->string front))
              #f))))
 
   (define (convert-category-id pat)
@@ -104,28 +103,24 @@
      #:with ((pat ...) ...) (stx-map
                              (λ (p) (parse-pat (attribute h.single?) p))
                              #'(ps ...))
-     #:with finfo (format-id #'f "~a-info" (syntax-e #'f))
      #:with (sup-clause ...) (if (syntax-e #'g)
-                               (with-syntax ([sinfo
-                                              (format-id #'g
-                                                         "~a-info"
-                                                         #'g)])
-                                 (datum->syntax #'f
-                                                (syntax-local-value #'sinfo)))
+                               (datum->syntax
+                                #'f
+                                ((syntax-local-value #'g) 'DUMMY))
                                #'())
+     #:with (clause ...) #'([`(,pat ...) body ...]
+                            ...
+                            sup-clause ...)
      #'(begin
-         (define-syntax finfo '([`(,pat ...) body ...] ...))
-         (define (f x ...)
-           (match `(,x ...)
-             [`(,pat ...) body ...] ...
-             sup-clause ...)))]))
-
-(define-provide-syntax (define/match-out stx)
-  (syntax-parse stx
-    [(_ mid:id)
-     #:with minfo (format-id #'mid "~a-info" #'mid)
-     #'(combine-out mid minfo)]))
-
+         (define f-body
+           (procedure-rename (λ (x ...) (match `(,x ...) clause ...))
+                             'f))
+         (define-syntax (f stx)
+           (if (syntax? stx)
+             (syntax-parse stx
+               [_:id #'f-body]
+               [(_ arg (... ...)) #'(f-body arg (... ...))])
+             '(clause ...))))]))
 
 (module+ test
   (define NUM? number?)
@@ -184,6 +179,7 @@
                             [(vector X₁ ...) #(a b c d)])
                   (list b a X₁))
                 '(2 1 (a b c d)))
+
 
   (define/match (f x)
     [1 'one]

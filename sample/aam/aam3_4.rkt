@@ -100,7 +100,7 @@
 
 (module+ §3.5
   (module+ L₀
-    (provide L₀ (reduction-out r₀-rules) to-five (reduction-out r₁-rules))
+    (provide L₀ r₀-rules to-five r₁-rules)
     
     (define-language L₀
       [M ∷= (? number?)])
@@ -146,7 +146,7 @@
 
 (module+ PCFρ
   (require (submod ".." PCF⇓))
-  (provide PCFρ (reduction-out vρ-rules) injρ)
+  (provide PCFρ vρ-rules injρ)
 
   (define-language PCFρ #:super PCF⇓
     [C ∷=
@@ -240,7 +240,7 @@
 
 (module+ PCFς
   (require (submod ".." PCFρ))
-  (provide PCFς  (reduction-out -->vς-rules) injς)
+  (provide PCFς -->vς-rules injς)
 
   (define-language PCFς #:super PCFρ
     [F ∷=
@@ -313,10 +313,9 @@
 ;; 3.8 Heap-allocated bindings
 
 (module+ PCFσ
-  (require (only-in (submod ".." PCFρ) vρ-rules vρ-rules-info)
+  (require (only-in (submod ".." PCFρ) vρ-rules)
            (submod ".." PCFς))
-  (provide PCFσ (reduction-out -->vσ-rules) injσ
-           formals (reduction-out alloc-rules) alloc)
+  (provide PCFσ -->vσ-rules injσ formals alloc-rules alloc)
 
   (define-language PCFσ #:super PCFς
     [Σ ∷= (? map?)]
@@ -401,6 +400,7 @@
        (match-let ([`(,X ...) (formals L)])
          `(,X′ ,@X))]))
 
+  ;; TODO: rewrite with define/match
   (define-reduction (alloc-rules)
     [`((((,M ,(? ρ?)) ,V ...) ,K) ,Σ)
      (map (λ (x) (list x (gensym x))) (formals M))])
@@ -420,10 +420,10 @@
 ;; 3.9 Abstracting over alloc
 
 (module+ PCFσ/alloc
-  (require (only-in (submod ".." PCFρ) vρ-rules vρ-rules-info)
-           (only-in (submod ".." PCFς) -->vς-rules -->vς-rules-info)
+  (require (only-in (submod ".." PCFρ) vρ-rules)
+           (only-in (submod ".." PCFς) -->vς-rules)
            (rename-in (submod ".." PCFσ) [PCFσ orig-PCFσ]))
-  (provide (reduction-out -->vσ/alloc-rules))
+  (provide -->vσ/alloc-rules)
 
   (define-language PCFσ #:super orig-PCFσ)
 
@@ -465,10 +465,9 @@
 ;; 3.10 Heap-allocated continuations
 
 (module+ PCFσ*
-  (require (only-in (submod ".." PCFρ) vρ-rules vρ-rules-info)
-           (only-in (submod ".." PCFς) -->vς-rules -->vς-rules-info)
-           (only-in (submod ".." PCFσ)
-                    PCFσ injσ formals alloc-rules alloc-rules-info)
+  (require (only-in (submod ".." PCFρ) vρ-rules)
+           (only-in (submod ".." PCFς) -->vς-rules)
+           (only-in (submod ".." PCFσ) PCFσ injσ formals alloc-rules)
            (submod ".." PCFσ/alloc))
 
   (define-language PCFσ* #:super PCFσ

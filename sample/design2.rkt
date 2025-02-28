@@ -1,8 +1,7 @@
 #lang racket
 (require lightstep/base
-         (only-in "design1.rkt" val? ECxt -->₂-rule -->₂-rule-info
-                  -->PCF₃-rule -->PCF₃-rule-info))
-(provide (reduction-out -->PCF₄-rule) subst)
+         (only-in "design1.rkt" val? ECxt -->₂-rule -->PCF₃-rule))
+(provide -->PCF₄-rule subst)
 
 (module+ test (require rackunit))
 
@@ -22,7 +21,7 @@
   [`(g ,x) (g x) "g"])
 
 (module+ test
-  (printf "----- -->₃ ------------\n")
+  ;(printf "----- -->₃ ------------\n")
   (define -->₃ (call-with-values
                 (λ () (invoke-unit (-->₃-rule)))
                 (λ (mrun reducer) (compose1 mrun reducer))))
@@ -60,7 +59,7 @@
 (define -->>PCF₄ (repeated -->PCF₄))
 
 (module+ test
-  (printf "----- PCF₄ ------------\n")
+  ;(printf "----- PCF₄ ------------\n")
   (check-equal? (car (-->>PCF₄ '(+ 1 2))) (set 3))
   (check-equal? (car (-->>PCF₄ '(+ (+ 1 2) 3))) (set 6))
   (check-equal? (car (-->>PCF₄ '(+ (+ 1 2) (+ 3 (+ 4 5)))))

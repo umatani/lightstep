@@ -2,7 +2,7 @@
 (require (for-syntax racket/base)
          lightstep/base
          (only-in racket/unit invoke-unit))
-(provide (define/match-out FV))
+(provide FV)
 
 (module+ test (require rackunit))
 

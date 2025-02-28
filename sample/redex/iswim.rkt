@@ -1,7 +1,6 @@
 #lang racket/base
 (require lightstep/base
-         (prefix-in lam: (only-in "lam.rkt" FV FV-info)))
-
+         (prefix-in lam: (only-in "lam.rkt" FV)))
 
 (module+ test (require rackunit))
 

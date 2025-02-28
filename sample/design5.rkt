@@ -81,7 +81,7 @@
    "EC"])
 
 (module+ test
-  (printf "----- PCF₇ ------------\n")
+  ;(printf "----- PCF₇ ------------\n")
   (define -->PCF₇ (letrec-values
                       ([(u1) (-->PCF₇-rule r1)]
                        [(m1 r1) (invoke-unit

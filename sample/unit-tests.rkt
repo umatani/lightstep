@@ -265,7 +265,8 @@
 
 (define-reduction (r81 p)
   #:do [(define y (* p 111))
-        (printf "printf in #:do: ~a ~a\n" p y)]
+        ;(printf "printf in #:do: ~a ~a\n" p y)
+        ]
   [x (+ x y)])
 (check-equal? (call-with-values
                 (λ () (invoke-unit (r81 2)))
@@ -275,7 +276,7 @@
 
 (define-reduction (r82 p)
   #:import [gege^]
-  #:do [(printf "printf in #:do: ~a\n" (hoge))
+  #:do [;(printf "printf in #:do: ~a\n" (hoge))
         (define y (* p 111))]
   [x (list (gege) (+ x y))])
 (define-values (mrun82 reducer82) (invoke-unit
@@ -360,7 +361,7 @@
 ;; test-scope
 
 (module+ scope1
-  (provide (reduction-out r21))
+  (provide r21)
   (define (add x) (+ x 1))
   (define-reduction (r21)
     [x (add x)])
@@ -371,7 +372,7 @@
   (check-equal? (-->22 8) (set 9 10)))
 
 (module+ scope2
-  (require (only-in (submod ".." scope1) r21 r21-info))
+  (require (only-in (submod ".." scope1) r21))
   (define-values (mrun21 reducer21) (invoke-unit (r21)))
   (define -->21 (compose1 mrun21 reducer21))
   (check-equal? (-->21 8) (set 9))
