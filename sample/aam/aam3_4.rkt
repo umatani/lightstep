@@ -3,7 +3,7 @@
                      (only-in syntax/parse syntax-parser id))
          (only-in racket/unit invoke-unit)
          lightstep/base
-         (only-in "common.rkt" mmap-ext mmap-lookup sequence cxt)
+         (only-in "common.rkt" mmap-ext mmap-lookup sequence)
          (only-in "aam1-3_3.rkt" PCF δ)
          rackunit)
 
@@ -313,9 +313,10 @@
 ;; 3.8 Heap-allocated bindings
 
 (module+ PCFσ
-  (require (reduction-in (submod ".." PCFρ) vρ-rules)
+  (require (only-in (submod ".." PCFρ) vρ-rules vρ-rules-info)
            (submod ".." PCFς))
-  (provide PCFσ (reduction-out -->vσ-rules) injσ formals alloc)
+  (provide PCFσ (reduction-out -->vσ-rules) injσ
+           formals (reduction-out alloc-rules) alloc)
 
   (define-language PCFσ #:super PCFς
     [Σ ∷= (? map?)]
@@ -400,10 +401,15 @@
        (match-let ([`(,X ...) (formals L)])
          `(,X′ ,@X))]))
 
-  (define (alloc σ)
-    (match σ
-      [`((((,M ,(? ρ?)) ,V ...) ,K) ,Σ)
-       (map (λ (x) (list x (gensym x))) (formals M))]))
+  (define-reduction (alloc-rules)
+    [`((((,M ,(? ρ?)) ,V ...) ,K) ,Σ)
+     (map (λ (x) (list x (gensym x))) (formals M))])
+
+  (define (alloc σ) (let ([al (call-with-values
+                                (λ () (invoke-unit (alloc-rules)))
+                                compose1)])
+                       (match (al σ)
+                         [(set x) x])))
 
   ;(alloc `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) []) ,(↦)))
   ;(-->vσ `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) []) ,(↦)))
@@ -414,8 +420,8 @@
 ;; 3.9 Abstracting over alloc
 
 (module+ PCFσ/alloc
-  (require (reduction-in (submod ".." PCFρ) vρ-rules)
-           (reduction-in (submod ".." PCFς) -->vς-rules)
+  (require (only-in (submod ".." PCFρ) vρ-rules vρ-rules-info)
+           (only-in (submod ".." PCFς) -->vς-rules -->vς-rules-info)
            (rename-in (submod ".." PCFσ) [PCFσ orig-PCFσ]))
   (provide (reduction-out -->vσ/alloc-rules))
 
@@ -459,29 +465,27 @@
 ;; 3.10 Heap-allocated continuations
 
 (module+ PCFσ*
-  (require (reduction-in (submod ".." PCFρ) vρ-rules)
-           (reduction-in (submod ".." PCFς) -->vς-rules)
-           (only-in (submod ".." PCFσ) PCFσ formals injσ)
+  (require (only-in (submod ".." PCFρ) vρ-rules vρ-rules-info)
+           (only-in (submod ".." PCFς) -->vς-rules -->vς-rules-info)
+           (only-in (submod ".." PCFσ)
+                    PCFσ injσ formals alloc-rules alloc-rules-info)
            (submod ".." PCFσ/alloc))
 
   (define-language PCFσ* #:super PCFσ
     [K ∷= '() `(,F ,A)]
     [U ∷= V K])
 
-  ;; TODO: eliminate duplication
-  ;;   define-metafunction?
-  (define (alloc σ)
-    (match σ
-      [`((((,M ,(? ρ?)) ,V ...) ,K) ,Σ) ; K must refer to new definition
-       (map (λ (x) (list x (gensym x))) (formals M))]))
+  (define-reduction (alloc*-rules) #:super (alloc-rules)
+    [`(((if0 ,S₀ ,C₁ ,C₂) ,K) ,Σ)
+     `(((if0 □ ,C₁ ,C₂) ,(gensym 'if0)))]
+    [`(((,V ... ,S ,C ...) ,K) ,Σ)
+     `(((,@V □ ,@C) ,(gensym 'app)))])
 
-  (define (alloc* σ)
-    (match σ
-      [`(((if0 ,S₀ ,C₁ ,C₂) ,K) ,Σ)
-       `(((if0 □ ,C₁ ,C₂) ,(gensym 'if0)))]
-      [`(((,V ... ,S ,C ...) ,K) ,Σ)
-       `(((,@V □ ,@C) ,(gensym 'app)))]
-      [_ (alloc σ)]))
+  (define (alloc* σ) (let ([al (call-with-values
+                                 (λ () (invoke-unit (alloc*-rules)))
+                                 compose1)])
+                        (match (al σ)
+                          [(set x) x])))
 
   ;; (alloc* `(((if0 ((add1 2) ,(↦)) (3 ,(↦)) (4 ,(↦))) ()) ,(↦)))
   ;; (alloc* `(((((λ ([y : num]) y) ,(↦)) ((add1 2) ,(↦))) ()) ,(↦)))
@@ -524,4 +528,4 @@
                    (λ () (invoke-unit (-->vσ*/alloc-rules alloc*)))
                    compose1))
 
-  (car ((repeated -->vσ*) (injσ fact-5))))
+  (check-equal? (car ((repeated -->vσ*) (injσ fact-5))) (set 120)))

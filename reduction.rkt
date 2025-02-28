@@ -4,7 +4,6 @@
                      (only-in racket/match match-define)
                      (only-in syntax/stx stx-map)
                      (only-in "set.rkt" list→set ∈))
-         (only-in racket/require-syntax define-require-syntax)
          (only-in racket/provide-syntax define-provide-syntax)
          (only-in racket/unit
                  define-signature unit import export link
@@ -14,7 +13,7 @@
                   PowerO run-StateT define-monad
                   ID ReaderT WriterT StateT FailT NondetT)
          (only-in "nondet.rkt" NondetM nondet-match))
-(provide ReduceM define-reduction repeated reduction-in reduction-out)
+(provide ReduceM define-reduction repeated reduction-out)
 
 (define ReduceM NondetM)
 
@@ -97,6 +96,8 @@
        (derive-mrun #'M′)]
       [_ (raise-syntax-error 'derive-mrun "unknown monad" M)])))
 
+;; TODO: multiple inheritance
+;;   signal error at name conflict
 (define-syntax (define-reduction stx)
   (define (gen-rnam stx sym)
     (datum->syntax stx (symbol->string (gensym sym))))
@@ -105,7 +106,7 @@
     [(_ (rid:id param:id ...)
         opts:options
         [pat body ... (~and e (~not :string))
-         (~optional rnam:string #:defaults ([rnam (gen-rnam #'rid 'r)]))]
+             (~optional rnam:string #:defaults ([rnam (gen-rnam #'rid 'r)]))]
         ...)
      #:do [(define (rescope stx)
              (replace-lexical-context #'rid stx))
@@ -192,32 +193,29 @@
 ;;=============================================================================
 ;; reflexive and transitive closure
 
-(define ((repeated →) ς)
+(define ((repeated →) ς #:limit [limit #f])
   (define-monad (NondetT (StateT PowerO ID)))
-  (define (search ς)
-    (do sΣ′ ≔ (→ ς)
-        sΣ ← get
-        (cond
-          [(∅? sΣ′) (return ς)]
-          [(⊆ sΣ′ sΣ) mzero]
-          [(do (for/monad+ ([ς′ (set-subtract sΣ′ sΣ)])
-                 (do (put (set-add sΣ ς′))
-                     (search ς′))))])))
-  (run-StateT (set ς) (search ς)))
+  (define (search ς limit)
+    (if (and limit (<= limit 0))
+      (return ς)
+      (do sΣ′ ≔ (→ ς)
+          sΣ ← get
+          (cond
+            [(∅? sΣ′) (return ς)]
+            [(⊆ sΣ′ sΣ) mzero]
+            [(do (for/monad+ ([ς′ (set-subtract sΣ′ sΣ)])
+                   (do (put (set-add sΣ ς′))
+                       (search ς′ (if limit
+                                    (sub1 limit)
+                                    #f)))))]))))
+  (run-StateT (set ς) (search ς limit)))
 
 
 ;;=============================================================================
-;; custom require/provide spec
-
-(define-require-syntax (reduction-in stx)
-  (syntax-parse stx
-    [(_ req-spec rid:id)
-     #:with rdesc (format-id #'rid "~a-info" #'rid)
-     #'(combine-in (only-in req-spec rid)
-                   (only-in req-spec rdesc))]))
+;; custom provide spec
 
 (define-provide-syntax (reduction-out stx)
   (syntax-parse stx
     [(_ rid:id)
-     #:with rdesc (format-id #'rid "~a-info" #'rid)
-     #'(combine-out rid rdesc)]))
+     #:with rinfo (format-id #'rid "~a-info" #'rid)
+     #'(combine-out rid rinfo)]))

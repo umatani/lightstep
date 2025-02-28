@@ -1,8 +1,7 @@
 #lang racket
 (require lightstep/base
          (only-in "design1.rkt" val?)
-         (only-in "design3.rkt" subst ECxt)
-         (reduction-in "design3.rkt" -->PCF₅-rule))
+         (only-in "design3.rkt" subst ECxt -->PCF₅-rule -->PCF₅-rule-info))
 
 (module+ test (require rackunit))
 

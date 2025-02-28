@@ -371,7 +371,7 @@
   (check-equal? (-->22 8) (set 9 10)))
 
 (module+ scope2
-  (require (reduction-in (submod ".." scope1) r21))
+  (require (only-in (submod ".." scope1) r21 r21-info))
   (define-values (mrun21 reducer21) (invoke-unit (r21)))
   (define -->21 (compose1 mrun21 reducer21))
   (check-equal? (-->21 8) (set 9))

@@ -8,7 +8,7 @@
          (only-in lightstep/transformers
                   define-monad NondetT StateT PowerO ID run-StateT)
          (only-in "common.rkt" match? mmap mmap-lookup mmap-ext
-                  sequence cxt reachable?))
+                  sequence reachable?))
 (provide PCF δ)
 
 (module+ test (require rackunit))

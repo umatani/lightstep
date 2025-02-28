@@ -1,5 +1,5 @@
 #lang racket
-(require lightstep/base
+(require (except-in lightstep/base cxt)
          (only-in racket/random random-ref)
          (for-syntax syntax/parse)
          (only-in "design1.rkt" val? cxt))

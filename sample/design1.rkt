@@ -1,5 +1,5 @@
 #lang racket
-(require  lightstep/base
+(require  (except-in lightstep/base cxt)
          (for-syntax syntax/parse syntax/stx))
 (provide (reduction-out -->PCF₃-rule)
          (reduction-out -->₂-rule)

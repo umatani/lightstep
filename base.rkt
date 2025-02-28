@@ -18,7 +18,7 @@
                   ReduceM
                   define-reduction
                   repeated
-                  reduction-in reduction-out))
+                  reduction-out))
 (provide (all-from-out "reduction.rkt"))
 
 (require "syntax.rkt")

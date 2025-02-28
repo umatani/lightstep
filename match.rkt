@@ -3,8 +3,10 @@
                      (only-in racket/syntax format-id)
                      (only-in racket/list splitf-at)
                      (only-in syntax/stx stx-map))
+         (only-in racket/provide-syntax define-provide-syntax)
          (only-in racket/match [match r:match]))
 (provide match match* match-λ match-λ* match-let
+         define/match define/match-out
          (rename-out [match-λ match-lambda] [match-λ* match-lambda*])
          (for-syntax category-id? category-id→pred-id
                      (rename-out [category-id→pred-id
@@ -75,6 +77,56 @@
      #'((match-λ* [(list pat ...) body ...])
         expr ...)]))
 
+(define-syntax (define/match stx)
+  (define-syntax-class header
+    #:attributes [f (param 1) single?]
+    (pattern (f:id x:id)
+             #:attr (param 1) (syntax->list #'(x))
+             #:attr single? #t)
+    (pattern (f:id y:id ...)
+             #:attr (param 1) (syntax->list #'(y ...))
+             #:attr single? #f))
+  (define-splicing-syntax-class option
+    (pattern (~optional (~seq #:super g))
+             #:with super #'(~? g #f)))
+
+  (define (parse-pat single? pat)
+    (if single?
+      #`(#,pat)
+      pat))
+
+  (syntax-parse stx
+    [(_ h:header o:option
+        [ps body ...] ...)
+     #:with f #'h.f
+     #:with g #'o.super
+     #:with (x ...) #'(h.param ...)
+     #:with ((pat ...) ...) (stx-map
+                             (λ (p) (parse-pat (attribute h.single?) p))
+                             #'(ps ...))
+     #:with finfo (format-id #'f "~a-info" (syntax-e #'f))
+     #:with (sup-clause ...) (if (syntax-e #'g)
+                               (with-syntax ([sinfo
+                                              (format-id #'g
+                                                         "~a-info"
+                                                         #'g)])
+                                 (datum->syntax #'f
+                                                (syntax-local-value #'sinfo)))
+                               #'())
+     #'(begin
+         (define-syntax finfo '([`(,pat ...) body ...] ...))
+         (define (f x ...)
+           (match `(,x ...)
+             [`(,pat ...) body ...] ...
+             sup-clause ...)))]))
+
+(define-provide-syntax (define/match-out stx)
+  (syntax-parse stx
+    [(_ mid:id)
+     #:with minfo (format-id #'mid "~a-info" #'mid)
+     #'(combine-out mid minfo)]))
+
+
 (module+ test
   (define NUM? number?)
   (define X? symbol?)
@@ -97,8 +149,6 @@
                   [`(,(? number? A) ,□ ,(? NUM? NUM″))
                    `(,NUM″ ,□ ,A)])
                 '(3 2 1))
-
-
 
   (check-equal? (match* ('(1 2)
                          #(1 2 3 4))
@@ -134,4 +184,33 @@
                             [(vector X₁ ...) #(a b c d)])
                   (list b a X₁))
                 '(2 1 (a b c d)))
-  )
+
+  (define/match (f x)
+    [1 'one]
+    [2 'two]
+    [_ 'other])
+  (check-equal? (f 1) 'one)
+  (check-equal? (f 2) 'two)
+  (check-equal? (f 3) 'other)
+
+  (define/match (g x y z)
+    [(1 y _) (list 'one y)]
+    [(2 _ z) (list 'two z)]
+    [(_ y z) (list 'other y z)])
+  (check-equal? (g 1 'a 'b) '(one a))
+  (check-equal? (g 2 'c 'd) '(two d))
+  (check-equal? (g 3 'e 'f) '(other e f))
+
+  (define/match (ff x) #:super f
+    [0 'zero])
+  (check-equal? (ff 0) 'zero)
+  (check-equal? (ff 1) 'one)
+  (check-equal? (ff 2) 'two)
+  (check-equal? (ff 3) 'other)
+
+  (define/match (gg x y z) #:super g
+    [(0 _ _) (list 'zero)])
+  (check-equal? (gg 0 'a 'b) '(zero))
+  (check-equal? (gg 1 'a 'b) '(one a))
+  (check-equal? (gg 2 'c 'd) '(two d))
+  (check-equal? (gg 3 'e 'f) '(other e f)))
