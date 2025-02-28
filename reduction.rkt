@@ -60,7 +60,7 @@
   (define (inst-reduction-info rid args)
     (match-define
       (reduction-desc _ import-sig-stx inst-xformer)
-      ((syntax-local-value rid) 'DUMMY))
+      ((syntax-local-value rid)))
 
     (syntax-parse
         ;; both can work
@@ -164,13 +164,13 @@
                                                    #:default default-clause
                                                    rule ...))])))
      #'(begin
-         (define-syntax (rid stx)
-           (define rdesc (reduction-desc #'mrun #'imports inst-xformer))
-           (if (syntax? stx)
-             (syntax-parse stx
-               [(_ arg (... ...))
-                #'(inst-reduction rid arg (... ...))])
-             rdesc)))]))
+         (define-syntax rid
+           (let ([rdesc (reduction-desc #'mrun #'imports inst-xformer)])
+             (case-λ
+              [() rdesc] ;; called at compile-time
+              [(stx) (syntax-parse stx
+                       [(_ arg (... ...))
+                        #'(inst-reduction rid arg (... ...))])]))))]))
 
 ;;=============================================================================
 ;; inst-reduction
@@ -180,7 +180,7 @@
     [(_ rid:id arg ...)
      #:do [(match-define
              (reduction-desc mrun import-sigs inst-xformer)
-             ((syntax-local-value #'rid) 'DUMMY))]
+             ((syntax-local-value #'rid)))]
      #`(unit
          (import #,@import-sigs) (export)
          (define (reducer ς) #,(inst-xformer #'(arg ... ς)))

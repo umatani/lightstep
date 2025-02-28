@@ -106,7 +106,7 @@
      #:with (sup-clause ...) (if (syntax-e #'g)
                                (datum->syntax
                                 #'f
-                                ((syntax-local-value #'g) 'DUMMY))
+                                ((syntax-local-value #'g)))
                                #'())
      #:with (clause ...) #'([`(,pat ...) body ...]
                             ...
@@ -115,12 +115,12 @@
          (define f-body
            (procedure-rename (λ (x ...) (match `(,x ...) clause ...))
                              'f))
-         (define-syntax (f stx)
-           (if (syntax? stx)
-             (syntax-parse stx
-               [_:id #'f-body]
-               [(_ arg (... ...)) #'(f-body arg (... ...))])
-             '(clause ...))))]))
+         (define-syntax f
+           (case-λ
+            [() '(clause ...)]
+            [(stx) (syntax-parse stx
+                     [_:id #'f-body]
+                     [(_ arg (... ...)) #'(f-body arg (... ...))])])))]))
 
 (module+ test
   (define NUM? number?)
