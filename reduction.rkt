@@ -134,8 +134,6 @@
        (derive-mrun #'M′)]
       [_ (raise-syntax-error 'derive-mrun "unknown monad" M)])))
 
-;; TODO: multiple inheritance
-;;   signal error at name conflict
 (define-syntax (define-reduction stx)
   (define (gen-rnam stx sym)
     (datum->syntax stx (symbol->string (gensym sym))))
