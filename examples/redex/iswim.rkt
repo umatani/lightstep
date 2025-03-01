@@ -1,6 +1,9 @@
 #lang racket/base
-(require lightstep/base
-         (prefix-in lam: (only-in "lam.rkt" FV)))
+(require (for-syntax racket/base)
+         lightstep/base lightstep/syntax
+         (only-in lightstep/monad sequence)
+         (only-in racket/unit invoke-unit)
+         (prefix-in lam: (only-in "lam.rkt" LAM FV subst)))
 
 (module+ test (require rackunit))
 
@@ -8,14 +11,11 @@
 ;; 4.1 ISWIM Expressions
 
 (define-syntax-rule (define-iswim-language L r ...)
-  (define-language L
-    [M ∷=
-       X
-       `(λ ,X ,M)
-       `(,M₁ ,M₂)
+  (define-language L #:super lam:LAM
+    [M ∷= ....
        (? b?)
        `(,(? oⁿ?) ,M (... ...))]
-    [X ∷= (? symbol? (not 'λ))]
+    [V ∷= (? b?) X `(λ ,X ,M)]
     r ...))
 
 (define-iswim-language ISWIM
@@ -41,3 +41,147 @@
   (check-equal? (FV '(z (λ z z)))     (set 'z))
   (check-equal? (FV 123)              ∅)
   (check-equal? (FV '(↑ (f x) (g 1))) (set 'f 'x 'g)))
+
+(define/match (subst m₁ x₂ m₂) #:super lam:subst
+  [((? b? b) X₂ M₂) b]
+  [(`(,(? oⁿ? oⁿ) ,M ...) X₂ M₂)
+   `(,oⁿ ,@(map (λ (m) (subst m X₂ M₂)) M))])
+
+
+;;=============================================================================
+;; 4.2  Calculating with ISWIM
+
+(define-reduction (βv-rule)
+  [`((λ ,X ,M) ,V)
+   (subst M X V)])
+
+(define/match (δ o bs)
+  [('add1 `(,(? number? m)))
+   (add1 m)]
+  [('sub1 `(,(? number? m)))
+   (sub1 m)]
+  [('iszero `(0))
+   '(λ x (λ y x))]
+  [('iszero `(,(? number? n)))
+   #:when (not (zero? n))
+   '(λ x (λ y y))]
+
+  [('+ `(,(? number? m) ,(? number? n)))
+   (+ m n)]
+  [('- `(,(? number? m) ,(? number? n)))
+   (- m n)]
+  [('* `(,(? number? m) ,(? number? n)))
+   (* m n)]
+  [('↑ `(,(? number? m) ,(? number? n)))
+   (expt m n)])
+
+(define (IF0 L M N)
+  (let ([X ((symbol-not-in (FV M) (FV N)) 'if0)])
+    `((((iszero ,L) (λ ,X ,M)) (λ ,X ,N)) 0)))
+
+(define-reduction (v-rules) #:super [(βv-rule)]
+  [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
+   (δ oⁿ b)])
+
+(define v (call-with-values
+           (λ () (invoke-unit (v-rules)))
+           compose1))
+
+(define-nondet-match-expander Cxt
+  (λ (stx)
+    (syntax-case stx ()
+      [(Cxt □)
+       #'(cxt Cxt □
+              ;`(λ ,X ,(? M? □))
+              `(,(? M? □) ,M)
+              `(,V ,(? M? □))
+              `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...)))])))
+
+(define-reduction (-->v-rules -->v) #:super [(v-rules)]
+  [(Cxt m)
+   M′ ← (-->v m)
+   (Cxt M′)])
+
+(define -->v (call-with-values
+              (λ () (invoke-unit (-->v-rules -->v)))
+              compose1))
+(define -->>v (compose1 car (repeated -->v)))
+
+(module+ test
+  (check-equal? (-->>v '((λ w (- (w 1) 5))
+                         ((λ x (x 10)) (λ y (λ z (+ z y))))))
+                (set 6))
+
+  (check-equal? (-->>v (IF0 0 1 2)) (set 1))
+  (check-equal? (-->>v (IF0 -1 1 2)) (set 2)))
+
+;;=============================================================================
+;; 4.4  The Yv Combinator
+
+(define Y '(λ f ((λ x (f (x x))) (λ x (f (x x))))))
+
+#;
+(define Yv '(λ f (λ y (((λ x (λ z ((f (λ p ((x x) p))) z)))
+                        (λ x (λ z ((f (λ p ((x x) p))) z)))) y))))
+(define Yv '(λ f (λ x (((λ g (f (λ x ((g g) x))))
+                        (λ g (f (λ x ((g g) x))))) x))))
+
+(module+ test
+ (define SUM `(,Yv (λ s (λ n ,(IF0 'n '0 '(+ n (s (sub1 n))))))))
+ ;(-->>v `(,Y ,SUM))
+ (check-equal? (-->>v `(,SUM 10)) (set 55))
+ )
+
+;;=============================================================================
+;; 4.5  Evaluation
+
+(define/match (evalᵥ m)
+  [M
+   #:when (∅? (FV M))
+   (match (-->>v m)
+    [(set (? b? b)) b]
+    [(set `(λ ,X ,M)) 'function]
+    [x (error 'evalᵥ "invalid answer: ~a" x)])]
+  [_ (error 'evalᵥ "invalid input: ~a" m)])
+
+(module+ test
+  (check-exn #rx"invalid input" (λ () (evalᵥ '(+ 1 x))))
+  (check-equal? (evalᵥ '(+ ((λ x x) 8) 2)) 10)
+  (check-equal? (evalᵥ '((λ x x) (λ x x))) 'function)
+  (check-exn #rx"invalid answer" (λ () (evalᵥ '(add1 (λ x x))))))
+
+;;=============================================================================
+;; 4.6  Consistency
+
+;; ↪v
+
+(define-reduction (↪v-rules ↪v)
+  [M M]
+  [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
+   (δ oⁿ b)]
+  [`((λ ,X ,M) ,V)
+   M′ ← (↪v M)
+   V′ ← (↪v V)
+   (subst M′ X V′)]
+  [`(,M₁ ,M₂)
+   M₁′ ← (↪v M₁)
+   M₂′ ← (↪v M₂)
+   `(,M₁′ ,M₂′)]
+  [`(λ ,X ,M)
+   M′ ← (↪v M)
+   `(λ ,X ,M′)]
+  [`(,(? oⁿ? oⁿ) ,M ...)
+   `(,M′ ...) ← (sequence (map ↪v M))
+   `(,oⁿ ,@M′)])
+
+(define ↪v (call-with-values
+            (λ () (invoke-unit (↪v-rules ↪v)))
+            compose1))
+
+(module+ test
+  ;; (for ([m′ (↪v '((λ x (x x)) (λ y ((λ x x) (λ x x)))))])
+  ;;   (printf "~s\n" m′))
+
+  ;; (for ([m′ (↪v '((λ y ((λ x x) (λ x x))) (λ y ((λ x x) (λ x x)))))])
+  ;;   (printf "~s\n" m′))
+  )

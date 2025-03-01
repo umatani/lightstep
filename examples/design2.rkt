@@ -17,7 +17,7 @@
 (define (f x) `(+ ,x ,x))
 (define (g x) `(<= 0 ,x))
 
-(define-reduction (-->₃-rule) #:super (-->₂-rule)
+(define-reduction (-->₃-rule) #:super [(-->₂-rule)]
   [`(g ,x) (g x) "g"])
 
 (module+ test
@@ -48,7 +48,7 @@
     ;[_ (subst0 e x e′)] ;; これはダメ
     ))
 
-(define-reduction (-->PCF₄-rule) #:super (-->PCF₃-rule)
+(define-reduction (-->PCF₄-rule) #:super [(-->PCF₃-rule)]
   [(ECxt e)
    e′ ← (-->PCF₄ e) ;; override (PCF₃ -> PCF₄)
    (ECxt e′)

@@ -153,7 +153,7 @@
 (module+ left-first-sequential
   (require rackunit)
 
-  (define-reduction (-->b′-rules -->a -->b′) #:super (-->b-rules -->a -->b′)
+  (define-reduction (-->b′-rules -->a -->b′) #:super [(-->b-rules -->a -->b′)]
     #:monad (StateT #f (NondetT ID))
 
     ;; remove super's "and" rule
@@ -229,7 +229,7 @@
 (module+ parallel-or
   (require rackunit)
 
-  (define-reduction (-->b′-rules -->a -->b′) #:super (-->b-rules -->a -->b′)
+  (define-reduction (-->b′-rules -->a -->b′) #:super [(-->b-rules -->a -->b′)]
     #:monad (StateT #f (NondetT ID))
 
     ;; remove super's "or" rule

@@ -1,9 +1,10 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse
                      (only-in racket/syntax format-id)
+                     (only-in racket/list check-duplicates)
                      (only-in racket/match match-define)
                      (only-in syntax/stx stx-map)
-                     (only-in "set.rkt" list→set ∈))
+                     (only-in "set.rkt" list→set set→list ∈ ∪))
          (only-in racket/unit
                  define-signature unit import export link
                  compound-unit invoke-unit)
@@ -25,7 +26,7 @@
                                     #:name "#:monad option")
                          (~optional (~seq #:mrun mr)
                                     #:name "#:mrun option")
-                         (~optional (~seq #:super (sname:id sarg ...))
+                         (~optional (~seq #:super [(sname:id sarg ...) ...])
                                     #:name "#:super option")
                          (~optional (~seq #:import [sig-spec ...])
                                     #:name "#:import option")
@@ -33,12 +34,12 @@
                                     #:name "#:do option")
                          (~optional (~seq #:default [pat body ... e])
                                     #:name "#:default option")) ...)
-             #:with monad     #'(~? m                #f)
-             #:with mrun      #'(~? mr               #f)
-             #:with sup-name  #'(~? sname            #f)
-             #:with sup-args  #'(~? (sarg ...)       ())
-             #:with imports   #'(~? (sig-spec ...)   ())
-             #:with do-bodies #'(~? (do-body ...)    ())
+             #:with monad     #'(~? m                 #f)
+             #:with mrun      #'(~? mr                #f)
+             #:with sup-names  #'(~? (sname ...)      ())
+             #:with sup-argss  #'(~? ((sarg ...) ...) ())
+             #:with imports   #'(~? (sig-spec ...)    ())
+             #:with do-bodies #'(~? (do-body ...)     ())
              #:with default   #'(~? (pat body ... e) #f)))
 
   (define (replace-lexical-context lctx stx)
@@ -75,6 +76,44 @@
           (rule ...)
           (do-body ...)
           drule)]))
+
+  (define (get-supers-info orig-stx rids argss)
+    (define (merge-imports importss) ;; TODO: check duplicates?
+      (set→list (apply ∪ (stx-map (compose1 list→set syntax->list) importss))))
+    (define (merge-rules ruless)
+      (syntax-parse ruless
+        [(((~and rule (_ _ _ rnam _ ...)) ...) ...)
+         (cond
+           [(check-duplicates (map syntax-e (syntax->list #'(rnam ... ...))))
+            => (λ (rnam) (raise-syntax-error
+                          #f (format "duplicate rule ~s" rnam)
+                          orig-stx ruless))]
+           [else #'(rule ... ...)])]))
+    (define (merge-do-bodies do-bodiess) ;; TODO: do something?
+      (syntax-parse do-bodiess
+        [((do-body ...) ...)
+         #'(do-body ... ...)]))
+    (define (merge-default defaults)
+      (define defs (filter syntax-e (syntax->list defaults)))
+      (if (> (length defs) 1)
+        (raise-syntax-error #f "duplicate default" orig-stx defaults)
+        (if (null? defs)
+          #'#f
+          (car defs))))
+
+    (if (null? (syntax->list rids))
+      #'(() () () #f)
+      (cond
+        [(check-duplicate-identifier (syntax->list rids))
+         => (λ (id) (raise-syntax-error
+                     #f (format "duplicate super name ~s" (syntax-e id))
+                     orig-stx rids))]
+        [else (with-syntax ([((imports rules do-bodies default) ...)
+                             (stx-map inst-reduction-info rids argss)])
+                (list (merge-imports   #'(imports ...))
+                      (merge-rules     #'(rules ...))
+                      (merge-do-bodies #'(do-bodies ...))
+                      (merge-default   #'(default ...))))])))
 
   (define (derive-mrun M)
     (syntax-parse M
@@ -127,10 +166,10 @@
      #:with (imports-of-super
              rules-of-super
              do-bodies-of-super
-             default-of-super)  (if (syntax-e #'opts.sup-name)
-                                  (inst-reduction-info #'opts.sup-name
-                                                       #'opts.sup-args)
-                                  #'(() () () #f))
+             default-of-super) (get-supers-info stx
+                                                #'opts.sup-names
+                                                #'opts.sup-argss)
+
 
      #:with imports (stx-map rescope #`(#,@#'imports-of-super
                                         #,@#'opts.imports))

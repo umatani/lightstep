@@ -2,8 +2,9 @@
 (require (for-syntax racket/base
                      (only-in syntax/parse syntax-parser id))
          (only-in racket/unit invoke-unit)
-         lightstep/base
-         (only-in "common.rkt" mmap-ext mmap-lookup sequence)
+         lightstep/base lightstep/syntax
+         (only-in lightstep/monad sequence)
+         (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "aam1-3_3.rkt" PCF δ)
          rackunit)
 
@@ -128,13 +129,13 @@
       [M ∷= .... (? string?)])
     (check-true (M? 5))
     (check-true (M? "five"))
-    (define-reduction (r₀′-rules) #:super (r₀-rules))
+    (define-reduction (r₀′-rules) #:super [(r₀-rules)])
     (define r₀′ (call-with-values
                  (λ () (invoke-unit (r₀′-rules)))
                  compose1))
     (check-equal? (r₀′ "seven") (set 5))
 
-    (define-reduction (r₁′-rules) #:super (r₁-rules))
+    (define-reduction (r₁′-rules) #:super [(r₁-rules)])
     (define r₁′ (call-with-values
                  (λ () (invoke-unit (r₁′-rules)))
                  compose1))
@@ -218,7 +219,7 @@
      C₂
      "if-f"])
   
-  (define-reduction (-->vρ-rules -->vρ) #:super (vρ-rules)
+  (define-reduction (-->vρ-rules -->vρ) #:super [(vρ-rules)]
     [(ECxt c)
      ; where
      C′ ← (-->vρ c)
@@ -258,7 +259,7 @@
     [ς ∷= `(,C ,K) V])
 
   (define-reduction (-->vς-rules)
-    #:do [(define-reduction (rules) #:super (vρ-rules))
+    #:do [(define-reduction (rules) #:super [(vρ-rules)])
           (define vρ (call-with-values
                        (λ () (invoke-unit (rules)))
                        compose1))]
@@ -315,7 +316,7 @@
 (module+ PCFσ
   (require (only-in (submod ".." PCFρ) vρ-rules)
            (submod ".." PCFς))
-  (provide PCFσ -->vσ-rules injσ formals alloc-rules alloc)
+  (provide PCFσ -->vσ-rules injσ formals alloc)
 
   (define-language PCFσ #:super PCFς
     [Σ ∷= (? map?)]
@@ -323,9 +324,9 @@
     [σ ∷= `(,(? ς?) ,Σ) V])
  
   (define-reduction (-->vσ-rules)
-    #:do [(define-reduction (-->vς′-rules) #:super (-->vς-rules)
+    #:do [(define-reduction (-->vς′-rules) #:super [(-->vς-rules)]
             #:do[;; remove rules manually
-                 (define-reduction (vρ′-rules) #:super (vρ-rules)
+                 (define-reduction (vρ′-rules) #:super [(vρ-rules)]
                    [x #:when #f x "ρ-x"]
                    [x #:when #f x "β"]
                    [x #:when #f x "rec-β"])
@@ -400,16 +401,9 @@
        (match-let ([`(,X ...) (formals L)])
          `(,X′ ,@X))]))
 
-  ;; TODO: rewrite with define/match
-  (define-reduction (alloc-rules)
+  (define/match (alloc σ)
     [`((((,M ,(? ρ?)) ,V ...) ,K) ,Σ)
      (map (λ (x) (list x (gensym x))) (formals M))])
-
-  (define (alloc σ) (let ([al (call-with-values
-                                (λ () (invoke-unit (alloc-rules)))
-                                compose1)])
-                       (match (al σ)
-                         [(set x) x])))
 
   ;(alloc `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) []) ,(↦)))
   ;(-->vσ `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) []) ,(↦)))
@@ -427,7 +421,7 @@
 
   (define-language PCFσ #:super orig-PCFσ)
 
-  (define-reduction (-->vσ/alloc-rules alloc) #:super (-->vσ-rules))
+  (define-reduction (-->vσ/alloc-rules alloc) #:super [(-->vσ-rules)])
 
   (define -->vσ (call-with-values
                   (λ () (invoke-unit (-->vσ/alloc-rules alloc)))
@@ -467,31 +461,25 @@
 (module+ PCFσ*
   (require (only-in (submod ".." PCFρ) vρ-rules)
            (only-in (submod ".." PCFς) -->vς-rules)
-           (only-in (submod ".." PCFσ) PCFσ injσ formals alloc-rules)
+           (only-in (submod ".." PCFσ) PCFσ injσ formals alloc)
            (submod ".." PCFσ/alloc))
 
   (define-language PCFσ* #:super PCFσ
     [K ∷= '() `(,F ,A)]
     [U ∷= V K])
 
-  (define-reduction (alloc*-rules) #:super (alloc-rules)
+  (define/match (alloc* σ) #:super alloc
     [`(((if0 ,S₀ ,C₁ ,C₂) ,K) ,Σ)
      `(((if0 □ ,C₁ ,C₂) ,(gensym 'if0)))]
     [`(((,V ... ,S ,C ...) ,K) ,Σ)
      `(((,@V □ ,@C) ,(gensym 'app)))])
-
-  (define (alloc* σ) (let ([al (call-with-values
-                                 (λ () (invoke-unit (alloc*-rules)))
-                                 compose1)])
-                        (match (al σ)
-                          [(set x) x])))
 
   ;; (alloc* `(((if0 ((add1 2) ,(↦)) (3 ,(↦)) (4 ,(↦))) ()) ,(↦)))
   ;; (alloc* `(((((λ ([y : num]) y) ,(↦)) ((add1 2) ,(↦))) ()) ,(↦)))
   ;; (alloc* `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) ()) ,(↦)))
 
   (define-reduction (-->vσ*/alloc-rules alloc*)
-    #:super (-->vσ/alloc-rules alloc*)
+    #:super [(-->vσ/alloc-rules alloc*)]
 
     ; Eval
     [(and σ `(((if0 ,S₀ ,C₁ ,C₂) ,K) ,Σ))

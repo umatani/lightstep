@@ -12,7 +12,7 @@
 (define select list→set)
 
 (define-reduction (-->PCF₆-rule --> ≔<1> ≔<2>)
-  #:super (-->PCF₅-rule --> ≔<1> ≔<2>))
+  #:super [(-->PCF₅-rule --> ≔<1> ≔<2>)])
 
 (define-values (-->PCF₆ reducer-PCF₆)
   (call-with-values
@@ -30,7 +30,7 @@
 ;; define-reduction時に ≔<1>, ≔<2>を固定できることも可能
 
 (define-reduction (-->PCF₆-v2-rule -->)
-  #:super (-->PCF₅-rule --> ≔ ←))
+  #:super [(-->PCF₅-rule --> ≔ ←)])
 
 (define-values (-->PCF₆-v2 reducer-PCF₆-v2)
   (call-with-values

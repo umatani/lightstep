@@ -89,7 +89,7 @@
     (pattern (~optional (~seq #:super g))
              #:with super #'(~? g #f)))
 
-  (define (parse-pat single? pat)
+  (define (make-pat single? pat)
     (if single?
       #`(#,pat)
       pat))
@@ -101,7 +101,7 @@
      #:with g #'o.super
      #:with (x ...) #'(h.param ...)
      #:with ((pat ...) ...) (stx-map
-                             (λ (p) (parse-pat (attribute h.single?) p))
+                             (λ (p) (make-pat (attribute h.single?) p))
                              #'(ps ...))
      #:with (sup-clause ...) (if (syntax-e #'g)
                                (datum->syntax

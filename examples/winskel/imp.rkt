@@ -136,7 +136,7 @@
 (module+ left-first-sequential
   (require rackunit)
 
-  (define-reduction (-->b′-rules -->a -->b′) #:super (-->b-rules -->a -->b′)
+  (define-reduction (-->b′-rules -->a -->b′) #:super [(-->b-rules -->a -->b′)]
     ;; remove super's "and" rule
     [`((∧ ,b₀ ,b₁) ,σ)
      #:when #f
@@ -204,7 +204,7 @@
 (module+ parallel-or
   (require rackunit)
 
-  (define-reduction (-->b′-rules -->a -->b′) #:super (-->b-rules -->a -->b′)
+  (define-reduction (-->b′-rules -->a -->b′) #:super [(-->b-rules -->a -->b′)]
     ;; remove super's "or" rule
     [`((∨ ,b₀ ,b₁) ,σ)
      #:when #f

@@ -44,7 +44,7 @@
    't
    "b"])
 
-(define-reduction (≍r-rules-v0) #:super (r-rules)
+(define-reduction (≍r-rules-v0) #:super [(r-rules)]
   [B₁
    B₁
    "c"])
@@ -66,7 +66,7 @@
   (check-equal? (car (->>r '(● f (● f (● t f))))) (set 't))
   (check-equal? (car (->>r '(● f (● f (● f f))))) (set 'f)))
 
-(define-reduction (-->r-rules -->r) #:super (r-rules)
+(define-reduction (-->r-rules -->r) #:super [(r-rules)]
   [`(● ,B₁ ,B₂)
    B₁′ ← (-->r B₁)
    `(● ,B₁′ ,B₂)]

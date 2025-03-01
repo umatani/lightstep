@@ -1,8 +1,8 @@
 #lang racket/base
 (require (for-syntax racket/base)
-         lightstep/base
+         lightstep/base lightstep/syntax
          (only-in racket/unit invoke-unit))
-(provide FV)
+(provide LAM FV subst)
 
 (module+ test (require rackunit))
 
@@ -82,7 +82,7 @@
            (λ () (invoke-unit (α-rule)))
            compose1))
 
-(define-reduction (-->α-rule -->α) #:super (-->gen-rule -->α)
+(define-reduction (-->α-rule -->α) #:super [(-->gen-rule -->α)]
   [M
    M′ ← (for/monad+ ([m′ (α M)]) (return m′))
    M′
@@ -101,7 +101,7 @@
            (λ () (invoke-unit (β-rule)))
            compose1))
 
-(define-reduction (-->β-rule -->β) #:super (-->gen-rule -->β)
+(define-reduction (-->β-rule -->β) #:super [(-->gen-rule -->β)]
   [M
    M′ ← (for/monad+ ([m′ (β M)]) (return m′))
    M′
@@ -122,7 +122,7 @@
            (λ () (invoke-unit (η-rule)))
            compose1))
 
-(define-reduction (-->η-rule -->η) #:super (-->gen-rule -->η)
+(define-reduction (-->η-rule -->η) #:super [(-->gen-rule -->η)]
   [M
    M′ ← (for/monad+ ([m′ (η M)]) (return m′))
    M′
@@ -132,25 +132,13 @@
               (λ () (invoke-unit (-->η-rule -->η)))
               compose1))
 
-(define-reduction (n-rule)
-  ;; [M
-  ;;  M′ ← (for/monad+ ([m′ (α M)]) (return m′))
-  ;;  M′
-  ;;  "α"]
-  [M
-   M′ ← (for/monad+ ([m′ (β M)]) (return m′))
-   M′
-   "β"]
-  [M
-   M′ ← (for/monad+ ([m′ (η M)]) (return m′))
-   M′
-   "η"])
+(define-reduction (n-rule) #:super [#;(α-rule) (β-rule) (η-rule)])
 
 (define n (call-with-values
            (λ () (invoke-unit (n-rule)))
            compose1))
 
-(define-reduction (-->n-rule -->n) #:super (-->gen-rule -->n)
+(define-reduction (-->n-rule -->n) #:super [(-->gen-rule -->n)]
   [M
    M′ ← (for/monad+ ([m′ (n M)]) (return m′))
    M′

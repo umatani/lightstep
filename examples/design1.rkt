@@ -1,5 +1,5 @@
 #lang racket
-(require  (except-in lightstep/base cxt)
+(require lightstep/base
          (for-syntax syntax/parse syntax/stx))
 (provide -->PCF₃-rule -->₂-rule val? subst ECxt cxt)
 
@@ -90,7 +90,7 @@
 ;;;; ruleの中に書ける複数式の説明．通常の式以外に ≔ や #:when
 ;;;; ここで reduction の拡張も説明．
 
-(define-reduction (-->PCF₀-rule) #:super (-->LAM₀-rule)
+(define-reduction (-->PCF₀-rule) #:super [(-->LAM₀-rule)]
   [`(+ ,(? number? n₁) ,(? number? n₂))
    (+ n₁ n₂) "add"]
   [`(<= ,(? number? n₁) ,(? number? n₂))
@@ -179,7 +179,7 @@
     [`(λ (,x) ,e) #t]
     [_            #f]))
 
-(define-reduction (-->PCF₂-rule) #:super (-->PCF₀-rule)
+(define-reduction (-->PCF₂-rule) #:super [(-->PCF₀-rule)]
   ;; override
   [`((λ (,x) ,e) ,(? val? v))
    (subst e x v) "β"]
@@ -389,7 +389,7 @@
    '(if (<= (+ 1 2) (+ 1 2)) (+ 3 4) 5)))
 
 
-(define-reduction (-->PCF₃-rule) #:super (-->PCF₀-rule)
+(define-reduction (-->PCF₃-rule) #:super [(-->PCF₀-rule)]
   ;; override
   [`((λ (,x) ,e) ,(? val? v))
    (subst e x v) "β"]

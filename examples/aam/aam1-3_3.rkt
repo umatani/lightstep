@@ -1,14 +1,14 @@
 #lang racket/base
 (require (for-syntax racket/base racket/syntax syntax/parse syntax/stx)
-         lightstep/base
+         lightstep/base lightstep/syntax
+         (only-in lightstep/monad sequence)
+         (only-in lightstep/transformers
+                  define-monad NondetT StateT PowerO ID run-StateT)
          (only-in racket/list split-at)
          (only-in racket/sequence sequence-map)
          (only-in racket/match match-define)
          (only-in racket/unit invoke-unit)
-         (only-in lightstep/transformers
-                  define-monad NondetT StateT PowerO ID run-StateT)
-         (only-in "common.rkt" match? mmap mmap-lookup mmap-ext
-                  sequence reachable?))
+         (only-in "common.rkt" match? mmap mmap-lookup mmap-ext reachable?))
 (provide PCF δ)
 
 (module+ test (require rackunit))
@@ -310,7 +310,7 @@
                 (set '(sub1 ((λ ([x : num]) x) (add1 5))))))
 
 ;; TODO: extend cxt pattern to support non-deterministic compatible-closure
-(define-reduction (-->ᵣ-rules -->ᵣ) #:super (r-rules)
+(define-reduction (-->ᵣ-rules -->ᵣ) #:super [(r-rules)]
   #:do [(define (split-app-cxt Ms)
           (define ((make-cxt i) M)
             (define-values (l r) (split-at Ms i))
@@ -415,7 +415,7 @@
              `(,O ,V ... ,(? M? □) ,M ...)
              `(if0 ,(? M? □) ,M₁ ,M₂)))]))
 
-(define-reduction (-->ₙ-rules -->ₙ) #:super (r-rules)
+(define-reduction (-->ₙ-rules -->ₙ) #:super [(r-rules)]
   [(ECxtₙ m)
    M′ ← (-->ₙ m)
    (ECxtₙ M′)
@@ -477,7 +477,7 @@
              `(,V ... ,(? M? □) ,M ...)
              `(if0 ,(? M? □) ,M₁ ,M₂)))]))
 
-(define-reduction (-->ᵥ-rules -->ᵥ) #:super (r-rules)
+(define-reduction (-->ᵥ-rules -->ᵥ) #:super [(r-rules)]
   [`((λ ([,X : ,T] ...) ,M₀) ,V ...)
    ((apply subst (map list X V)) M₀)
    "β"]

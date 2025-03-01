@@ -5,11 +5,12 @@
          (only-in racket/match match-define define-match-expander)
          (only-in racket/unit define-signature define-unit import export)
          (only-in racket/sequence sequence-fold)
-         (only-in rackunit check-equal?)
          (only-in "map.rkt" [∅ m:∅] ⊔)
          (only-in "match.rkt" match match-let match-λ)
          (only-in "set.rkt" [∅ s:∅] set ∪ set-map list→set))
 (provide (all-defined-out))
+
+(module+ test (require rackunit))
 
 
 ;;=============================================================================
@@ -1026,6 +1027,96 @@
                (return x))
              fail)))
    (set (cons (failure) 0) (cons 1 0) (cons 2 0) (cons 3 0))))
+
+(module+ test
+  ;; 2 ReaderT, 4 StateT, and 1 NondetT
+  ;; both combinations can work in a uniform manner
+  
+  ;; (define-monad (ReaderT                      ; r₂ (env)
+  ;;                (ReaderT                     ; r₁ (ξ)
+  ;;                 (StateT                     ; s₃ (store)
+  ;;                  #f (StateT                 ; s₂ (σ)
+  ;;                      #f
+  ;;                      (StateT            ; s₁ (cont)
+  ;;                       #f
+  ;;                       (StateT           ; s₀ (κ)
+  ;;                        #f
+  ;;                        (NondetT ID))))))))
+
+  (define-monad (ReaderT                      ; r₂ (env)
+                 (ReaderT                     ; r₁ (ξ)
+                  (StateT                     ; s₃ (store)
+                   #f (StateT                 ; s₂ (σ)
+                       #f (NondetT
+                           (StateT            ; s₁ (cont)
+                            (FinMapO PowerO)
+                            (StateT           ; s₀ (κ)
+                             (FinMapO PowerO)
+                             ID))))))))
+
+  (define ask-env (bind ask (compose1 return car)))
+  (define ask-ξ   (bind ask (compose1 return cdr)))
+  (define (local-env env xM)
+    (do (cons _ ξ) ← ask
+        (local (cons env ξ) xM)))
+  (define (local-ξ ξ xM)
+    (do (cons env _) ← ask
+        (local (cons env ξ) xM)))
+
+  (define get-store (bind get (compose1 return car)))
+  (define get-σ     (bind get (compose1 return cadr)))
+  (define get-cont  (bind get (compose1 return caddr)))
+  (define get-κ     (bind get (compose1 return cdddr)))
+  (define (put-store s)
+    (do `(,_ ,σ ,c . ,κ) ← get
+        (put `(,s ,σ ,c . ,κ))))
+  (define (put-σ σ)
+    (do `(,s ,_ ,c . ,κ) ← get
+        (put `(,s ,σ ,c . ,κ))))
+  (define (put-cont c)
+    (do `(,s ,σ ,_ . ,κ) ← get
+        (put `(,s ,σ ,c . ,κ))))
+  (define (put-κ κ)
+    (do `(,s ,σ ,c . ,_) ← get
+        (put `(,s ,σ ,c . ,κ))))
+
+  (define (mrun m)
+    (run-StateT
+     (m:∅ 'κ (set 0)) ; (FinMapO PowerO)
+     (run-StateT
+      (m:∅ 'cont (set 1)) ; (FinMapO PowerO)
+      (run-StateT
+       'σ
+       (run-StateT
+        'store
+        (run-ReaderT
+         'ξ
+         (run-ReaderT
+          'env
+          m)))))))
+
+  (check-equal? (mrun (local-ξ
+                       'ξ′
+                       (local-env
+                        'env′
+                        (do env ← ask-env
+                            ξ ← ask-ξ
+                            s ← get-store
+                            (put-store 'foo)
+                            κ ← get-κ
+                            (put-κ (κ 'bar (set 'a 'b 'c)))
+                            (return (list env ξ))))))
+                (cons
+                 (cons
+                  (set (cons
+                        (cons
+                         (list 'env′ 'ξ′)
+                         'foo)
+                        'σ))
+                  (m:∅ 'cont (set 1)))
+                 ((m:∅ 'κ (set 0)) 'bar (set 'a 'b 'c)))))
+
+
 
 (module+ additional-test
   ;; (with-monad (WriterT AddO ID)

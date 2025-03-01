@@ -3,8 +3,7 @@
          (for-syntax racket/base syntax/parse)
          (only-in lightstep/transformers define-monad)
          (prefix-in r: (only-in racket/set mutable-set set-member? set-add!)))
-(provide match? mmap mmap-lookup mmap-lookup? mmap-ext1 mmap-ext
-         sequence reachable?)
+(provide match? mmap mmap-lookup mmap-lookup? mmap-ext1 mmap-ext reachable?)
 
 (module+ test (require rackunit))
 
@@ -61,21 +60,6 @@
   (match bs
     ['() m]
     [`([,x ,t] ,@bs′) (mmap-ext1 (apply mmap-ext m bs′) x t)]))
-
-;; mapM : Monad m => (a -> m b) -> [a] -> m [b]
-(define (mapM #:monad [M ReduceM] f as)
-  (define-monad M)
-  (foldr (λ (a r)
-           (do x  ← (f a)
-               xs ← r
-               (return (cons x xs))))
-         (return '())
-         as))
-
-;; sequence : Monad m => [m a] -> m [a]
-(define (sequence #:monad [M ReduceM] as)
-  (mapM #:monad M (λ (a) a) as))
-
 
 (struct Queueof (head tail) #:transparent #:mutable
   #:constructor-name Queue)

@@ -5,6 +5,7 @@
 
 (module+ test
   (require (submod lightstep/nondet test))
+  (require (submod lightstep/transformers test))
   (require (submod lightstep/syntax test))
 
   (require (submod lightstep/examples/unit-tests scope2))

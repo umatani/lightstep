@@ -20,5 +20,5 @@
                   repeated))
 (provide (all-from-out "reduction.rkt"))
 
-(require "syntax.rkt")
-(provide (all-from-out "syntax.rkt"))
+;; (require "syntax.rkt")
+;; (provide (all-from-out "syntax.rkt"))
