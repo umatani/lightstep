@@ -4,6 +4,7 @@
          (only-in lightstep/monad sequence)
          (only-in racket/unit invoke-unit)
          (prefix-in lam: (only-in "lam.rkt" LAM FV subst)))
+(provide ISWIM FV subst δ v)
 
 (module+ test (require rackunit))
 
@@ -87,15 +88,16 @@
            (λ () (invoke-unit (v-rules)))
            compose1))
 
+;; ECxt of iswim2.rkt is same, but deterministic
 (define-nondet-match-expander Cxt
   (λ (stx)
     (syntax-case stx ()
       [(Cxt □)
-       #'(cxt Cxt □
-              ;`(λ ,X ,(? M? □))
-              `(,(? M? □) ,M)
-              `(,V ,(? M? □))
-              `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...)))])))
+       #'(nondet-cxt Cxt □
+                     ;`(λ ,X ,(? M? □)) ;; non-termination
+                     `(,(? M? □) ,M)
+                     `(,V ,(? M? □))
+                     `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...)))])))
 
 (define-reduction (-->v-rules -->v) #:super [(v-rules)]
   [(Cxt m)
@@ -138,7 +140,7 @@
 (define/match (evalᵥ m)
   [M
    #:when (∅? (FV M))
-   (match (-->>v m)
+   (match (-->>v M)
     [(set (? b? b)) b]
     [(set `(λ ,X ,M)) 'function]
     [x (error 'evalᵥ "invalid answer: ~a" x)])]

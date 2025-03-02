@@ -5,9 +5,10 @@
                      (only-in "map.rkt" ↦ for/map ⊔ [∈ map-∈]))
          (only-in racket/list check-duplicates)
          (only-in "set.rkt" ∈ ∪)
+         (only-in racket/match define-match-expander)
          (only-in "match.rkt" match match-λ category-id?)
          (only-in "nondet.rkt" define-nondet-match-expander nondet))
-(provide define-language cxt unique symbol-not-in)
+(provide define-language cxt nondet-cxt unique symbol-not-in)
 
 (module+ test (require rackunit))
 
@@ -162,17 +163,45 @@
 
       [p (raise-syntax-error 'with-ctor "unknown pattern" #'p)]))
 
-  (define (cxt1 stx)
+  (define (nondet-cxt1 stx)
     (syntax-parse stx
       [(C:id hole:id p)
        #:with (p′ c) (with-ctor #'p)
        #'(and p (app (match-λ [p′ (λ (hole) c)]) C))])))
 
-(define-nondet-match-expander cxt
+(define-nondet-match-expander nondet-cxt
   (syntax-parser
     [(_ C:id hole:id p ...)
-     #:with (p′ ...) (stx-map (λ (p) (cxt1 #`(C hole #,p))) #'(p ...))
+     #:with (p′ ...) (stx-map (λ (p) (nondet-cxt1 #`(C hole #,p))) #'(p ...))
      #'(nondet p′ ...)]))
+
+
+(define-match-expander cxt
+  (syntax-parser
+    [(_ C:id [□:id p₁] p ...)
+     #:with ((p′ c) ...) (stx-map with-ctor #'(p ...))
+     #'(app (letrec ([chk (λ (f e)
+                            (match e
+                              [p′
+                               #:do [(define r (chk (λ (□) (f c)) □))]
+                               #:when r
+                               r]
+                              ...
+                              [p₁ (cons f e)]
+                              [_ #f]))])
+              (λ (e) (chk (λ (x) x) e)))
+            (? (λ (x) (not (eq? 'fail x))) (cons C p₁)))]))
+
+(module+ test
+  (check-equal? (match '(1 (a (b c))) ; '((λ x x) (+ 1 2))
+                  [(cxt Ce [□ (? symbol? □)]
+                        `(,(? number?) ,□)
+                        `(,(? symbol?) ,□)
+                        `(,□ ,y)
+                        )
+                   (list (Ce (string->symbol (format "~a′" □))) □)]
+                  [_ 'NG])
+                '((1 (a (b c′))) c)))
 
 
 ;;=============================================================================

@@ -6,7 +6,7 @@
                   define-monad NondetT StateT PowerO ID run-StateT)
          (only-in racket/list split-at)
          (only-in racket/sequence sequence-map)
-         (only-in racket/match match-define)
+         (only-in racket/match match-define define-match-expander)
          (only-in racket/unit invoke-unit)
          (only-in "common.rkt" match? mmap mmap-lookup mmap-ext reachable?))
 (provide PCF δ)
@@ -75,7 +75,13 @@
   [O   ∷= (? Op₁?) (? Op₂?)]
   [Op₁ ∷= 'add1 'sub1]
   [Op₂ ∷= '+ '*]
-  [T   ∷= 'num `(,T₁ ... → ,T)])
+  [T   ∷= 'num `(,T₁ ... → ,T)]
+
+  [redex ∷=
+         `(μ [,X : ,T] ,L)
+         `((λ ([,X : ,T] ...) ,M) ,M′ ...)
+         `(,O ,N ...)
+         `(if0 ,N ,M₁ ,M₂)])
 
 (module+ test
   (provide fact-5)
@@ -394,35 +400,22 @@
 ;;-----------------------------------------------------------------------------
 ;; 3.3 Call-by-value and call-by-name: Strategies, contexts, and axioms
 
-;; list-pattern version
-#;
-(define-nondet-match-expander ECxtₙ
+(define-match-expander ECxtₙ
   (syntax-parser
     [(ECxtₙ □:id)
-     #'(...
-        (cxt ECxtₙ □
-             (list O V ... (? M? □) M ...)
-             (list (? M? □) M ...)
-             (list 'if0 (? M? □) M₁ M₂)))]))
+     #'(... (cxt ECxtₙ [□ (and □ (? redex?))]
+                 `(,□ ,M ...)
+                 `(,O ,V ... ,□ ,M ...)
+                 `(if0 ,□ ,M₁ ,M₂)))]))
 
-;; quasiquote-pattern version
-(define-nondet-match-expander ECxtₙ
-  (syntax-parser
-    [(ECxtₙ □:id)
-     #'(...
-        (cxt ECxtₙ □
-             `(,(? M? □) ,M ...)
-             `(,O ,V ... ,(? M? □) ,M ...)
-             `(if0 ,(? M? □) ,M₁ ,M₂)))]))
-
-(define-reduction (-->ₙ-rules -->ₙ) #:super [(r-rules)]
+(define-reduction (-->ₙ-rules)
   [(ECxtₙ m)
-   M′ ← (-->ₙ m)
+   M′ ← (r m)
    (ECxtₙ M′)
    "ECxtₙ"])
 
 (define -->ₙ (call-with-values
-              (λ () (invoke-unit (-->ₙ-rules -->ₙ)))
+              (λ () (invoke-unit (-->ₙ-rules)))
               compose1))
 
 (module+ test
@@ -458,37 +451,28 @@
   ;; (reachable? -->ᵣ fact-5 120)
   )
 
-;; list-pattern version
-#;
-(define-nondet-match-expander ECxtᵥ
+(define-match-expander ECxtᵥ
   (syntax-parser
     [(ECxtᵥ □:id)
-     #'(...
-        (cxt ECxtᵥ □
-             (list V ... (? M? □) M ...)
-             (list 'if0 (? M? □) M₁ M₂)))]))
+     #'(... (cxt ECxtᵥ [□ (and □ (? redex?))]
+                 `(,V ... ,□ ,M ...)
+                 `(if0 ,□ ,M₁ ,M₂)))]))
 
-;; quasiquote-pattern version
-(define-nondet-match-expander ECxtᵥ
-  (syntax-parser
-    [(ECxtᵥ □:id)
-     #'(...
-        (cxt ECxtᵥ □
-             `(,V ... ,(? M? □) ,M ...)
-             `(if0 ,(? M? □) ,M₁ ,M₂)))]))
-
-(define-reduction (-->ᵥ-rules -->ᵥ) #:super [(r-rules)]
-  [`((λ ([,X : ,T] ...) ,M₀) ,V ...)
-   ((apply subst (map list X V)) M₀)
-   "β"]
-
+(define-reduction (-->ᵥ-rules)
+  #:do [(define-reduction (v-rules) #:super [(r-rules)]
+          [`((λ ([,X : ,T] ...) ,M₀) ,V ...)
+           ((apply subst (map list X V)) M₀)
+           "β"])
+        (define v (call-with-values
+                   (λ () (invoke-unit (v-rules)))
+                   compose1))]
   [(ECxtᵥ m)
-   M′ ← (-->ᵥ m)
+   M′ ← (v m)
    (ECxtᵥ M′)
    "ECxtᵥ"])
 
 (define -->ᵥ (call-with-values
-              (λ () (invoke-unit (-->ᵥ-rules -->ᵥ)))
+              (λ () (invoke-unit (-->ᵥ-rules)))
               compose1))
 
 (module+ test

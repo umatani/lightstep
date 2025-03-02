@@ -2,6 +2,7 @@
 (require (for-syntax racket/base
                      (only-in syntax/parse syntax-parser id))
          (only-in racket/unit invoke-unit)
+         (only-in racket/match define-match-expander)
          lightstep/base lightstep/syntax
          (only-in lightstep/monad sequence)
          (only-in "common.rkt" mmap-ext mmap-lookup)
@@ -13,6 +14,10 @@
 
 ;; Abstracting Abstract Machines from:
 ;;   https://dvanhorn.github.io/redex-aam-tutorial/
+
+
+;; TODO: monadic version
+
 
 ;;-----------------------------------------------------------------------------
 ;; 3.4 Evaluation
@@ -154,12 +159,23 @@
        V
        `(,M ,(? ρ?))
        `(if0 ,C₀ ,C₁ ,C₂)
-       `(,C₀ ,C₁ ...)])
+       `(,C₀ ,C₁ ...)]
 
-  (define-nondet-match-expander ECxt
+    [redex ∷=
+           `((if0 ,M ...) ,(? ρ?))
+           `((,M ...) ,(? ρ?))
+           `(,O ,(? ρ?))
+           `(,N ,(? ρ?))
+           `(,X ,(? ρ?))
+           `(((λ ([,X : ,T] ...) ,M) ,(? ρ?)) ,V ...)
+           `(((μ [,X′ : ,T′] (λ ([,X : ,T] ...) ,M)) ,(? ρ?)) ,V ...)
+           `(,O ,V ...)
+           `(if0 ,N ,C₁ ,C₂)])
+
+  (define-match-expander ECxt
     (syntax-parser
       [(ECxt □:id)
-       #'(... (cxt ECxt □
+       #'(... (cxt ECxt [□ (and □ (? redex?))]
                    `(,V ... ,(? C? □) ,C ...)
                    `(if0 ,(? C? □) ,C₁ ,C₂)))]))
 
@@ -219,16 +235,19 @@
      C₂
      "if-f"])
   
-  (define-reduction (-->vρ-rules -->vρ) #:super [(vρ-rules)]
+  (define-reduction (-->vρ-rules)
+    #:do [(define vρ (call-with-values
+                      (λ () (invoke-unit (vρ-rules)))
+                      compose1))]
     [(ECxt c)
      ; where
-     C′ ← (-->vρ c)
+     C′ ← (vρ c)
      ; -->
      (ECxt C′)
      "EC"])
 
   (define -->vρ (call-with-values
-                 (λ () (invoke-unit (-->vρ-rules -->vρ)))
+                 (λ () (invoke-unit (-->vρ-rules)))
                  compose1))
 
   (define (injρ M)

@@ -49,8 +49,7 @@
       [(p ...)
        #:with (p′ ...) (stx-map convert-category-id #'(p ...))
        #'(p′ ...)]
-      [p #'p]))
-  )
+      [p #'p])))
 
 (define-syntax (match stx)
   (syntax-parse stx

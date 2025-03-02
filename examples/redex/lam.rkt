@@ -62,10 +62,10 @@
   (λ (stx)
     (syntax-case stx ()
       [(Cxt □)
-       #'(cxt Cxt □
-              `(λ ,X ,(? M? □))
-              `(,(? M? □) ,M)
-              `(,M ,(? M? □)))])))
+       #'(nondet-cxt Cxt □
+                     `(λ ,X ,(? M? □))
+                     `(,(? M? □) ,M)
+                     `(,M ,(? M? □)))])))
 
 (define-reduction (-->gen-rule r)
   [(Cxt m)
