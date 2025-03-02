@@ -28,6 +28,7 @@
   (require (submod lightstep/examples/redex/lam test))
   (require (submod lightstep/examples/redex/iswim test))
   (require (submod lightstep/examples/redex/iswim2 test))
+  (require (submod lightstep/examples/redex/cc test))
 
   ;; aam
   (require (submod lightstep/examples/aam/common test))

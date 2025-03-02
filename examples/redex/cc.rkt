@@ -1,9 +1,9 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
-         lightstep/base lightstep/syntax
+         lightstep/base lightstep/syntax lightstep/transformers
          (only-in racket/unit invoke-unit)
          (only-in racket/match define-match-expander)
-         (only-in "iswim.rkt" [ISWIM orig-ISWIM] subst δ))
+         (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ))
 
 (module+ test (require rackunit))
 
@@ -59,14 +59,108 @@
    "cc6"])
 
 
+(define-reduction (⊢->cc′-rules)
+  #:monad (StateT #f (NondetT ID))
+
+  [`(,M₁ ,M₂)
+   #:when (not (V? M₁))
+   (ECxt □) ← get
+   (put (ECxt `(,□ ,M₂)))
+   M₁ 
+   "cc1"]
+
+  [`(,V ,M)
+   #:when (not (V? M))
+   (ECxt □) ← get
+   (put (ECxt `(,V ,□)))
+   M
+   "cc2"]
+
+  [`(,(? oⁿ? oⁿ) ,V ... ,M₁ ,M ...)
+   #:when (not (V? M₁))
+   (ECxt □) ← get
+   (put (ECxt `(,oⁿ ,@V ,□ ,@M)))
+   M₁
+   "cc3"]
+
+  [`((λ ,X ,M) ,V)
+   (subst M X V)
+   "ccfiᵥ"]
+
+  [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
+   (δ oⁿ b)
+   "ccffi"]
+
+  [V
+   (ECxt `(,V′ ,□) #:hole □) ← get
+   (put (ECxt □))
+   `(,V′ ,V)
+   "cc4"]
+
+  [V
+   (ECxt `(,□ ,M) #:hole □) ← get
+   (put (ECxt □))
+   `(,V ,M)
+   "cc5"]
+
+  [V
+   (ECxt `(,(? oⁿ? oⁿ) ,V′ ... ,□ ,M ...) #:hole □) ← get
+   (put (ECxt □))
+   `(,oⁿ ,@V′ ,V ,@M)
+   "cc6"])
+
+
 (define ⊢->cc (call-with-values
                (λ () (invoke-unit (⊢->cc-rules)))
                compose1))
 (define ⊢->>cc (compose1 car (repeated ⊢->cc)))
 
+(define ⊢->cc′ (call-with-values
+               (λ () (invoke-unit (⊢->cc′-rules)))
+               (λ (mrun reducer)
+                 (λ (ς) (mrun (cdr ς) (reducer (car ς)))))))
+(define ⊢->>cc′ (compose1 car (repeated ⊢->cc′)))
+
 (define □-cc #())
 
+(define/match (evalcc m)
+  [M
+   #:when (∅? (FV M))
+   (match (⊢->>cc `(,M ,□-cc))
+     [(set `(,(? b? b) ,□))
+      #:when (equal? □ □-cc)
+      b]
+     [(set `((λ ,X ,(? M? N)) ,□))
+      #:when (equal? □ □-cc)
+      'function]
+     [x (error 'evalcc "invalid final state: ~a" x)])]
+  [_ (error 'evalcc "invalid input: ~a" m)])
+
+(define/match (evalcc′ m)
+  [M
+   #:when (∅? (FV M))
+   (match (⊢->>cc′ (cons M □-cc))
+     [(set (cons (? b? b) □))
+      #:when (equal? □ □-cc)
+      b]
+     [(set (cons `(λ ,X ,(? M? N)) □))
+      #:when (equal? □ □-cc)
+      'function]
+     [x (error 'evalcc′ "invalid final state: ~a" x)])]
+  [_ (error 'evalcc′ "invalid input: ~a" m)])
+
+
 (module+ test
-  (⊢->>cc `((((λ x x) (λ y y)) g) ,□-cc))
-  (⊢->>cc `((((λ x x) n) p) ,□-cc))
-  (⊢->>cc `((+ (* 9 (↑ 2 3)) 3) ,□-cc)))
+  (check-equal? (⊢->>cc  `((((λ x x) (λ y y)) 1) ,□-cc))
+                (set `(1 ,□-cc)))
+  (check-equal? (⊢->>cc′ (cons '(((λ x x) (λ y y)) 1) □-cc))
+                (set (cons 1 □-cc)))
+  (check-equal? (⊢->>cc  `((+ (add1 2) (* 3 4)) ,□-cc))
+                (set `(15 ,□-cc)))
+  (check-equal? (⊢->>cc′ (cons '(+ (add1 2) (* 3 4)) □-cc))
+                (set (cons 15 □-cc)))
+
+  (check-equal? (evalcc '(+ (* 9 (↑ 2 3)) 3)) 75)
+  (check-equal? (evalcc '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16)
+  (check-equal? (evalcc′ '(+ (* 9 (↑ 2 3)) 3)) 75)
+  (check-equal? (evalcc′ '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16))
