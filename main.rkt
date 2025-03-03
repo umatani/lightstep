@@ -30,6 +30,7 @@
   (require (submod lightstep/examples/redex/iswim2 test))
   (require (submod lightstep/examples/redex/cc test))
   (require (submod lightstep/examples/redex/scc test))
+  (require (submod lightstep/examples/redex/ck test))
 
   ;; aam
   (require (submod lightstep/examples/aam/common test))

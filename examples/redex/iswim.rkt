@@ -20,6 +20,7 @@
     r ...))
 
 (define-iswim-language ISWIM
+  [X ∷= (? symbol? (not 'λ 'add1 'sub1 'iszero '+ '- '* '↑))]
   [b ∷= (? number?)]
   [oⁿ ∷= (? o¹?) (? o²?)]
   [o¹ ∷= 'add1 'sub1 'iszero]
