@@ -190,7 +190,7 @@
                               [p₁ (cons f e)]
                               [_ #f]))])
               (λ (e) (chk (λ (x) x) e)))
-            (? (λ (x) (not (eq? 'fail x))) (cons C p₁)))]))
+            (cons C p₁))]))
 
 (module+ test
   (check-equal? (match '(1 (a (b c))) ; '((λ x x) (+ 1 2))

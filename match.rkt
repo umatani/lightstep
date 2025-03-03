@@ -13,6 +13,8 @@
 
 (module+ test (require rackunit))
 
+;; TODO: why cannot write (? (λ (x) (equal? 'foo x))) in pattern
+
 ;; ID... is a synonym for (? ID? ID...)
 ;; (Camel cases are reserved for struct names)
 (begin-for-syntax
