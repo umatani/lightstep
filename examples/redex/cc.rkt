@@ -4,7 +4,7 @@
          (only-in racket/unit invoke-unit)
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ))
-(provide ECxt ■)
+(provide ECxt □)
 
 (module+ test (require rackunit))
 
@@ -15,32 +15,31 @@
 
 (define-match-expander ECxt
   (syntax-parser
-    [(ECxt □:id)
-     #'(ECxt □ #:hole □)]
-    [(ECxt p #:hole □:id)
+    [(ECxt p)
      #'(... (cxt ECxt [□ p]
                  `(,V ,□)
                  `(,□ ,M)
                  `(,(? oⁿ?) ,V ... ,□ ,M ...)))]))
 
-(define-match-expander ■
-  (syntax-parser [(_ □) #'(? (λ (x) (equal? x #())) □)])
-  (syntax-parser [_:id #'#()]))
+(define-match-expander □
+  (syntax-parser [(□:id) #'(? (λ (x) (equal? x #()))
+                             (app (λ (x) (λ () x)) □))])
+  (syntax-parser [(_:id) #'#()]))
 
 (define-reduction (⊢->cc-rules)
-  [`((,M₁ ,M₂) ,(ECxt (■ □) #:hole □))
+  [`((,M₁ ,M₂) ,(ECxt (□)))
    #:when (not (V? M₁))
-   `(,M₁ ,(ECxt `(,□ ,M₂)))
+   `(,M₁ ,(ECxt `(,(□) ,M₂)))
    "cc1"]
 
-  [`((,V ,M) ,(ECxt (■ □) #:hole □))
+  [`((,V ,M) ,(ECxt (□)))
    #:when (not (V? M))
-   `(,M ,(ECxt `(,V ,□)))
+   `(,M ,(ECxt `(,V ,(□))))
    "cc2"]
 
-  [`((,(? oⁿ? oⁿ) ,V ... ,M₁ ,M ...) ,(ECxt (■ □) #:hole □))
+  [`((,(? oⁿ? oⁿ) ,V ... ,M₁ ,M ...) ,(ECxt (□)))
    #:when (not (V? M₁))
-   `(,M₁ ,(ECxt `(,oⁿ ,@V ,□ ,@M)))
+   `(,M₁ ,(ECxt `(,oⁿ ,@V ,(□) ,@M)))
    "cc3"]
 
   [`(((λ ,X ,M) ,V) ,ECxt)
@@ -51,16 +50,16 @@
    `(,(δ oⁿ b) ,ECxt)
    "ccffi"]
 
-  [`(,V ,(ECxt `(,V′ ,(■ □)) #:hole □))
-   `((,V′ ,V) ,(ECxt □))
+  [`(,V ,(ECxt `(,V′ ,(□))))
+   `((,V′ ,V) ,(ECxt (□)))
    "cc4"]
 
-  [`(,V ,(ECxt `(,(■ □) ,M) #:hole □))
-   `((,V ,M) ,(ECxt □))
+  [`(,V ,(ECxt `(,(□) ,M)))
+   `((,V ,M) ,(ECxt (□)))
    "cc5"]
 
-  [`(,V ,(ECxt `(,(? oⁿ? oⁿ) ,V′ ... ,(■ □) ,M ...) #:hole □))
-   `((,oⁿ ,@V′ ,V ,@M) ,(ECxt □))
+  [`(,V ,(ECxt `(,(? oⁿ? oⁿ) ,V′ ... ,(□) ,M ...)))
+   `((,oⁿ ,@V′ ,V ,@M) ,(ECxt (□)))
    "cc6"])
 
 
@@ -69,22 +68,22 @@
 
   [`(,M₁ ,M₂)
    #:when (not (V? M₁))
-   (ECxt (■ □) #:hole □) ← get
-   (put (ECxt `(,□ ,M₂)))
+   (ECxt (□)) ← get
+   (put (ECxt `(,(□) ,M₂)))
    M₁ 
    "cc1"]
 
   [`(,V ,M)
    #:when (not (V? M))
-   (ECxt (■ □) #:hole □) ← get
-   (put (ECxt `(,V ,□)))
+   (ECxt (□)) ← get
+   (put (ECxt `(,V ,(□))))
    M
    "cc2"]
 
   [`(,(? oⁿ? oⁿ) ,V ... ,M₁ ,M ...)
    #:when (not (V? M₁))
-   (ECxt (■ □) #:hole □) ← get
-   (put (ECxt `(,oⁿ ,@V ,□ ,@M)))
+   (ECxt (□)) ← get
+   (put (ECxt `(,oⁿ ,@V ,(□) ,@M)))
    M₁
    "cc3"]
 
@@ -97,20 +96,20 @@
    "ccffi"]
 
   [V
-   (ECxt `(,V′ ,(■ □)) #:hole □) ← get
-   (put (ECxt □))
+   (ECxt `(,V′ ,(□))) ← get
+   (put (ECxt (□)))
    `(,V′ ,V)
    "cc4"]
 
   [V
-   (ECxt `(,(■ □) ,M) #:hole □) ← get
-   (put (ECxt □))
+   (ECxt `(,(□) ,M)) ← get
+   (put (ECxt (□)))
    `(,V ,M)
    "cc5"]
 
   [V
-   (ECxt `(,(? oⁿ? oⁿ) ,V′ ... ,(■ □) ,M ...) #:hole □) ← get
-   (put (ECxt □))
+   (ECxt `(,(? oⁿ? oⁿ) ,V′ ... ,(□) ,M ...)) ← get
+   (put (ECxt (□)))
    `(,oⁿ ,@V′ ,V ,@M)
    "cc6"])
 
@@ -128,10 +127,10 @@
 (define/match (evalcc m)
   [M
    #:when (∅? (FV M))
-   (match (⊢->>cc `(,M ,■))
-     [(set `(,(? b? b) ,(■ □)))
+   (match (⊢->>cc `(,M ,(□)))
+     [(set `(,(? b? b) ,(□)))
       b]
-     [(set `((λ ,X ,(? M? N)) ,(■ □)))
+     [(set `((λ ,X ,(? M? N)) ,(□)))
       'function]
      [x (error 'evalcc "invalid final state: ~a" x)])]
   [_ (error 'evalcc "invalid input: ~a" m)])
@@ -139,24 +138,24 @@
 (define/match (evalcc′ m)
   [M
    #:when (∅? (FV M))
-   (match (⊢->>cc′ (cons M ■))
-     [(set (cons (? b? b) (■ □)))
+   (match (⊢->>cc′ (cons M (□)))
+     [(set (cons (? b? b) (□)))
       b]
-     [(set (cons `(λ ,X ,(? M? N)) (■ □)))
+     [(set (cons `(λ ,X ,(? M? N)) (□)))
       'function]
      [x (error 'evalcc′ "invalid final state: ~a" x)])]
   [_ (error 'evalcc′ "invalid input: ~a" m)])
 
 
 (module+ test
-  (check-equal? (⊢->>cc  `((((λ x x) (λ y y)) 1) ,■))
-                (set `(1 ,■)))
-  (check-equal? (⊢->>cc′ (cons '(((λ x x) (λ y y)) 1) ■))
-                (set (cons 1 ■)))
-  (check-equal? (⊢->>cc  `((+ (add1 2) (* 3 4)) ,■))
-                (set `(15 ,■)))
-  (check-equal? (⊢->>cc′ (cons '(+ (add1 2) (* 3 4)) ■))
-                (set (cons 15 ■)))
+  (check-equal? (⊢->>cc  `((((λ x x) (λ y y)) 1) ,(□)))
+                (set `(1 ,(□))))
+  (check-equal? (⊢->>cc′ (cons '(((λ x x) (λ y y)) 1) (□)))
+                (set (cons 1 (□))))
+  (check-equal? (⊢->>cc  `((+ (add1 2) (* 3 4)) ,(□)))
+                (set `(15 ,(□))))
+  (check-equal? (⊢->>cc′ (cons '(+ (add1 2) (* 3 4)) (□)))
+                (set (cons 15 (□))))
 
   (check-equal? (evalcc '(+ (* 9 (↑ 2 3)) 3)) 75)
   (check-equal? (evalcc '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16)
