@@ -8,7 +8,7 @@
  (only-in "transformers.rkt" ID StateT NondetT with-monad run-StateT))
 (provide NondetM nondet nondet-match define-nondet-match-expander)
 
-(module+ test   (require rackunit))
+(module+ test (require rackunit))
 
 ;;=============================================================================
 ;; define-nondet-match-expander
@@ -69,13 +69,6 @@
        #'(p′ ...)]
       [p #'p]))
 
-  (define (products ps)
-    (if (null? ps)
-      '(())
-      (for*/list ([ps′ (products (cdr ps))]
-                  [p (syntax->list (car ps))])
-        (cons p ps′))))
-
   (define (expand-nondet pat)
     (syntax-parse pat
       #:literals (nondet)
@@ -83,11 +76,6 @@
       [(nondet p ...)
        #:with ((p′ ...) ...) (stx-map expand-nondet #'(p ...))
        #'(p′ ... ...)]
-
-      [(p ...)
-       #:with (ps′ ...) (stx-map expand-nondet #'(p ...))
-       #:with (p′ ...) (products (syntax->list #'(ps′ ...)))
-       #'(p′ ...)]
       
       [p #'(p)]))
 

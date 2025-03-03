@@ -13,8 +13,6 @@
 
 (module+ test (require rackunit))
 
-;; TODO: why cannot write (? (λ (x) (equal? 'foo x))) in pattern
-
 ;; ID... is a synonym for (? ID? ID...)
 ;; (Camel cases are reserved for struct names)
 (begin-for-syntax
@@ -180,7 +178,6 @@
                             [(vector X₁ ...) #(a b c d)])
                   (list b a X₁))
                 '(2 1 (a b c d)))
-
 
   (define/match (f x)
     [1 'one]

@@ -67,8 +67,6 @@
      [x (error 'evalscc "invalid final state: ~a" x)])]
   [_ (error 'evalscc "invalid input: ~a" m)])
 
-(⊢->>scc (cons '(- (+ 1 2) (* 30 40)) ■))
-
 (module+ test
   (check-equal? (⊢->>scc (cons '(((λ x x) (λ y y)) 1) ■))
                 (set (cons 1 ■)))
