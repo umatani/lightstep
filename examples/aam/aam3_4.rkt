@@ -463,7 +463,7 @@
   (define (alloc-nat σ)
     (match σ
       [`((((,M ,(? ρ?)) ,V ...) ,K) ,Σ)
-       (let ([n (add1 (apply max 0 (set→list (keys Σ))))])
+       (let ([n (add1 (apply max 0 (set→list (dom Σ))))])
          (build-list (length (formals M))
                      (λ (i) (+ i n))))]))  
 

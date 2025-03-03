@@ -118,15 +118,21 @@
   (define (derive-mrun M)
     (syntax-parse M
       #:literals (ID ReaderT WriterT StateT FailT NondetT ReduceM)
-      [ID      #'(λ (m) m)]
-      [ReduceM #'(λ (m) m)]
+      [ID
+       #:with (m) (generate-temporaries #'(m))
+       #'(λ (m) m)]
+      [ReduceM
+       #:with (m) (generate-temporaries #'(m))
+       #'(λ (m) m)]
       [(ReaderT M′)
        #:with (λ (p ...) b) (derive-mrun #'M′)
+       #:with (r) (generate-temporaries #'(r))
        #'(λ (r p ...) (run-ReaderT r ((λ (p ...) b) p ...)))]
       [(WriterT _ M′)
        (derive-mrun #'M′)]
       [(StateT _ M′)
        #:with (λ (p ...) b) (derive-mrun #'M′)
+       #:with (s) (generate-temporaries #'(s))
        #'(λ (s p ...) (run-StateT s ((λ (p ...) b) p ...)))]
       [(FailT M′)
        (derive-mrun #'M′)]
@@ -196,6 +202,7 @@
                                 [(param ... ς)
                                  #'(let ()
                                      (define M′ M)
+                                     (define-monad M′)
                                      do-body ...
                                      (nondet-match M′ ς
                                                    #:default default-clause

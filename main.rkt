@@ -1,7 +1,11 @@
 #lang racket/base
 
-(require "base.rkt")
-(provide (all-from-out "base.rkt"))
+(require "base.rkt"
+         "syntax.rkt"
+         "transformers.rkt")
+(provide (all-from-out "base.rkt")
+         (all-from-out "syntax.rkt")
+         (all-from-out "transformers.rkt"))
 
 (module+ test
   (require (submod lightstep/nondet test))

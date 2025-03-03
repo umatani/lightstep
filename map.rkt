@@ -4,7 +4,7 @@
          (only-in racket/match define-match-expander)
          (only-in "set.rkt" for/set [∈ s:∈]))
 (provide ↦ map? ∅ ∈ ⊔ size map->list hash->map
-         keys rng restrict map-remove for/map in-map
+         dom rng restrict map-remove for/map in-map
          (rename-out [repl->hash map->hash]
                      [repl->hash map→hash]
                      [map->list map→list]
@@ -68,7 +68,7 @@
    [(k m) (hash-has-key? (repl->hash m) k)]
    [(m)   (in-map m)]))
     
-(define (keys m)
+(define (dom m)
   (for/set ([(k _) (∈ m)]) k))
 
 (define (rng m)

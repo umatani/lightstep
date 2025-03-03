@@ -10,45 +10,45 @@
 (define-language CK #:super orig-ISWIM
   [κ ∷=
      'mt
-     `(fn ,V ,κ)
-     `(ar ,M ,κ)
-     `(op ,(? list? VsOⁿ) ,(? list? Ns) ,κ)])
+     `(fn ,V ,(? κ? κ))
+     `(ar ,M ,(? κ? κ))
+     `(op ,(? list? VsOⁿ) ,(? list? Ns) ,(? κ? κ))])
 
 (define-reduction (⊢->ck-rules)
   #:monad (StateT #f (NondetT ID))
 
   [`(,M₁ ,M₂)
-   κ ← get
+   (? κ? κ) ← get
    (put `(ar ,M₂ ,κ))
    M₁
    "ck1"]
 
   [`(,(? oⁿ? oⁿ) ,M ,M′ ...)
-   κ ← get
+   (? κ? κ) ← get
    (put `(op (,oⁿ) (,@M′) ,κ))
    M
    "ck2"]
 
   [V
-   `(fn (λ ,X ,M) ,κ) ← get
+   `(fn (λ ,X ,M) ,(? κ? κ)) ← get
    (put κ)
    (subst M X V)
    "ck3"]
 
   [V
-   `(ar ,M ,κ) ← get
+   `(ar ,M ,(? κ? κ)) ← get
    (put `(fn ,V ,κ))
    M
    "ck4"]
 
   [(? b? bₙ)
-   `(op (,(? b? b) ... ,oⁿ) () ,κ) ← get
+   `(op (,(? b? b) ... ,oⁿ) () ,(? κ? κ)) ← get
    (put κ)
    (δ oⁿ `(,@(reverse (cons bₙ b))))
    "ck5"]
 
   [V
-   `(op (,V′ ... ,oⁿ) (,M ,M′ ...) ,κ) ← get
+   `(op (,V′ ... ,oⁿ) (,M ,M′ ...) ,(? κ? κ)) ← get
    (put `(op (,V ,@V′ ,oⁿ) (,@M′) ,κ))
    M
    "ck6"])

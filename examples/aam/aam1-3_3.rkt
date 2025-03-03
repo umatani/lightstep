@@ -104,8 +104,8 @@
 
 (define (Γ? Γ)
   (and (map? Γ)
-       (for/and ([x  (keys Γ)]) (X? x))
-       (for/and ([ts (rng  Γ)]) (for/and ([t (in-set ts)]) (T? t)))))
+       (for/and ([x  (dom Γ)]) (X? x))
+       (for/and ([ts (rng Γ)]) (for/and ([t (in-set ts)]) (T? t)))))
 
 
 (define-reduction (⊢-rules ⊢)
