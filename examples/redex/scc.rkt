@@ -79,10 +79,14 @@
   [_ (error 'evalscc "invalid input: ~a" m)])
 
 (module+ test
-  (check-equal? (⊢->>scc (cons '(((λ x x) (λ y y)) 1) (□)))
+  (require (only-in (submod "cc.rkt" test) Ω))
+
+  (check-equal? (⊢->>scc (mkSCC '(((λ x x) (λ y y)) 1) (□)))
                 (set (cons 1 (□))))
-  (check-equal? (⊢->>scc (cons '(+ (add1 2) (* 3 4)) (□)))
+  (check-equal? (⊢->>scc (mkSCC '(+ (add1 2) (* 3 4)) (□)))
                 (set (cons 15 (□))))
 
   (check-equal? (evalscc '(+ (* 9 (↑ 2 3)) 3)) 75)
-  (check-equal? (evalscc '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16))
+  (check-equal? (evalscc '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16)
+
+  (check-equal? (⊢->>scc (mkSCC Ω (□))) ∅))

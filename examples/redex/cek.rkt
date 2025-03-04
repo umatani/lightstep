@@ -110,5 +110,9 @@
   [_ (error 'evalcek "invalid input: ~a" m)])
 
 (module+ test
+  (require (only-in (submod "cc.rkt" test) Ω))
+  
   (check-equal? (evalcek '(+ (* 9 (↑ 2 3)) 3)) 75)
-  (check-equal? (evalcek '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16))
+  (check-equal? (evalcek '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16)
+
+  (check-equal? (⊢->>cek (mkCEK Ω (↦) 'mt)) ∅))

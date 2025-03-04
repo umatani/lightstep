@@ -157,16 +157,22 @@
 
 
 (module+ test
-  (check-equal? (⊢->>cc  `((((λ x x) (λ y y)) 1) ,(□)))
+  (provide Ω)
+
+  (check-equal? (⊢->>cc `((((λ x x) (λ y y)) 1) ,(□)))
                 (set `(1 ,(□))))
-  (check-equal? (⊢->>cc′ (cons '(((λ x x) (λ y y)) 1) (□)))
+  (check-equal? (⊢->>cc′ (mkCC '(((λ x x) (λ y y)) 1) (□)))
                 (set (cons 1 (□))))
-  (check-equal? (⊢->>cc  `((+ (add1 2) (* 3 4)) ,(□)))
+  (check-equal? (⊢->>cc `((+ (add1 2) (* 3 4)) ,(□)))
                 (set `(15 ,(□))))
-  (check-equal? (⊢->>cc′ (cons '(+ (add1 2) (* 3 4)) (□)))
+  (check-equal? (⊢->>cc′ (mkCC '(+ (add1 2) (* 3 4)) (□)))
                 (set (cons 15 (□))))
 
   (check-equal? (evalcc '(+ (* 9 (↑ 2 3)) 3)) 75)
   (check-equal? (evalcc '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16)
   (check-equal? (evalcc′ '(+ (* 9 (↑ 2 3)) 3)) 75)
-  (check-equal? (evalcc′ '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16))
+  (check-equal? (evalcc′ '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16)
+
+  (define Ω '((λ x (x x)) (λ x (x x))))
+  (check-equal? (⊢->>cc `(,Ω ,(□))) ∅)
+  (check-equal? (⊢->>cc′ (mkCC Ω (□))) ∅))

@@ -124,6 +124,8 @@
   [_ (error 'evalsecd "invalid input: ~a" m)])
 
 (module+ test
+  (require (only-in (submod "cc.rkt" test) Ω))
+
   (check-equal? (⊢->>secd (mkSECD '() (↦ ['x 1])
                                   '((- (↑ 10 2) (* (add1 4) (+ x 2)))) 'ϵ))
                 (set (mkSECD '(85) (↦ ['x 1]) '() 'ϵ)))
@@ -134,4 +136,8 @@
   (check-equal? (evalsecd '((λ x (+ x x)) (add1 1))) 4)
 
   (check-equal? (evalsecd '(+ (* 9 (↑ 2 3)) 3)) 75)
-  (check-equal? (evalsecd '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16))
+  (check-equal? (evalsecd '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16)
+
+  ;; loops forever
+  ;; (⊢->>secd (mkSECD '() (↦) `(,Ω) 'ϵ))
+  )

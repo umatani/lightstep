@@ -83,10 +83,14 @@
   [_ (error 'evalck "invalid input: ~a" m)])
 
 (module+ test
-  (check-equal? (⊢->>ck (cons '(((λ x x) (λ y y)) 1) 'mt))
+  (require (only-in (submod "cc.rkt" test) Ω))
+
+  (check-equal? (⊢->>ck (mkCK '(((λ x x) (λ y y)) 1) 'mt))
                 (set (cons 1 'mt)))
-  (check-equal? (⊢->>ck (cons '(+ (add1 2) (* 3 4)) 'mt))
+  (check-equal? (⊢->>ck (mkCK '(+ (add1 2) (* 3 4)) 'mt))
                 (set (cons 15 'mt)))
 
   (check-equal? (evalck '(+ (* 9 (↑ 2 3)) 3)) 75)
-  (check-equal? (evalck '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16))
+  (check-equal? (evalck '(((λ f (λ x (f x))) (λ y (+ y y))) 8)) 16)
+
+  (check-equal? (⊢->>ck (mkCK Ω 'mt)) ∅))
