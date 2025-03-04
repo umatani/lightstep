@@ -88,32 +88,27 @@
 
 (define-syntax (nondet-match stx)
   (syntax-parse stx
-    [(_ M:id x (~optional (~seq #:default dclause)) [pat body ...] ...)
+    [(_ M:id x
+        (~optional (~seq #:do [do-body ...]))
+        [pat body ...] ...)
      ;; M must be an identifier to transplant its lexical context. why?
      #:with do      (format-id #'M "do")
      #:with return  (format-id #'M "return")
      #:with mzero   (format-id #'M "mzero")
      #:with mconcat (format-id #'M "mconcat")
 
+     #:with (do-body′ ...) (if (attribute do-body)
+                             #'(do-body ...)
+                             #'())
      #:with (((pat′ body′ ... e′) ...) ...) (stx-map expand-clause
                                                      #'([pat body ...] ...))
-     #:with nexts #'(with-monad M
-                      (mconcat (match x
-                                 [pat′ (do body′ ... (return e′))]
-                                 [_ mzero]) ...
-                               ...))
-     (if (and (attribute dclause) (syntax-e #'dclause))
-       (with-syntax ([[pat body ...] #'dclause])
-         (define/syntax-parse ((pat′ body′ ... e′) ...)
-           (expand-clause #'[pat body ...]))
-         #'(let ([ςs nexts])
-             (if (∅? ςs)
-               (with-monad M
-                 (match x
-                   [pat′ (do body′ ... (return e′))] ...
-                   [_ mzero]))
-               ςs)))
-       #'nexts)]))
+     #'(with-monad M
+         (let ()
+           do-body′ ...
+           (mconcat (match x
+                      [pat′ (do body′ ... (return e′))]
+                      [_ mzero]) ...
+                    ...)))]))
 
 (module+ test
   (check-equal? (nondet-match NondetM '(1 2 3)
@@ -138,28 +133,14 @@
                               [`(,x ...) x])
                 (set '(1 2 3)))
 
-  (check-equal? (nondet-match NondetM '(1 2 3)
-                              #:default #f
-                              [(list a b) (+ a b)])
-                ∅)
-  (check-equal? (nondet-match NondetM '(1 2 3)
-                              #:default [xs xs]
-                              [(list a b) (+ a b)])
-                (set '(1 2 3)))
-  (check-equal? (nondet-match NondetM '(1 2 3)
-                              #:default [xs xs]
-                              [(list a b c) (+ a b c)])
-                (set 6))
-
   (define SRM (StateT #f NondetM))
   (check-equal? (run-StateT ∅ (nondet-match SRM '(1 2 3)
                                             [x
                                              `(,_ ,y ...) ← (return x)
                                              y]
                                             [(list a b c) (+ a b c)]))
-                (set (cons 6 ∅) (cons '(2 3) ∅))))
+                (set (cons 6 ∅) (cons '(2 3) ∅)))
 
-(module+ test
   (check-equal? (nondet-match NondetM '(a 2) [`(,x ,y) x]) (set 'a))
   (check-equal? (nondet-match NondetM '(a 2) [`(,z ,x) x]) (set 2))
   (check-equal? (nondet-match NondetM '(a 2)

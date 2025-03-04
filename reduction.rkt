@@ -10,7 +10,7 @@
                  compound-unit invoke-unit)
          (only-in "set.rkt" set ∅? ⊆ set-add set-subtract)
          (only-in "transformers.rkt"
-                  PowerO run-StateT define-monad
+                  PowerO run-StateT define-monad with-monad
                   ID ReaderT WriterT StateT FailT NondetT)
          (only-in "nondet.rkt" NondetM nondet-match))
 (provide ReduceM define-reduction repeated)
@@ -31,16 +31,14 @@
                          (~optional (~seq #:import [sig-spec ...])
                                     #:name "#:import option")
                          (~optional (~seq #:do [do-body ...])
-                                    #:name "#:do option")
-                         (~optional (~seq #:default [pat body ... e])
-                                    #:name "#:default option")) ...)
+                                    #:name "#:do option"))
+                   ...)
              #:with monad     #'(~? m                 #f)
              #:with mrun      #'(~? mr                #f)
              #:with sup-names  #'(~? (sname ...)      ())
              #:with sup-argss  #'(~? ((sarg ...) ...) ())
              #:with imports   #'(~? (sig-spec ...)    ())
-             #:with do-bodies #'(~? (do-body ...)     ())
-             #:with default   #'(~? (pat body ... e) #f)))
+             #:with do-bodies #'(~? (do-body ...)     ())))
 
   (define (replace-lexical-context lctx stx)
     (datum->syntax lctx (syntax->datum stx)))
@@ -69,13 +67,12 @@
         (syntax-local-apply-transformer inst-xformer rid 'expression #f
                                         #`(#,@args ς))
       #:datum-literals [let nondet-match]
-      [(let ()
-         do-body ...
-         (nondet-match _ _ #:default drule rule ...))
+      ;; NOTE: this let form must be consistent with inst-xformer below
+      [(let () _defM
+         (nondet-match _ _ #:do [do-body ...] rule ...))
        #`(#,import-sig-stx
           (rule ...)
-          (do-body ...)
-          drule)]))
+          (do-body ...))]))
 
   (define (get-supers-info orig-stx rids argss)
     (define (merge-imports importss) ;; TODO: check duplicates?
@@ -93,27 +90,19 @@
       (syntax-parse do-bodiess
         [((do-body ...) ...)
          #'(do-body ... ...)]))
-    (define (merge-default defaults)
-      (define defs (filter syntax-e (syntax->list defaults)))
-      (if (> (length defs) 1)
-        (raise-syntax-error #f "duplicate default" orig-stx defaults)
-        (if (null? defs)
-          #'#f
-          (car defs))))
 
     (if (null? (syntax->list rids))
-      #'(() () () #f)
+      #'(() () ())
       (cond
         [(check-duplicate-identifier (syntax->list rids))
          => (λ (id) (raise-syntax-error
                      #f (format "duplicate super name ~s" (syntax-e id))
                      orig-stx rids))]
-        [else (with-syntax ([((imports rules do-bodies default) ...)
+        [else (with-syntax ([((imports rules do-bodies) ...)
                              (stx-map inst-reduction-info rids argss)])
                 (list (merge-imports   #'(imports ...))
                       (merge-rules     #'(rules ...))
-                      (merge-do-bodies #'(do-bodies ...))
-                      (merge-default   #'(default ...))))])))
+                      (merge-do-bodies #'(do-bodies ...))))])))
 
   (define (derive-mrun M)
     (syntax-parse M
@@ -169,8 +158,7 @@
 
      #:with (imports-of-super
              rules-of-super
-             do-bodies-of-super
-             default-of-super) (get-supers-info stx
+             do-bodies-of-super) (get-supers-info stx
                                                 #'opts.sup-names
                                                 #'opts.sup-argss)
 
@@ -191,22 +179,18 @@
                                    #`(#,@#'do-bodies-of-super
                                       #,@#'opts.do-bodies))
      
-     #:with default-clause (rescope
-                            (if (syntax-e #'opts.default)
-                              #'opts.default
-                              #'default-of-super))
-
      #:with inst-xformer (escape-elipsis
                           #'(λ (stx)
                               (syntax-parse stx
                                 [(param ... ς)
+                                 ;; NOTE: this let form must be consistent
+                                 ;; with inst-reduction-info above
                                  #'(let ()
                                      (define M′ M)
-                                     (define-monad M′)
-                                     do-body ...
-                                     (nondet-match M′ ς
-                                                   #:default default-clause
-                                                   rule ...))])))
+                                     (nondet-match
+                                      M′ ς
+                                      #:do [do-body ...]
+                                      rule ...))])))
      #'(begin
          (define-syntax rid
            (let ([rdesc (reduction-desc #'mrun #'imports inst-xformer)])

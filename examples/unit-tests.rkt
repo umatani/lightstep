@@ -210,10 +210,12 @@
 ;; test-default
 
 (define-reduction (r71)
-  #:default [x `(default ,x)]
   [(? number? n) n "special"])
 (define-values (mrun71 reducer71) (invoke-unit (r71)))
-(define -->71 (compose1 mrun71 reducer71))
+(define -->71 (λ (ς)
+                (match (mrun71 (reducer71 ς))
+                  [(set) (set `(default ,ς))]
+                  [ςs ςs])))
 (check-equal? (-->71 8) (set 8))
 (check-equal? (-->71 'foo) (set '(default foo)))
 (check-equal? (-->71 '(1 2)) (set '(default (1 2))))
@@ -222,15 +224,22 @@
   [(? symbol? s) (symbol->string s) "special"])
 (define-values (mrun72 reducer72) (invoke-unit (r72)))
 (define -->72 (compose1 mrun72 reducer72))
-(check-equal? (-->72 8) (set '(default 8)))
+(check-equal? (-->72 8) (set))
 (check-equal? (-->72 'foo) (set "foo"))
-(check-equal? (-->72 '(1 2)) (set '(default (1 2))))
+(check-equal? (-->72 '(1 2)) (set))
 
+(define (default-hook73 →)
+  (λ (ς)
+    (match (→ ς)
+      [(set) (match ς
+               [`(,x ...)
+                (set `(default ,(car x)))]
+               [_ (set)])]
+      [ςs ςs])))
 (define-reduction (r73)
-  #:default [`(,x ...) `(default ,(car x))]
   [(? number? n) n "special"])
 (define-values (mrun73 reducer73) (invoke-unit (r73)))
-(define -->73 (compose1 mrun73 reducer73))
+(define -->73 (default-hook73 (compose1 mrun73 reducer73)))
 (check-equal? (-->73 8) (set 8))
 (check-equal? (-->73 'foo) ∅)
 (check-equal? (-->73 '(1 2)) (set '(default 1)))
@@ -238,16 +247,20 @@
 (define-reduction (r74) #:super [(r73)]
   [(? symbol? s) (symbol->string s) "special"])
 (define-values (mrun74 reducer74) (invoke-unit (r74)))
-(define -->74 (compose1 mrun74 reducer74))
+(define -->74 (default-hook73 (compose1 mrun74 reducer74)))
 (check-equal? (-->74 8) ∅)
 (check-equal? (-->74 'foo) (set "foo"))
 (check-equal? (-->74 '(1 2)) (set '(default 1)))
 
+(define (default-hook75 → p)
+  (λ (ς)
+    (match (→ ς)
+      [(set) (set `(,p ,ς))]
+      [ςs ςs])))
 (define-reduction (r75 p q)
-  #:default [x `(p ,x)]
   [(? number? n) (+ n q) "special"])
 (define-values (mrun75 reducer75) (invoke-unit (r75 default 100)))
-(define -->75 (compose1 mrun75 reducer75))
+(define -->75 (default-hook75 (compose1 mrun75 reducer75) 'default))
 (check-equal? (-->75 8) (set 108))
 (check-equal? (-->75 'foo) (set '(default foo)))
 (check-equal? (-->75 '(1 2)) (set '(default (1 2))))
@@ -255,10 +268,29 @@
 (define-reduction (r76 a b) #:super [(r75 b a)]
   [(? symbol? s) (symbol->string s) "special"])
 (define-values (mrun76 reducer76) (invoke-unit (r76 200 DEFAULT)))
-(define -->76 (compose1 mrun76 reducer76))
+(define -->76 (default-hook75 (compose1 mrun76 reducer76) 'DEFAULT))
 (check-equal? (-->76 8) (set '(DEFAULT 8)))
 (check-equal? (-->76 'foo) (set "foo"))
 (check-equal? (-->76 '(1 2)) (set '(DEFAULT (1 2))))
+
+(define-reduction (r77)
+  #:monad (StateT #f (NondetT ID))
+  [(? number? n) (+ n 1)]
+  [(? string? s) (string-append s s)])
+(define -->77 (call-with-values
+               (λ () (invoke-unit (r77)))
+               (λ (mrun reducer)
+                 (λ (ς)
+                   (match (mrun (cdr ς) (reducer (car ς)))
+                     ;; default rule
+                     [(set)
+                      (match (car ς)
+                        [x (set (cons (list x x x) (cdr ς)))])]
+                     [ςs ςs])))))
+(check-equal? (-->77 (cons 3 ∅)) (set (cons 4 ∅)))
+(check-equal? (-->77 (cons "foo" ∅)) (set (cons "foofoo" ∅)))
+(check-equal? (-->77 (cons 'foo ∅)) (set (cons '(foo foo foo) ∅)))
+
 
 ;;=============================================================================
 ;; test-do
