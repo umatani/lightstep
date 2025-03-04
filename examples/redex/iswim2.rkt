@@ -41,7 +41,7 @@
    #:when (∅? (FV M))
    (match (⊢->>v M)
     [(set (? b? b)) b]
-    [(set `(λ ,X ,(? M? N))) 'function]
+    [(set `(λ ,X ,M)) 'function]
     [x (error 'evalᵥˢ "invalid answer: ~a" x)])]
   [_ (error 'evalᵥˢ "invalid input: ~a" m)])
 

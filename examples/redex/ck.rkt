@@ -1,13 +1,16 @@
-#lang racket
-(require lightstep/base lightstep/syntax lightstep/transformers
-         (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ))
+#lang racket/base
+(require (for-syntax racket/base syntax/parse)
+         lightstep/base lightstep/syntax lightstep/transformers
+         (only-in racket/unit invoke-unit)
+         (only-in racket/match define-match-expander)
+         (only-in "iswim.rkt" ISWIM FV subst δ))
 
 (module+ test (require rackunit))
 
 ;;=============================================================================
 ;; 6.3 The CK Machine
 
-(define-language CK #:super orig-ISWIM
+(define-language CK #:super ISWIM
   [κ ∷=
      'mt
      `(fn ,V ,(? κ? κ))
@@ -53,19 +56,28 @@
    M
    "ck6"])
 
+(define-match-expander mkCK
+  (syntax-parser
+    [(_ M κ) #'(cons M κ)])
+  (syntax-parser
+    [(_ M κ) #'(cons M κ)]))
+
 (define ⊢->ck (call-with-values
                (λ () (invoke-unit (⊢->ck-rules)))
                (λ (mrun reducer)
-                 (λ (ς) (mrun (cdr ς) (reducer (car ς)))))))
+                 (λ (ς)
+                   (match ς
+                     [(mkCK M (? κ? κ))
+                      (mrun κ (reducer M))])))))
 (define ⊢->>ck (compose1 car (repeated ⊢->ck)))
 
 (define/match (evalck m)
   [M
    #:when (∅? (FV M))
-   (match (⊢->>ck (cons M 'mt))
-     [(set (cons (? b? b) 'mt))
+   (match (⊢->>ck (mkCK M 'mt))
+     [(set (mkCK (? b? b) 'mt))
       b]
-     [(set (cons `(λ ,X ,(? M? N)) 'mt))
+     [(set (mkCK `(λ ,X ,M) 'mt))
       'function]
      [x (error 'evalck "invalid final state: ~a" x)])]
   [_ (error 'evalck "invalid input: ~a" m)])

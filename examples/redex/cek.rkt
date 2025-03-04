@@ -1,98 +1,110 @@
-#lang racket
-(require lightstep/base lightstep/syntax lightstep/transformers
-         (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV δ))
+#lang racket/base
+(require (for-syntax racket/base syntax/parse)
+         lightstep/base lightstep/syntax lightstep/transformers
+         (only-in racket/unit invoke-unit)
+         (only-in racket/match define-match-expander)
+         (only-in "iswim.rkt" ISWIM FV δ))
 
 (module+ test (require rackunit))
 
 ;;=============================================================================
 ;; 6.4 The CEK Machine
 
-(define-language CEK #:super orig-ISWIM
+(define-language CEK #:super ISWIM
   [κ ∷=
      'mt
      `(fn (,V ,ξ) ,(? κ? κ))
      `(ar (,M ,ξ) ,(? κ? κ))
      `(op ,(? list? VξsOⁿ) ,(? list? Mξs) ,(? κ? κ))]
-  [ξ ∷= (? map?)])
+  [E ∷= (? map? X→VE)])
 
 (define-reduction (⊢->cek-rules)
   #:monad (StateT #f (StateT #f (NondetT ID)))
-  #:do [(define get-ξ (bind get (compose1 return car)))
+  #:do [(define get-E (bind get (compose1 return car)))
         (define get-κ (bind get (compose1 return cdr)))
-        (define (put-ξ ξ)
+        (define (put-E E)
           (do (cons _ κ) ← get
-              (put (cons ξ κ))))
+              (put (cons E κ))))
         (define (put-κ κ)
-          (do (cons ξ _) ← get
-              (put (cons ξ κ))))]
+          (do (cons E _) ← get
+              (put (cons E κ))))]
   [`(,M₁ ,M₂)
-   ξ ← get-ξ
+   E ← get-E
    κ ← get-κ
-   (put-κ `(ar (,M₂ ,ξ) ,κ))
+   (put-κ `(ar (,M₂ ,E) ,κ))
    M₁
    "cek1"]
 
   [`(,(? oⁿ? oⁿ) ,M ,M′ ...)
-   ξ ← get-ξ
+   E ← get-E
    κ ← get-κ
-   (put-κ `(op (,oⁿ) ,(map (λ (m) `(,m ,ξ)) M′) ,κ))
+   (put-κ `(op (,oⁿ) ,(map (λ (m) `(,m ,E)) M′) ,κ))
    M
    "cek2"]
 
   [V
    #:when (not (X? V))
-   ξ ← get-ξ
-   `(fn ((λ ,X₁ ,M) ,ξ′) ,κ) ← get-κ
-   (put-ξ (ξ′ X₁ `(,V ,ξ)))
+   E ← get-E
+   `(fn ((λ ,X₁ ,M) ,E′) ,κ) ← get-κ
+   (put-E (E′ X₁ `(,V ,E)))
    (put-κ κ)
    M
    "cek3"]
 
   [V
    #:when (not (X? V))
-   ξ ← get-ξ
-   `(ar (,M ,ξ′) ,κ) ← get-κ
-   (put-ξ ξ′)
-   (put-κ `(fn (,V ,ξ) ,κ))
+   E ← get-E
+   `(ar (,M ,E′) ,κ) ← get-κ
+   (put-E E′)
+   (put-κ `(fn (,V ,E) ,κ))
    M
    "cek4"]
 
   [(? b? bₙ)
    `(op ((,(? b? b) ,_) ... ,oⁿ) () ,κ) ← get-κ
-   (put-ξ (↦))
+   (put-E (↦))
    (put-κ κ)
    (δ oⁿ (reverse (cons bₙ b)))
    "cek5"]
 
   [V
    #:when (not (X? V))
-   ξ ← get-ξ
-   `(op (,c ... ,oⁿ) ((,M ,ξₘ) ,cₗ ...) ,κ) ← get-κ
-   (put-ξ ξₘ)
-   (put-κ `(op ((,V ,ξ) ,@c ,oⁿ) (,@cₗ) ,κ))
+   E ← get-E
+   `(op (,c ... ,oⁿ) ((,M ,Eₘ) ,cₗ ...) ,κ) ← get-κ
+   (put-E Eₘ)
+   (put-κ `(op ((,V ,E) ,@c ,oⁿ) (,@cₗ) ,κ))
    M
    "cek6"]
 
   [X
-   ξ ← get-ξ
-   `(,V ,ξ′) ≔ (ξ X)
-   (put-ξ ξ′)
+   E ← get-E
+   `(,V ,E′) ≔ (E X)
+   (put-E E′)
    V
    "cek7"])
+
+(define-match-expander mkCEK
+  (syntax-parser
+    [(_ M E κ) #'(cons (cons M E) κ)])
+  (syntax-parser
+    [(_ M E κ) #'(cons (cons M E) κ)]))
 
 (define ⊢->cek (call-with-values
                 (λ () (invoke-unit (⊢->cek-rules)))
                 (λ (mrun reducer)
-                  (λ (ς) (mrun (cdr ς) (cdar ς) (reducer (caar ς)))))))
+                  (λ (ς)
+                    (match ς
+                      [(mkCEK M E (? κ? κ))
+                       (mrun κ E (reducer M))])))))
 (define ⊢->>cek (compose1 car (repeated ⊢->cek)))
 
 (define/match (evalcek m)
   [M
    #:when (∅? (FV M))
-   (match (⊢->>cek (cons (cons M (↦)) 'mt))
-     [(set (cons (cons (? b? b) (? ξ? _)) 'mt))
+   (match (⊢->>cek (mkCEK M (↦) 'mt))
+     [(set (mkCEK (? b? b) E 'mt))
       b]
-     [(set (cons (cons `(λ ,X ,(? M? N)) (? ξ? _)) 'mt))
+     [(set (mkCEK `(λ ,X ,M) E 'mt))
       'function]
      [x (error 'evalcek "invalid final state: ~a" x)])]
   [_ (error 'evalcek "invalid input: ~a" m)])

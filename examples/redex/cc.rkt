@@ -118,10 +118,19 @@
                compose1))
 (define ⊢->>cc (compose1 car (repeated ⊢->cc)))
 
+(define-match-expander mkCC
+  (syntax-parser
+    [(_ M ECxt) #'(cons M ECxt)])
+  (syntax-parser
+    [(_ M ECxt) #'(cons M ECxt)]))
+
 (define ⊢->cc′ (call-with-values
                (λ () (invoke-unit (⊢->cc′-rules)))
                (λ (mrun reducer)
-                 (λ (ς) (mrun (cdr ς) (reducer (car ς)))))))
+                 (λ (ς)
+                   (match ς
+                     [(mkCC M ECxt)
+                      (mrun ECxt (reducer M))])))))
 (define ⊢->>cc′ (compose1 car (repeated ⊢->cc′)))
 
 (define/match (evalcc m)
@@ -138,10 +147,10 @@
 (define/match (evalcc′ m)
   [M
    #:when (∅? (FV M))
-   (match (⊢->>cc′ (cons M (□)))
-     [(set (cons (? b? b) (□)))
+   (match (⊢->>cc′ (mkCC M (□)))
+     [(set (mkCC (? b? b) (□)))
       b]
-     [(set (cons `(λ ,X ,(? M? N)) (□)))
+     [(set (mkCC `(λ ,X ,M) (□)))
       'function]
      [x (error 'evalcc′ "invalid final state: ~a" x)])]
   [_ (error 'evalcc′ "invalid input: ~a" m)])

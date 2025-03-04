@@ -1,6 +1,8 @@
 #lang racket/base
-(require lightstep/base lightstep/syntax lightstep/transformers
+(require (for-syntax racket/base syntax/parse)
+         lightstep/base lightstep/syntax lightstep/transformers
          (only-in racket/unit invoke-unit)
+         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ)
          (only-in "cc.rkt" ECxt □))
 
@@ -50,19 +52,28 @@
    M₁
    "scc6"])
 
+(define-match-expander mkSCC
+  (syntax-parser
+    [(_ M ECxt) #'(cons M ECxt)])
+  (syntax-parser
+    [(_ M ECxt) #'(cons M ECxt)]))
+
 (define ⊢->scc (call-with-values
                 (λ () (invoke-unit (⊢->scc-rules)))
                 (λ (mrun reducer)
-                  (λ (ς) (mrun (cdr ς) (reducer (car ς)))))))
+                  (λ (ς)
+                    (match ς
+                      [(mkSCC M ECxt)
+                       (mrun ECxt (reducer M))])))))
 (define ⊢->>scc (compose1 car (repeated ⊢->scc)))
 
 (define/match (evalscc m)
   [M
    #:when (∅? (FV M))
-   (match (⊢->>scc (cons M (□)))
-     [(set (cons (? b? b) (□)))
+   (match (⊢->>scc (mkSCC M (□)))
+     [(set (mkSCC (? b? b) (□)))
       b]
-     [(set (cons `(λ ,X ,(? M? N)) (□)))
+     [(set (mkSCC `(λ ,X ,M) (□)))
       'function]
      [x (error 'evalscc "invalid final state: ~a" x)])]
   [_ (error 'evalscc "invalid input: ~a" m)])

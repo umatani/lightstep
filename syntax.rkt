@@ -2,7 +2,7 @@
 (require (for-syntax racket/base syntax/parse
                      (only-in racket/syntax define/with-syntax format-id)
                      (only-in syntax/stx stx-map)
-                     (only-in "map.rkt" ↦ for/map ⊔ [∈ map-∈]))
+                     (only-in "map.rkt" ↦ for/map ⊔ [∈ map-∈] in-map))
          (only-in racket/list check-duplicates)
          (only-in "set.rkt" ∈ ∪)
          (only-in racket/match define-match-expander)
@@ -41,6 +41,9 @@
                                   (if (eq? (car new-pats) '....)
                                     (append old-pats (cdr new-pats))
                                     new-pats))))
+     (for ([(n ps) (in-map rules)])
+       (when (eq? (car ps) '....)
+         (raise-syntax-error #f (format "unknown super category ~s" n) stx)))
      (define/with-syntax ([N′ (pat′ ...)] ...)
        (for/list ([(n ps) (map-∈ rules)])
          (list (datum->syntax #'L n) (datum->syntax #'L ps))))
@@ -50,10 +53,7 @@
          ;(define-nonterminal N′ pat′ ...) ...
          #,@(stx-map (λ (c) (quasisyntax/loc stx
                               (define-nonterminal #,@c)))
-                     #'((N′ pat′ ...) ...))
-         )
-     ]))
-
+                     #'((N′ pat′ ...) ...)))]))
 
 ;;=============================================================================
 ;; cxt
