@@ -21,7 +21,7 @@
          [p #t]
          [_ #f])]))
 
-;; multi-map: A → P(B)
+;; multi-map: A → 𝒫(B)
 
 (define (mmap . bs)
   (match bs
@@ -60,6 +60,10 @@
   (match bs
     ['() m]
     [`([,x ,t] ,@bs′) (mmap-ext1 (apply mmap-ext m bs′) x t)]))
+
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;; reachable? (useless)
 
 (struct Queueof (head tail) #:transparent #:mutable
   #:constructor-name Queue)
