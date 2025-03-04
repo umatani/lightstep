@@ -2,9 +2,9 @@
 (require (for-syntax racket/base syntax/parse
                      (only-in racket/syntax format-id)
                      (only-in racket/list check-duplicates)
-                     (only-in racket/match match-define)
+                     (only-in racket/match match match-define)
                      (only-in syntax/stx stx-map)
-                     (only-in "set.rkt" list→set set→list ∈ ∪))
+                     (only-in "set.rkt" set list→set set→list ∈ ∪))
          (only-in racket/unit
                  define-signature unit import export link
                  compound-unit invoke-unit)
@@ -58,7 +58,7 @@
 
   (define (inst-reduction-info rid args)
     (match-define
-      (reduction-desc _ import-sig-stx inst-xformer)
+      (reduction-desc mrun import-sig-stx inst-xformer)
       ((syntax-local-value rid)))
 
     (syntax-parse
@@ -68,13 +68,23 @@
                                         #`(#,@args ς))
       #:datum-literals [let nondet-match]
       ;; NOTE: this let form must be consistent with inst-xformer below
-      [(let () _defM
+      [(let ()
+         (define _ M)
          (nondet-match _ _ #:do [do-body ...] rule ...))
-       #`(#,import-sig-stx
+       #`(M
+          #,mrun
+          #,import-sig-stx
           (rule ...)
           (do-body ...))]))
 
   (define (get-supers-info orig-stx rids argss)
+    (define (merge-M Ms)
+      (match (list→set (syntax->datum Ms))
+        [(set _) (car (syntax->list Ms))]
+        [_ (raise-syntax-error
+            #f "inconsistent monad specs" orig-stx Ms)]))
+    (define (merge-mrun mruns)
+      (car (syntax->list mruns)))
     (define (merge-imports importss) ;; TODO: check duplicates?
       (set→list (apply ∪ (stx-map (compose1 list→set syntax->list) importss))))
     (define (merge-rules ruless)
@@ -92,15 +102,17 @@
          #'(do-body ... ...)]))
 
     (if (null? (syntax->list rids))
-      #'(() () ())
+      #'(#f #f () () ())  ;; (M mrun imports rules do-bodies)
       (cond
         [(check-duplicate-identifier (syntax->list rids))
          => (λ (id) (raise-syntax-error
                      #f (format "duplicate super name ~s" (syntax-e id))
                      orig-stx rids))]
-        [else (with-syntax ([((imports rules do-bodies) ...)
+        [else (with-syntax ([((M mrun imports rules do-bodies) ...)
                              (stx-map inst-reduction-info rids argss)])
-                (list (merge-imports   #'(imports ...))
+                (list (merge-M         #'(M ...))
+                      (merge-mrun      #'(mrun ...))
+                      (merge-imports   #'(imports ...))
                       (merge-rules     #'(rules ...))
                       (merge-do-bodies #'(do-bodies ...))))])))
 
@@ -147,21 +159,26 @@
                  [(_ _ _ rnam _ ...)
                   (∈ (syntax-e #'rnam) rnams)])))]
 
+     #:with (M-of-super
+             mrun-of-super
+             imports-of-super
+             rules-of-super
+             do-bodies-of-super) (get-supers-info
+                                  stx
+                                  #'opts.sup-names
+                                  #'opts.sup-argss)
+
      #:with M (if (syntax-e #'opts.monad)
                 #'opts.monad
-                #'ReduceM)
-     #:with M′ (format-id #'rid "~a" (gensym 'M))
+                (if (syntax-e #'M-of-super)
+                  #'M-of-super
+                  #'ReduceM))
 
-     #:with mrun (if (syntax-e #'opts.mrun)
-                   #'opts.mrun
-                   (derive-mrun #'M))
-
-     #:with (imports-of-super
-             rules-of-super
-             do-bodies-of-super) (get-supers-info stx
-                                                #'opts.sup-names
-                                                #'opts.sup-argss)
-
+     #:with mrun (cond
+                   [(syntax-e #'opts.mrun) #'opts.mrun]
+                   [(syntax-e #'opts.monad) (derive-mrun #'M)]
+                   [(syntax-e #'mrun-of-super) #'mrun-of-super]
+                   [else (derive-mrun #'M)])
 
      #:with imports (stx-map rescope #`(#,@#'imports-of-super
                                         #,@#'opts.imports))
@@ -179,6 +196,7 @@
                                    #`(#,@#'do-bodies-of-super
                                       #,@#'opts.do-bodies))
      
+     #:with M′ (format-id #'rid "~a" (gensym 'M))
      #:with inst-xformer (escape-elipsis
                           #'(λ (stx)
                               (syntax-parse stx
