@@ -3,6 +3,7 @@
          (only-in racket/unit invoke-unit)
          (only-in "iswim.rkt" FV δ)
          (only-in "secd.rkt" SECD ⊢->secd-rules mkSECD))
+(provide ⊢->secd/tco-rules)
 
 (module+ test (require rackunit))
 

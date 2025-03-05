@@ -40,6 +40,7 @@
   (require (submod lightstep/examples/redex/secd2 test))
   (require (submod lightstep/examples/redex/secd-tco test))
   (require (submod lightstep/examples/redex/cek-ss test))
+  (require (submod lightstep/examples/redex/secd-tco-ss test))
 
   ;; aam
   (require (submod lightstep/examples/aam/common test))
