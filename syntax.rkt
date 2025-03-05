@@ -23,8 +23,7 @@
      ;;     (match x [pat #t] ... [_ #f]))
      (syntax/loc stx
        (define (N? x)
-         (match x [pat #t] ... [_ #f])))
-     ]))
+         (match x [pat #t] ... [_ #f])))]))
 
 ;; TODO: auto generate Gen of rackcheck from the definition
 (define-syntax (define-language stx)

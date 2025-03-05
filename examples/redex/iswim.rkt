@@ -4,7 +4,7 @@
          (only-in lightstep/monad sequence)
          (only-in racket/unit invoke-unit)
          (prefix-in lam: (only-in "lam.rkt" LAM FV subst)))
-(provide ISWIM FV subst δ v)
+(provide ISWIM FV subst δ βv-rule v Cxt)
 
 (module+ test (require rackunit))
 
@@ -20,7 +20,7 @@
     r ...))
 
 (define-iswim-language ISWIM
-  [X ∷= (? symbol? (not 'λ 'add1 'sub1 'iszero '+ '- '* '↑))]
+  [KWD ∷= .... (? o¹?) (? o²?)]
   [b ∷= (? number?)]
   [oⁿ ∷= (? o¹?) (? o²?)]
   [o¹ ∷= 'add1 'sub1 'iszero]
@@ -81,15 +81,17 @@
   (let ([X ((symbol-not-in (FV M) (FV N)) 'if0)])
     `((((iszero ,L) (λ ,X ,M)) (λ ,X ,N)) 0)))
 
-(define-reduction (v-rules) #:super [(βv-rule)]
+(define-reduction (δ-rule)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    (δ oⁿ b)])
+
+(define-reduction (v-rules) #:super [(βv-rule) (δ-rule)])
 
 (define v (call-with-values
            (λ () (invoke-unit (v-rules)))
            compose1))
 
-;; ECxt of iswim2.rkt is same, but deterministic
+;; ECxt of iswim-std.rkt is same, but deterministic
 (define-nondet-match-expander Cxt
   (λ (stx)
     (syntax-case stx ()
@@ -155,8 +157,6 @@
 
 ;;=============================================================================
 ;; 4.6  Consistency
-
-;; ↪v
 
 (define-reduction (↪v-rules ↪v)
   [M M]

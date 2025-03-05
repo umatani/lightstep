@@ -31,7 +31,7 @@
   (require (submod lightstep/examples/redex/b test))
   (require (submod lightstep/examples/redex/lam test))
   (require (submod lightstep/examples/redex/iswim test))
-  (require (submod lightstep/examples/redex/iswim2 test))
+  (require (submod lightstep/examples/redex/iswim-std test))
   (require (submod lightstep/examples/redex/cc test))
   (require (submod lightstep/examples/redex/scc test))
   (require (submod lightstep/examples/redex/ck test))
@@ -41,6 +41,7 @@
   (require (submod lightstep/examples/redex/secd-tco test))
   (require (submod lightstep/examples/redex/cek-ss test))
   (require (submod lightstep/examples/redex/secd-tco-ss test))
+  (require (submod lightstep/examples/redex/e-iswim test))
 
   ;; aam
   (require (submod lightstep/examples/aam/common test))

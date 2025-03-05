@@ -248,6 +248,6 @@
             [(do (for/monad+ ([ς′ (set-subtract sΣ′ sΣ)])
                    (do (put (set-add sΣ ς′))
                        (search ς′ (if limit
-                                    (sub1 limit)
-                                    #f)))))]))))
+                                     (sub1 limit)
+                                     #f)))))]))))
   (run-StateT (set ς) (search ς limit)))

@@ -14,7 +14,8 @@
      X
      `(λ ,X ,M)
      `(,M₁ ,M₂)]
-  [X ∷= (? symbol? (not 'λ))])
+  [X ∷= (? symbol? (? (compose1 not KWD?)))]
+  [KWD ∷= 'λ])
 
 (module+ test
   (check-true (M? 'x))
