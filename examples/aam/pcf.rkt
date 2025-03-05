@@ -390,7 +390,6 @@
                 (set 6))
   (check-equal? (car ((repeated -->ₙ) fact-5)) (set 120)))
 
-
 (module+ test
   (check-true (reachable? -->ₙ fact-5 120))
 

@@ -4,6 +4,7 @@
          (only-in racket/unit invoke-unit)
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM FV δ))
+(provide CEK ⊢->cek-rules mkCEK)
 
 (module+ test (require rackunit))
 

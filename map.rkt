@@ -74,10 +74,10 @@
 (define (rng m)
   (for/set ([(_ v) (∈ m)]) v))
 
-(define (restrict m xs)
-  (for/map ([(x _) (∈ m)]
-            #:when (s:∈ x xs))
-    (values x (m x))))
+(define (restrict m ks)
+  (for/map ([(k v) (∈ m)]
+            #:when (s:∈ k ks))
+    (values k v)))
 
 (define (size m)
   (hash-count (repl->hash m)))
