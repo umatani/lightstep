@@ -2,11 +2,11 @@
 (require lightstep/base lightstep/syntax
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
-         (only-in "pcf-rho.rkt" vρ-rules)
-         (only-in "pcf-varsigma.rkt" -->vς-rules)
+         (only-in "pcf-rho.rkt" vρ)
+         (only-in "pcf-varsigma.rkt" -->vς)
          (only-in "pcf-sigma.rkt"
-                  [PCFσ orig-PCFσ] -->vσ-rules injσ formals  alloc))
-(provide -->vσ/alloc-rules)
+                  [PCFσ orig-PCFσ] -->vσ injσ formals  alloc))
+(provide -->vσ/alloc)
 
 (module+ test
   (require rackunit)
@@ -23,11 +23,9 @@
 
 (define-language PCFσ #:super orig-PCFσ)
 
-(define-reduction (-->vσ/alloc-rules alloc) #:super [(-->vσ-rules)])
+(define-reduction (-->vσ/alloc alloc) #:super [(-->vσ)])
 
-(define -->vσ (call-with-values
-               (λ () (-->vσ/alloc-rules alloc))
-               compose1))
+(define -->vσ (call-with-values (λ () (-->vσ/alloc alloc)) compose1))
 
 (module+ test
   (check-equal?  (car ((repeated -->vσ) (injσ fact-5))) (set 120)))
@@ -38,10 +36,8 @@
      (map gensym (formals M))]))  
 
 (module+ test
-  (define --> (call-with-values
-               (λ () (-->vσ/alloc-rules alloc-gensym))
-               compose1))
-  ;(car ((repeated -->) (injσ '((λ ([x : num]) (λ ([y : num]) x)) 100))))
+  (define --> (call-with-values (λ () (-->vσ/alloc alloc-gensym)) compose1))
+  ;(car ((repeated step-->) (injσ '((λ ([x : num]) (λ ([y : num]) x)) 100))))
   (check-equal? (car ((repeated -->) (injσ fact-5))) (set 120)))
 
 (define (alloc-nat σ)
@@ -52,8 +48,6 @@
                    (λ (i) (+ i n))))]))  
 
 (module+ test
-  (define -->′ (call-with-values
-               (λ () (-->vσ/alloc-rules alloc-nat))
-               compose1))
-  ;(car ((repeated -->′) (injσ '((λ ([x : num]) (λ ([y : num]) x)) 100))))
+  (define -->′ (call-with-values (λ () (-->vσ/alloc alloc-nat)) compose1))
+  ;(car ((repeated step-->′) (injσ '((λ ([x : num]) (λ ([y : num]) x)) 100))))
   (check-equal? (car ((repeated -->′) (injσ fact-5))) (set 120)))

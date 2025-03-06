@@ -1,6 +1,6 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax)
-(provide L₀ r₀-rules to-five r₁-rules)
+(provide L₀ r₀ to-five r₁)
 
 (module+ test (require rackunit))
 
@@ -12,23 +12,19 @@
 
 (define-language L₀
   [M ∷= (? number?)])
-(define-reduction (r₀-rules)
+(define-reduction (r₀)
   [M 5])
-(define r₀ (call-with-values
-            (λ () (r₀-rules))
-            compose1))
+(define step-r₀ (call-with-values (λ () (r₀)) compose1))
 
 (module+ test
-  (check-equal? (r₀ 7) (set 5)))
+  (check-equal? (step-r₀ 7) (set 5)))
 
 (define (to-five m)
   (match m
     [M 5]))
-(define-reduction (r₁-rules)
+(define-reduction (r₁)
   [M (to-five M)])
-(define r₁ (call-with-values
-            (λ () (r₁-rules))
-            compose1))
+(define step-r₁ (call-with-values (λ () (r₁)) compose1))
 
 (module+ test
-  (check-equal? (r₁ 7) (set 5)))
+  (check-equal? (step-r₁ 7) (set 5)))

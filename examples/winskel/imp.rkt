@@ -6,7 +6,7 @@
 ;;=============================================================================
 ;; 2.2 The evaluation of arithmetic expressions
 
-(define-reduction (-->a-r)
+(define-reduction (-->a)
   [`(,(? number? n) ,σ)
    n
    "number"]
@@ -16,43 +16,42 @@
    "location"]
 
   [`((+ ,a₀ ,a₁) ,σ)
-   n₀ ← (-->a-r `(,a₀ ,σ))
-   n₁ ← (-->a-r `(,a₁ ,σ))
+   n₀ ← (-->a `(,a₀ ,σ))
+   n₁ ← (-->a `(,a₁ ,σ))
    (+ n₀ n₁)
    "sum"]
 
   [`((- ,a₀ ,a₁) ,σ)
-   n₀ ← (-->a-r `(,a₀ ,σ))
-   n₁ ← (-->a-r `(,a₁ ,σ))
+   n₀ ← (-->a `(,a₀ ,σ))
+   n₁ ← (-->a `(,a₁ ,σ))
    (- n₀ n₁)
    "subtract"]
 
   [`((× ,a₀ ,a₁) ,σ)
-   n₀ ← (-->a-r `(,a₀ ,σ))
-   n₁ ← (-->a-r `(,a₁ ,σ))
+   n₀ ← (-->a `(,a₀ ,σ))
+   n₁ ← (-->a `(,a₁ ,σ))
    (* n₀ n₁)
    "product"])
 
-(define-values (mrun-a reducer-a) (-->a-r))
-(define -->a (compose1 mrun-a reducer-a))
+(define step-a (call-with-values (λ () (-->a)) compose1))
 
 (define ((~a a₀ a₁) σ)
-  (equal? (-->a `(,a₀ ,σ)) (-->a `(,a₁ ,σ))))
+  (equal? (step-a `(,a₀ ,σ)) (step-a `(,a₁ ,σ))))
 
 (module+ test
-  (check-equal? (-->a `(3 ,(↦))) (set 3))
-  (check-equal? (-->a `(y ,(↦ ['x 3] ['y 2]))) (set 2))
-  (check-equal? (-->a `((+ x 1) ,(↦ ['x 3] ['y 2]))) (set 4))
-  (check-equal? (-->a `((+ x y) ,(↦ ['x 3] ['y 2]))) (set 5))
-  (check-equal? (-->a `((- x y) ,(↦ ['x 3] ['y 2]))) (set 1))
-  (check-equal? (-->a `((× x y) ,(↦ ['x 3] ['y 2]))) (set 6))
+  (check-equal? (step-a `(3 ,(↦))) (set 3))
+  (check-equal? (step-a `(y ,(↦ ['x 3] ['y 2]))) (set 2))
+  (check-equal? (step-a `((+ x 1) ,(↦ ['x 3] ['y 2]))) (set 4))
+  (check-equal? (step-a `((+ x y) ,(↦ ['x 3] ['y 2]))) (set 5))
+  (check-equal? (step-a `((- x y) ,(↦ ['x 3] ['y 2]))) (set 1))
+  (check-equal? (step-a `((× x y) ,(↦ ['x 3] ['y 2]))) (set 6))
 
-  (check-equal? (-->a `((+ (+ Init 5) (+ 7 9)) ,(↦ ['Init 0]))) (set 21)))
+  (check-equal? (step-a `((+ (+ Init 5) (+ 7 9)) ,(↦ ['Init 0]))) (set 21)))
 
 ;;=============================================================================
 ;; 2.3 The evaluation of boolean expressions
 
-(define-reduction (-->b-rules -->a -->b)
+(define-reduction (-->b -->a)
   [`(#t ,σ)
    #t
    "true"]
@@ -111,31 +110,30 @@
    (or t₀ t₁)
    "or"])
 
-(define-values (mrun-b reducer-b) (-->b-rules reducer-a reducer-b))
-(define -->b (compose1 mrun-b reducer-b))
+(define step-b (call-with-values (λ () (-->b (reducer-of (-->a)))) compose1))
 
 (define ((~b b₀ b₁) σ)
-  (equal? (-->b `(,b₀ ,σ)) (-->b `(,b₁ ,σ))))
+  (equal? (step-b `(,b₀ ,σ)) (step-b `(,b₁ ,σ))))
 
 (module+ test
-  (check-equal? (-->b `(#t ,(↦))) (set #t))
-  (check-equal? (-->b `(#f ,(↦))) (set #f))
-  (check-equal? (-->b `((= x 1) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b `((= x 1) ,(↦ ['x 2]))) (set #f))
-  (check-equal? (-->b `((≤ x 0) ,(↦ ['x 1]))) (set #f))
-  (check-equal? (-->b `((≤ x 3) ,(↦ ['x 2]))) (set #t))
-  (check-equal? (-->b `((¬ (≤ x 0)) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b `((¬ (≤ x 3)) ,(↦ ['x 2]))) (set #f))
-  (check-equal? (-->b `((∧ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #f))
-  (check-equal? (-->b `((∧ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b `((∨ (≤ x -1) (≤ x 0)) ,(↦ ['x 1]))) (set #f))
-  (check-equal? (-->b `((∨ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b `((∨ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t)))
+  (check-equal? (step-b `(#t ,(↦))) (set #t))
+  (check-equal? (step-b `(#f ,(↦))) (set #f))
+  (check-equal? (step-b `((= x 1) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b `((= x 1) ,(↦ ['x 2]))) (set #f))
+  (check-equal? (step-b `((≤ x 0) ,(↦ ['x 1]))) (set #f))
+  (check-equal? (step-b `((≤ x 3) ,(↦ ['x 2]))) (set #t))
+  (check-equal? (step-b `((¬ (≤ x 0)) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b `((¬ (≤ x 3)) ,(↦ ['x 2]))) (set #f))
+  (check-equal? (step-b `((∧ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #f))
+  (check-equal? (step-b `((∧ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b `((∨ (≤ x -1) (≤ x 0)) ,(↦ ['x 1]))) (set #f))
+  (check-equal? (step-b `((∨ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b `((∨ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t)))
 
 (module+ left-first-sequential
   (require rackunit)
 
-  (define-reduction (-->b′-rules -->a -->b′) #:super [(-->b-rules -->a -->b′)]
+  (define-reduction (-->b′ -->a) #:super [(-->b -->a)]
     ;; remove super's "and" rule
     [`((∧ ,b₀ ,b₁) ,σ)
      #:when #f
@@ -182,27 +180,28 @@
      #f
      "or-ff"])
 
-  (define-values (mrun-b′ reducer-b′) (-->b′-rules reducer-a reducer-b′))
-  (define -->b′ (compose1 mrun-b′ reducer-b′))
+  (define step-b′ (call-with-values
+                   (λ () (-->b′ (reducer-of (-->a))))
+                   compose1))
 
-  (check-equal? (-->b′ `(#t ,(↦))) (set #t))
-  (check-equal? (-->b′ `(#f ,(↦))) (set #f))
-  (check-equal? (-->b′ `((= x 1) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b′ `((= x 1) ,(↦ ['x 2]))) (set #f))
-  (check-equal? (-->b′ `((≤ x 0) ,(↦ ['x 1]))) (set #f))
-  (check-equal? (-->b′ `((≤ x 3) ,(↦ ['x 2]))) (set #t))
-  (check-equal? (-->b′ `((¬ (≤ x 0)) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b′ `((¬ (≤ x 3)) ,(↦ ['x 2]))) (set #f))
-  (check-equal? (-->b′ `((∧ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #f))
-  (check-equal? (-->b′ `((∧ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b′ `((∨ (≤ x -1) (≤ x 0)) ,(↦ ['x 1]))) (set #f))
-  (check-equal? (-->b′ `((∨ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b′ `((∨ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t)))
+  (check-equal? (step-b′ `(#t ,(↦))) (set #t))
+  (check-equal? (step-b′ `(#f ,(↦))) (set #f))
+  (check-equal? (step-b′ `((= x 1) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b′ `((= x 1) ,(↦ ['x 2]))) (set #f))
+  (check-equal? (step-b′ `((≤ x 0) ,(↦ ['x 1]))) (set #f))
+  (check-equal? (step-b′ `((≤ x 3) ,(↦ ['x 2]))) (set #t))
+  (check-equal? (step-b′ `((¬ (≤ x 0)) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b′ `((¬ (≤ x 3)) ,(↦ ['x 2]))) (set #f))
+  (check-equal? (step-b′ `((∧ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #f))
+  (check-equal? (step-b′ `((∧ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b′ `((∨ (≤ x -1) (≤ x 0)) ,(↦ ['x 1]))) (set #f))
+  (check-equal? (step-b′ `((∨ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b′ `((∨ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t)))
 
 (module+ parallel-or
   (require rackunit)
 
-  (define-reduction (-->b′-rules -->a -->b′) #:super [(-->b-rules -->a -->b′)]
+  (define-reduction (-->b′ -->a) #:super [(-->b -->a)]
     ;; remove super's "or" rule
     [`((∨ ,b₀ ,b₁) ,σ)
      #:when #f
@@ -225,28 +224,29 @@
      #f
      "or-ff"])
 
-  (define-values (mrun-b′ reducer-b′) (-->b′-rules reducer-a reducer-b′))
-  (define -->b′ (compose1 mrun-b′ reducer-b′))
+  (define step-b′ (call-with-values
+                   (λ () (-->b′ (reducer-of (-->a))))
+                   compose1))
 
-  (check-equal? (-->b′ `(#t ,(↦))) (set #t))
-  (check-equal? (-->b′ `(#f ,(↦))) (set #f))
-  (check-equal? (-->b′ `((= x 1) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b′ `((= x 1) ,(↦ ['x 2]))) (set #f))
-  (check-equal? (-->b′ `((≤ x 0) ,(↦ ['x 1]))) (set #f))
-  (check-equal? (-->b′ `((≤ x 3) ,(↦ ['x 2]))) (set #t))
-  (check-equal? (-->b′ `((¬ (≤ x 0)) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b′ `((¬ (≤ x 3)) ,(↦ ['x 2]))) (set #f))
-  (check-equal? (-->b′ `((∧ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #f))
-  (check-equal? (-->b′ `((∧ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b′ `((∨ (≤ x -1) (≤ x 0)) ,(↦ ['x 1]))) (set #f))
-  (check-equal? (-->b′ `((∨ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
-  (check-equal? (-->b′ `((∨ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t)))
+  (check-equal? (step-b′ `(#t ,(↦))) (set #t))
+  (check-equal? (step-b′ `(#f ,(↦))) (set #f))
+  (check-equal? (step-b′ `((= x 1) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b′ `((= x 1) ,(↦ ['x 2]))) (set #f))
+  (check-equal? (step-b′ `((≤ x 0) ,(↦ ['x 1]))) (set #f))
+  (check-equal? (step-b′ `((≤ x 3) ,(↦ ['x 2]))) (set #t))
+  (check-equal? (step-b′ `((¬ (≤ x 0)) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b′ `((¬ (≤ x 3)) ,(↦ ['x 2]))) (set #f))
+  (check-equal? (step-b′ `((∧ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #f))
+  (check-equal? (step-b′ `((∧ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b′ `((∨ (≤ x -1) (≤ x 0)) ,(↦ ['x 1]))) (set #f))
+  (check-equal? (step-b′ `((∨ (≤ x 0) (≤ x 3)) ,(↦ ['x 1]))) (set #t))
+  (check-equal? (step-b′ `((∨ (≤ x 2) (≤ x 3)) ,(↦ ['x 1]))) (set #t)))
 
 
 ;;=============================================================================
 ;; 2.4 The execution of commands
 
-(define-reduction (-->c-rules -->a -->b -->c)
+(define-reduction (-->c -->a -->b)
   [`(skip ,σ)
    σ
    "skip"]
@@ -286,26 +286,28 @@
    σ′
    "while-t"])
 
-(define-values (mrun-c reducer-c) (-->c-rules reducer-a reducer-b reducer-c))
-(define -->c (compose1 mrun-c reducer-c))
+(define step-c (let ([reducer-a (reducer-of (-->a))])
+                 (call-with-values
+                  (λ () (-->c reducer-a (reducer-of (-->b reducer-a))))
+                  compose1)))
 
 (define ((~c c₀ c₁) σ)
-  (equal? (-->c `(,c₀ ,σ)) (-->c `(,c₁ ,σ))))
+  (equal? (step-c `(,c₀ ,σ)) (step-c `(,c₁ ,σ))))
 
 (module+ test
-  (check-equal? (-->c `(skip ,(↦ ['x 1]))) (set (↦ ['x 1])))
-  (check-equal? (-->c `((≔ x (+ x 1)) ,(↦ ['x 1]))) (set (↦ ['x 2])))
-  (check-equal? (-->c `((seq (≔ x (+ x 1)) (≔ y (+ y x))) ,(↦ ['x 1] ['y 1])))
+  (check-equal? (step-c `(skip ,(↦ ['x 1]))) (set (↦ ['x 1])))
+  (check-equal? (step-c `((≔ x (+ x 1)) ,(↦ ['x 1]))) (set (↦ ['x 2])))
+  (check-equal? (step-c `((seq (≔ x (+ x 1)) (≔ y (+ y x))) ,(↦ ['x 1] ['y 1])))
                 (set (↦ ['x 2] ['y 3])))
-  (check-equal? (-->c `((if (≤ x 1)
+  (check-equal? (step-c `((if (≤ x 1)
                           (≔ x (+ x 1))
                           skip) ,(↦ ['x 1])))
                 (set (↦ ['x 2])))
-  (check-equal? (-->c `((if (≤ x 1)
+  (check-equal? (step-c `((if (≤ x 1)
                           (≔ x (+ x 1))
                           skip) ,(↦ ['x 2])))
                 (set (↦ ['x 2])))
-  (check-equal? (-->c `((while (¬ (= x 0))
+  (check-equal? (step-c `((while (¬ (= x 0))
                           (seq (≔ sum (+ sum x))
                                (≔ x (- x 1))))
                         ,(↦ ['x 10] ['sum 0])))
@@ -315,7 +317,7 @@
 ;;=============================================================================
 ;; 2.6 Alternative semantics
 
-(define-reduction (-->₁a-rules -->₁a)
+(define-reduction (-->₁a)
   [`(,(? symbol? X) ,σ)
    `(,(σ X) ,σ)]
 
@@ -355,27 +357,26 @@
    p ≔ (* n m)
    `(,p ,σ)])
 
-(define-values (mrun₁-a reducer₁-a) (-->₁a-rules reducer₁-a))
-(define -->₁a (compose1 mrun₁-a reducer₁-a))
-(define -->>₁a (repeated -->₁a))
+(define step₁-a (call-with-values (λ () (-->₁a)) compose1))
+(define -->>₁a (repeated step₁-a))
 
 (define ((~₁a a₀ a₁) σ)
-  (equal? (-->₁a `(,a₀ ,σ)) (-->₁a `(,a₁ ,σ))))
+  (equal? (step₁-a `(,a₀ ,σ)) (step₁-a `(,a₁ ,σ))))
 
 (module+ test
-  (check-equal? (-->₁a `(3 ,(↦))) ∅)
-  (check-equal? (-->₁a `(y ,(↦ ['x 3] ['y 2])))
-                (set   `(2 ,(↦ ['x 3] ['y 2]))))
-  (check-equal? (-->₁a `((+ x 1) ,(↦ ['x 3] ['y 2])))
-                (set   `((+ 3 1) ,(↦ ['x 3] ['y 2]))))
-  (check-equal? (-->₁a `((+ x y) ,(↦ ['x 3] ['y 2])))
-                (set   `((+ 3 y) ,(↦ ['x 3] ['y 2]))))
-  (check-equal? (-->₁a `((- x y) ,(↦ ['x 3] ['y 2])))
-                (set   `((- 3 y) ,(↦ ['x 3] ['y 2]))))
-  (check-equal? (-->₁a `((× x y) ,(↦ ['x 3] ['y 2])))
-                (set   `((× 3 y) ,(↦ ['x 3] ['y 2]))))
-  (check-equal? (-->₁a `((+ (+ Init 5) (+ 7 9)) ,(↦ ['Init 0])))
-                (set   `((+ (+ 0 5) (+ 7 9))    ,(↦ ['Init 0]))))
+  (check-equal? (step₁-a `(3 ,(↦))) ∅)
+  (check-equal? (step₁-a `(y ,(↦ ['x 3] ['y 2])))
+                (set     `(2 ,(↦ ['x 3] ['y 2]))))
+  (check-equal? (step₁-a `((+ x 1) ,(↦ ['x 3] ['y 2])))
+                (set     `((+ 3 1) ,(↦ ['x 3] ['y 2]))))
+  (check-equal? (step₁-a `((+ x y) ,(↦ ['x 3] ['y 2])))
+                (set     `((+ 3 y) ,(↦ ['x 3] ['y 2]))))
+  (check-equal? (step₁-a `((- x y) ,(↦ ['x 3] ['y 2])))
+                (set     `((- 3 y) ,(↦ ['x 3] ['y 2]))))
+  (check-equal? (step₁-a `((× x y) ,(↦ ['x 3] ['y 2])))
+                (set     `((× 3 y) ,(↦ ['x 3] ['y 2]))))
+  (check-equal? (step₁-a `((+ (+ Init 5) (+ 7 9)) ,(↦ ['Init 0])))
+                (set     `((+ (+ 0 5) (+ 7 9))    ,(↦ ['Init 0]))))
 
   (check-equal? (car (-->>₁a `(3 ,(↦))))
                 (set         `(3 ,(↦))))
@@ -393,7 +394,7 @@
                 (set         `(21                     ,(↦ ['Init 0])))))
 
 
-(define-reduction (-->₁b-rules -->₁a -->₁b)
+(define-reduction (-->₁b -->₁a)
   [`((= ,a₀ ,a₁) ,σ)
    `(,a₀′ ,(? (λ (σ′) (equal? σ σ′)))) ← (-->₁a `(,a₀ ,σ))
    `((= ,a₀′ ,a₁) ,σ)]
@@ -458,38 +459,37 @@
   [`((∨ ,(? boolean? t₀) ,(? boolean? t₁)) ,σ)
    `(,(or t₀ t₁) ,σ)])
 
-(define-values (mrun₁-b reducer₁-b) (-->₁b-rules reducer₁-a reducer₁-b))
-(define -->₁b (compose1 mrun₁-b reducer₁-b))
-(define -->>₁b (repeated -->₁b))
+(define step₁-b (call-with-values (λ () (-->₁b (reducer-of (-->₁a)))) compose1))
+(define -->>₁b (repeated step₁-b))
 
 (define ((~b₁ b₀ b₁) σ)
-  (equal? (-->₁b `(,b₀ ,σ)) (-->₁b `(,b₁ ,σ))))
+  (equal? (step₁-b `(,b₀ ,σ)) (step₁-b `(,b₁ ,σ))))
 
 (module+ test
-  (check-equal? (-->₁b `(#t ,(↦))) ∅)
-  (check-equal? (-->₁b `(#f ,(↦))) ∅)
-  (check-equal? (-->₁b `((= x 1) ,(↦ ['x 1])))
-                (set   `((= 1 1) ,(↦ ['x 1]))))
-  (check-equal? (-->₁b `((= x 1) ,(↦ ['x 2])))
-                (set   `((= 2 1) ,(↦ ['x 2]))))
-  (check-equal? (-->₁b `((≤ x 0) ,(↦ ['x 1])))
-                (set   `((≤ 1 0) ,(↦ ['x 1]))))
-  (check-equal? (-->₁b `((≤ x 3) ,(↦ ['x 2])))
-                (set   `((≤ 2 3) ,(↦ ['x 2]))))
-  (check-equal? (-->₁b `((¬ (≤ x 0)) ,(↦ ['x 1])))
-                (set   `((¬ (≤ 1 0)) ,(↦ ['x 1]))))
-  (check-equal? (-->₁b `((¬ (≤ x 3)) ,(↦ ['x 2])))
-                (set   `((¬ (≤ 2 3)) ,(↦ ['x 2]))))
-  (check-equal? (-->₁b `((∧ (≤ x 0) (≤ x 3)) ,(↦ ['x 1])))
-                (set   `((∧ (≤ 1 0) (≤ x 3)) ,(↦ ['x 1]))))
-  (check-equal? (-->₁b `((∧ (≤ x 2) (≤ x 3)) ,(↦ ['x 1])))
-                (set   `((∧ (≤ 1 2) (≤ x 3)) ,(↦ ['x 1]))))
-  (check-equal? (-->₁b `((∨ (≤ x -1) (≤ x 0)) ,(↦ ['x 1])))
-                (set   `((∨ (≤ 1 -1) (≤ x 0)) ,(↦ ['x 1]))))
-  (check-equal? (-->₁b `((∨ (≤ x 0) (≤ x 3)) ,(↦ ['x 1])))
-                (set   `((∨ (≤ 1 0) (≤ x 3)) ,(↦ ['x 1]))))
-  (check-equal? (-->₁b `((∨ (≤ x 2) (≤ x 3)) ,(↦ ['x 1])))
-                (set   `((∨ (≤ 1 2) (≤ x 3)) ,(↦ ['x 1]))))
+  (check-equal? (step₁-b `(#t ,(↦))) ∅)
+  (check-equal? (step₁-b `(#f ,(↦))) ∅)
+  (check-equal? (step₁-b `((= x 1) ,(↦ ['x 1])))
+                (set     `((= 1 1) ,(↦ ['x 1]))))
+  (check-equal? (step₁-b `((= x 1) ,(↦ ['x 2])))
+                (set     `((= 2 1) ,(↦ ['x 2]))))
+  (check-equal? (step₁-b `((≤ x 0) ,(↦ ['x 1])))
+                (set     `((≤ 1 0) ,(↦ ['x 1]))))
+  (check-equal? (step₁-b `((≤ x 3) ,(↦ ['x 2])))
+                (set     `((≤ 2 3) ,(↦ ['x 2]))))
+  (check-equal? (step₁-b `((¬ (≤ x 0)) ,(↦ ['x 1])))
+                (set     `((¬ (≤ 1 0)) ,(↦ ['x 1]))))
+  (check-equal? (step₁-b `((¬ (≤ x 3)) ,(↦ ['x 2])))
+                (set     `((¬ (≤ 2 3)) ,(↦ ['x 2]))))
+  (check-equal? (step₁-b `((∧ (≤ x 0) (≤ x 3)) ,(↦ ['x 1])))
+                (set     `((∧ (≤ 1 0) (≤ x 3)) ,(↦ ['x 1]))))
+  (check-equal? (step₁-b `((∧ (≤ x 2) (≤ x 3)) ,(↦ ['x 1])))
+                (set     `((∧ (≤ 1 2) (≤ x 3)) ,(↦ ['x 1]))))
+  (check-equal? (step₁-b `((∨ (≤ x -1) (≤ x 0)) ,(↦ ['x 1])))
+                (set     `((∨ (≤ 1 -1) (≤ x 0)) ,(↦ ['x 1]))))
+  (check-equal? (step₁-b `((∨ (≤ x 0) (≤ x 3)) ,(↦ ['x 1])))
+                (set     `((∨ (≤ 1 0) (≤ x 3)) ,(↦ ['x 1]))))
+  (check-equal? (step₁-b `((∨ (≤ x 2) (≤ x 3)) ,(↦ ['x 1])))
+                (set     `((∨ (≤ 1 2) (≤ x 3)) ,(↦ ['x 1]))))
 
   (check-equal? (car (-->>₁b `(#t ,(↦))))
                 (set         `(#t ,(↦))))
@@ -519,7 +519,7 @@
                 (set         `(#t                  ,(↦ ['x 1])))))
 
 
-(define-reduction (-->₁c-rules -->₁a -->₁b -->₁c)
+(define-reduction (-->₁c -->₁a -->₁b)
   #:do [(define σ? map?)
         (define ((σ=? σ) σ′) (equal? σ σ′))]
 
@@ -556,46 +556,49 @@
        (seq ,c (while ,b ,c))
        skip) ,σ)])
 
-(define-values (mrun₁-c reducer₁-c)
-  (-->₁c-rules reducer₁-a reducer₁-b reducer₁-c))
-(define -->₁c (compose1 mrun₁-c reducer₁-c))
-(define -->>₁c (repeated -->₁c))
+(define step₁-c (let ([reducer₁-a (reducer-of (-->₁a))])
+                  (call-with-values
+                   (λ () (-->₁c reducer₁-a (reducer-of (-->₁b reducer₁-a))))
+                   compose1)))
+(define -->>₁c (repeated step₁-c))
 
 (define ((~₁c c₀ c₁) σ)
-  (equal? (-->₁c `(,c₀ ,σ)) (-->₁c `(,c₁ ,σ))))
+  (equal? (step₁-c `(,c₀ ,σ)) (step₁-c `(,c₁ ,σ))))
 
 (module+ test
-  (check-equal? (-->₁c `(skip ,(↦ ['x 1])))
-                (set           (↦ ['x 1])))
-  (check-equal? (-->₁c `((≔ x (+ x 1)) ,(↦ ['x 1])))
-                (set   `((≔ x (+ 1 1)) ,(↦ ['x 1]))))
-  (check-equal? (-->₁c `((seq (≔ x (+ x 1)) (≔ y (+ y x))) ,(↦ ['x 1] ['y 1])))
-                (set   `((seq (≔ x (+ 1 1)) (≔ y (+ y x))) ,(↦ ['x 1] ['y 1]))))
-  (check-equal? (-->₁c `((if (≤ x 1)
-                           (≔ x (+ x 1))
-                           skip) ,(↦ ['x 1])))
-                (set   `((if (≤ 1 1)
-                           (≔ x (+ x 1))
-                           skip) ,(↦ ['x 1]))))
-  (check-equal? (-->₁c `((if (≤ x 1)
-                           (≔ x (+ x 1))
-                           skip) ,(↦ ['x 2])))
-                (set   `((if (≤ 2 1)
-                           (≔ x (+ x 1))
-                           skip) ,(↦ ['x 2]))))
-  (check-equal? (-->₁c `((while (¬ (= x 0))
-                           (seq (≔ sum (+ sum x))
-                                (≔ x (- x 1))))
-                         ,(↦ ['x 10] ['sum 0])))
-                (set   `((if (¬ (= x 0))
-                           (seq
-                            (seq (≔ sum (+ sum x))
-                                 (≔ x (- x 1)))
-                            (while (¬ (= x 0))
+  (check-equal? (step₁-c `(skip ,(↦ ['x 1])))
+                (set             (↦ ['x 1])))
+  (check-equal? (step₁-c `((≔ x (+ x 1)) ,(↦ ['x 1])))
+                (set     `((≔ x (+ 1 1)) ,(↦ ['x 1]))))
+  (check-equal? (step₁-c `((seq (≔ x (+ x 1)) (≔ y (+ y x)))
+                           ,(↦ ['x 1] ['y 1])))
+                (set     `((seq (≔ x (+ 1 1)) (≔ y (+ y x)))
+                           ,(↦ ['x 1] ['y 1]))))
+  (check-equal? (step₁-c `((if (≤ x 1)
+                             (≔ x (+ x 1))
+                             skip) ,(↦ ['x 1])))
+                (set     `((if (≤ 1 1)
+                             (≔ x (+ x 1))
+                             skip) ,(↦ ['x 1]))))
+  (check-equal? (step₁-c `((if (≤ x 1)
+                             (≔ x (+ x 1))
+                             skip) ,(↦ ['x 2])))
+                (set     `((if (≤ 2 1)
+                             (≔ x (+ x 1))
+                             skip) ,(↦ ['x 2]))))
+  (check-equal? (step₁-c `((while (¬ (= x 0))
+                             (seq (≔ sum (+ sum x))
+                                  (≔ x (- x 1))))
+                           ,(↦ ['x 10] ['sum 0])))
+                (set     `((if (¬ (= x 0))
+                             (seq
                               (seq (≔ sum (+ sum x))
-                                   (≔ x (- x 1)))))
-                           skip)
-                         ,(↦ ['x 10] ['sum 0]))))
+                                   (≔ x (- x 1)))
+                              (while (¬ (= x 0))
+                                (seq (≔ sum (+ sum x))
+                                     (≔ x (- x 1)))))
+                             skip)
+                           ,(↦ ['x 10] ['sum 0]))))
 
   (check-equal? (car (-->>₁c `(skip ,(↦ ['x 1]))))
                 (set                 (↦ ['x 1])))

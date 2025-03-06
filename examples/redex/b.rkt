@@ -6,7 +6,7 @@
 ;;=============================================================================
 ;; Syntax
 
-(define-reduction (∈B-rules ∈B)
+(define-reduction (∈B)
   ['t
    #t]
   ['f
@@ -16,11 +16,10 @@
    #t ← (∈B b₁)
    #t])
 
-(define-values (mrun-∈B reducer-∈B) (∈B-rules reducer-∈B))
-(define ∈B (compose1 mrun-∈B reducer-∈B))
+(define run-∈B (call-with-values (λ () (∈B)) compose1))
 
 (define (B? B)
-  (match (∈B B)
+  (match (run-∈B B)
     [(set #t) #t]
     [(set)    #f]
     [_ (error "no such case")]))
@@ -36,7 +35,7 @@
 ;;=============================================================================
 ;; Semantics
 
-(define-reduction (r-rules)
+(define-reduction (r)
   [`(● f ,B₁)
    B₁
    "a"]
@@ -44,12 +43,12 @@
    't
    "b"])
 
-(define-reduction (≍r-rules-v0) #:super [(r-rules)]
+(define-reduction (≍r-v0) #:super [(r)]
   [B₁
    B₁
    "c"])
 
-(define-reduction (≍r-rules r)
+(define-reduction (≍r r)
   [B₁
    B₂ ← (r B₁)
    B₂
@@ -58,15 +57,14 @@
    B₁
    "c"])
 
-(define-values (mrun-r reducer-r) (r-rules))
-(define r (compose1 mrun-r reducer-r))
-(define ->>r (repeated r))
+(define step-r (call-with-values (λ () (r)) compose1))
+(define ->>r (repeated step-r))
 
 (module+ test
   (check-equal? (car (->>r '(● f (● f (● t f))))) (set 't))
   (check-equal? (car (->>r '(● f (● f (● f f))))) (set 'f)))
 
-(define-reduction (-->r-rules -->r) #:super [(r-rules)]
+(define-reduction (-->r) #:super [(r)]
   [`(● ,B₁ ,B₂)
    B₁′ ← (-->r B₁)
    `(● ,B₁′ ,B₂)]
@@ -75,28 +73,26 @@
    B₂′ ← (-->r B₂)
    `(● ,B₁ ,B₂′)])
 
-(define-values (mrun-->r reducer-->r) (-->r-rules reducer-->r))
-(define -->r (compose1 mrun-->r reducer-->r))
-(define -->>r (repeated -->r))
+(define step-->r (call-with-values (λ () (-->r)) compose1))
+(define -->>r (repeated step-->r))
 
 (module+ test
-  (check-equal? (-->r '(● (● f t) f)) (set '(● t f)))
-  (check-equal? (-->r '(● t f)) (set 't))
+  (check-equal? (step-->r '(● (● f t) f)) (set '(● t f)))
+  (check-equal? (step-->r '(● t f)) (set 't))
   (check-equal? (car (-->>r '(● (● f t) f))) (set 't))
   (check-equal? (car (-->>r '(● f (● (● t f) f)))) (set 't)))
 
 
-(define-reduction (∈R-rules ∈R)
+(define-reduction (∈R)
   ['t
    #t]
   ['f
    #t])
 
-(define-values (mrun-∈R reducer-∈R) (∈R-rules reducer-∈R))
-(define ∈R (compose1 mrun-∈R reducer-∈R))
+(define run-∈R (call-with-values (λ () (∈R)) compose1))
 
 (define (R? B)
-  (match (∈R B)
+  (match (run-∈R B)
     [(set #t) #t]
     [(set)    #f]
     [_ (error "no such case")]))
@@ -110,13 +106,13 @@
   (check-false (R? '(● (f) (t))))
   (check-false (R? "hello")))
 
-(define ((eval-r -->) B)
+(define ((evalᵣ -->) B)
   (match (--> B)
     [(set R) R]
     [(set _) (error "get stuck")]
     [_ (error "non-deterministic relation")]))
 
-(define eval (eval-r (compose1 car -->>r)))
+(define eval (evalᵣ (compose1 car -->>r)))
 
 (module+ test
   (check-equal? (eval '(● (● f t) f)) 't)

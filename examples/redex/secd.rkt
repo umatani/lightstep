@@ -3,7 +3,7 @@
          lightstep/base lightstep/syntax lightstep/transformers
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM FV δ))
-(provide SECD ⊢->secd-rules mkSECD)
+(provide SECD ⊢->secd mkSECD)
 
 (module+ test (require rackunit))
 
@@ -17,7 +17,7 @@
   [D ∷= 'ϵ `(,S ,E ,(? list? Cs) ,D)]
   [V ∷= (? b?) `((λ ,X ,M) ,E)])
 
-(define-reduction (⊢->secd-rules)
+(define-reduction (⊢->secd)
   #:monad (StateT #f (StateT #f (StateT #f (NondetT ID))))
   #:do [(define get-S (bind get (compose1 return car)))
         (define get-E (bind get (compose1 return cadr)))
@@ -102,14 +102,11 @@
     [(_ S E Cs D)
      #'(cons (cons (cons Cs S) E) D)]))
 
-(define ⊢->secd (call-with-values
-                (λ () (⊢->secd-rules))
-                (λ (mrun reducer)
-                  (λ (ς)
-                    (match ς
-                      [(mkSECD S E Cs D)
-                       (mrun D E S (reducer Cs))])))))
-(define ⊢->>secd (compose1 car (repeated ⊢->secd)))
+(define step⊢->secd (let-values ([(mrun reducer) (⊢->secd)])
+                      (match-λ
+                       [(mkSECD S E Cs D)
+                        (mrun D E S (reducer Cs))])))
+(define ⊢->>secd (compose1 car (repeated step⊢->secd)))
 
 (define/match (evalsecd m)
   [M

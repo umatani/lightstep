@@ -2,7 +2,7 @@
 (require lightstep/base lightstep/syntax
          (only-in "iswim.rkt" FV δ)
          (only-in "secd.rkt" SECD mkSECD)
-         (only-in "secd-tco.rkt" ⊢->secd/tco-rules))
+         (only-in "secd-tco.rkt" ⊢->secd/tco))
 
 (module+ test (require rackunit))
 
@@ -11,7 +11,7 @@
 
 (define-language SECD/TCO/SS #:super SECD)
 
-(define-reduction (⊢->secd/tco/ss-rules) #:super [(⊢->secd/tco-rules)]
+(define-reduction (⊢->secd/tco/ss) #:super [(⊢->secd/tco)]
   [`((λ ,X ,M) ,C ...)
    S ← get-S
    E ← get-E
@@ -19,14 +19,11 @@
    `(,@C)
    "secd4"])
 
-(define ⊢->secd/tco/ss (call-with-values
-                        (λ () (⊢->secd/tco/ss-rules))
-                        (λ (mrun reducer)
-                          (λ (ς)
-                            (match ς
+(define step⊢->secd/tco/ss (let-values ([(mrun reducer) (⊢->secd/tco/ss)])
+                             (match-λ
                               [(mkSECD S E Cs D)
-                               (mrun D E S (reducer Cs))])))))
-(define ⊢->>secd/tco/ss (compose1 car (repeated ⊢->secd/tco/ss)))
+                               (mrun D E S (reducer Cs))])))
+(define ⊢->>secd/tco/ss (compose1 car (repeated step⊢->secd/tco/ss)))
 
 (define/match (evalsecd/tco/ss m)
   [M

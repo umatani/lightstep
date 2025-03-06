@@ -6,7 +6,7 @@
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
          (only-in "pcf-bigstep.rkt" PCF⇓))
-(provide PCFρ vρ-rules injρ)
+(provide PCFρ vρ injρ)
 
 (module+ test (require rackunit))
 
@@ -43,7 +43,7 @@
                  `(,V ... ,(? C? □) ,C ...)
                  `(if0 ,(? C? □) ,C₁ ,C₂)))]))
 
-(define-reduction (vρ-rules)
+(define-reduction (vρ)
   [`((if0 ,M ...) ,(? ρ? ρ))
    ; -->
    `(if0 ,@(map (λ (m) `(,m ,ρ)) M))
@@ -99,22 +99,20 @@
    C₂
    "if-f"])
 
-(define-reduction (-->vρ-rules)
-  #:do [(define vρ (reducer-of (vρ-rules)))]
+(define-reduction (-->vρ)
+  #:do [(define →vρ (reducer-of (vρ)))]
   [(ECxt c)
    ; where
-   C′ ← (vρ c)
+   C′ ← (→vρ c)
    ; -->
    (ECxt C′)
    "EC"])
 
-(define -->vρ (call-with-values
-               (λ () (-->vρ-rules))
-               compose1))
+(define step-->vρ (call-with-values (λ () (-->vρ)) compose1))
 
 (define (injρ M)
   `(,M ,(↦)))
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))
-  (check-equal? (car ((repeated -->vρ) (injρ fact-5))) (set 120)))
+  (check-equal? (car ((repeated step-->vρ) (injρ fact-5))) (set 120)))

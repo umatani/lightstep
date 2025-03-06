@@ -12,7 +12,7 @@
 ;;=============================================================================
 ;; 6.2 The CC Machine
 
-(define-reduction (⊢->scc-rules)
+(define-reduction (⊢->scc)
   #:monad (StateT #f (NondetT ID))
 
   [`(,M₁ ,M₂)
@@ -57,14 +57,11 @@
   (syntax-parser
     [(_ M ECxt) #'(cons M ECxt)]))
 
-(define ⊢->scc (call-with-values
-                (λ () (⊢->scc-rules))
-                (λ (mrun reducer)
-                  (λ (ς)
-                    (match ς
+(define step⊢->scc (let-values ([(mrun reducer) (⊢->scc)])
+                     (match-λ
                       [(mkSCC M ECxt)
-                       (mrun ECxt (reducer M))])))))
-(define ⊢->>scc (compose1 car (repeated ⊢->scc)))
+                       (mrun ECxt (reducer M))])))
+(define ⊢->>scc (compose1 car (repeated step⊢->scc)))
 
 (define/match (evalscc m)
   [M

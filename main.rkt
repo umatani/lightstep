@@ -23,6 +23,8 @@
 
   ;; winskel
   (require (submod lightstep/examples/winskel/imp test))
+  (require (submod lightstep/examples/winskel/imp left-first-sequential))
+  (require (submod lightstep/examples/winskel/imp parallel-or))
   (require (submod lightstep/examples/winskel/imp-state test))
   (require (submod lightstep/examples/winskel/imp-state left-first-sequential))
   (require (submod lightstep/examples/winskel/imp-state parallel-or))
@@ -37,7 +39,7 @@
   (require (submod lightstep/examples/redex/ck test))
   (require (submod lightstep/examples/redex/cek test))
   (require (submod lightstep/examples/redex/secd test))
-  (require (submod lightstep/examples/redex/secd-std test))
+  (require (submod lightstep/examples/redex/secd2 test))
   (require (submod lightstep/examples/redex/secd-tco test))
   (require (submod lightstep/examples/redex/cek-ss test))
   (require (submod lightstep/examples/redex/secd-tco-ss test))

@@ -2,9 +2,9 @@
 (require lightstep/base lightstep/syntax
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
-         (only-in "pcf-rho.rkt" vρ-rules)
-         (only-in "pcf-varsigma.rkt" PCFς -->vς-rules injς))
-(provide PCFσ -->vσ-rules injσ formals alloc)
+         (only-in "pcf-rho.rkt" vρ)
+         (only-in "pcf-varsigma.rkt" PCFς -->vς injς))
+(provide PCFσ -->vσ injσ formals alloc)
 
 (module+ test (require rackunit))
 
@@ -21,25 +21,25 @@
   [A ∷= (? (λ (_) #t))]
   [σ ∷= `(,(? ς?) ,Σ) V])
 
-(define-reduction (-->vσ-rules)
-  #:do [(define-reduction (-->vς′-rules) #:super [(-->vς-rules)]
+(define-reduction (-->vσ)
+  #:do [(define-reduction (-->vς′) #:super [(-->vς)]
           #:do [;; remove rules manually
-                (define-reduction (vρ′-rules) #:super [(vρ-rules)]
+                (define-reduction (vρ′) #:super [(vρ)]
                   [x #:when #f x "ρ-x"]
                   [x #:when #f x "β"]
                   [x #:when #f x "rec-β"])
-                (define vρ′ (reducer-of (vρ′-rules)))]
+                (define →vρ′ (reducer-of (vρ′)))]
           ; Apply
           [`(,C ,K)
            ; where
-           C′ ← (vρ′ C)
+           C′ ← (→vρ′ C)
            ; -->
            `(,C′ ,K)
            "ap"])
-        (define -->vς′ (reducer-of (-->vς′-rules)))]
+        (define →-->vς′ (reducer-of (-->vς′)))]
   [`(,(? ς? ς) ,Σ)
    ; where
-   (? ς? ς′) ← (-->vς′ ς)
+   (? ς? ς′) ← (→-->vς′ ς)
    ; -->
    `(,ς′ ,Σ)]
 
@@ -79,9 +79,7 @@
      ,(apply mmap-ext Σ `[,A′ ,f] (map list A V)))
    "rec-β"])
 
-(define -->vσ (call-with-values
-               (λ () (-->vσ-rules))
-               compose1))
+(define step-->vσ (call-with-values (λ () (-->vσ)) compose1))
 
 (define (injσ M)
   `(,(injς M) ,(↦)))
@@ -104,4 +102,4 @@
   ;(alloc `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) []) ,(↦)))
   ;(-->vσ `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) []) ,(↦)))
 
-  (check-equal?  (car ((repeated -->vσ) (injσ fact-5))) (set 120)))
+  (check-equal?  (car ((repeated step-->vσ) (injσ fact-5))) (set 120)))

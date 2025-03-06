@@ -3,7 +3,7 @@
          lightstep/base lightstep/syntax
          (only-in lightstep/monad sequence)
          (prefix-in lam: (only-in "lam.rkt" LAM FV subst)))
-(provide ISWIM FV subst δ βv-rule v-rules Cxt)
+(provide ISWIM FV subst δ βv-rule v Cxt)
 
 (module+ test (require rackunit))
 
@@ -84,11 +84,9 @@
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    (δ oⁿ b)])
 
-(define-reduction (v-rules) #:super [(βv-rule) (δ-rule)])
+(define-reduction (v) #:super [(βv-rule) (δ-rule)])
 
-(define v (call-with-values
-           (λ () (v-rules))
-           compose1))
+(define step-v (call-with-values (λ () (v)) compose1))
 
 ;; ECxt of iswim-std.rkt is same, but deterministic
 (define-nondet-match-expander Cxt
@@ -101,15 +99,13 @@
                      `(,V ,(? M? □))
                      `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...)))])))
 
-(define-reduction (-->v-rules -->v) #:super [(v-rules)]
+(define-reduction (-->v) #:super [(v)]
   [(Cxt m)
    M′ ← (-->v m)
    (Cxt M′)])
 
-(define -->v (call-with-values
-              (λ () (-->v-rules -->v))
-              compose1))
-(define -->>v (compose1 car (repeated -->v)))
+(define step-->v (call-with-values (λ () (-->v)) compose1))
+(define -->>v (compose1 car (repeated step-->v)))
 
 (module+ test
   (check-equal? (-->>v '((λ w (- (w 1) 5))
@@ -157,7 +153,7 @@
 ;;=============================================================================
 ;; 4.6  Consistency
 
-(define-reduction (↪v-rules ↪v)
+(define-reduction (↪v)
   [M M]
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    (δ oⁿ b)]
@@ -176,14 +172,11 @@
    `(,M′ ...) ← (sequence (map ↪v M))
    `(,oⁿ ,@M′)])
 
-(define ↪v (call-with-values
-            (λ () (↪v-rules ↪v))
-            compose1))
+(define step-↪v (call-with-values (λ () (↪v)) compose1))
 
 (module+ test
-  ;; (for ([m′ (↪v '((λ x (x x)) (λ y ((λ x x) (λ x x)))))])
+  ;; (for ([m′ (step-↪v '((λ x (x x)) (λ y ((λ x x) (λ x x)))))])
   ;;   (printf "~s\n" m′))
-
-  ;; (for ([m′ (↪v '((λ y ((λ x x) (λ x x))) (λ y ((λ x x) (λ x x)))))])
+  ;; (for ([m′ (step-↪v '((λ y ((λ x x) (λ x x))) (λ y ((λ x x) (λ x x)))))])
   ;;   (printf "~s\n" m′))
   )

@@ -67,88 +67,76 @@
                      `(,(? M? □) ,M)
                      `(,M ,(? M? □)))])))
 
-(define-reduction (-->gen-rule r)
+(define-reduction (-->gen r)
   [(Cxt m)
-   M′ ← (for/monad+ ([m′ (r m)]) (return m′))
+   M′ ← (r m)
    (Cxt M′)])
 
-(define-reduction (α-rule)
+(define-reduction (α)
   [`(λ ,X₁ ,M)
    X₂ ≔ ((symbol-not-in (FV M)) X₁)
    `(λ ,X₂ ,(subst M X₁ X₂))
    "α"])
 
-(define α (call-with-values
-           (λ () (α-rule))
-           compose1))
+(define step-α (call-with-values (λ () (α)) compose1))
 
-(define-reduction (-->α-rule -->α) #:super [(-->gen-rule -->α)]
+(define-reduction (-->α) #:super [(-->gen -->α)]
+  #:do [(define →α (reducer-of (α)))]
   [M
-   M′ ← (for/monad+ ([m′ (α M)]) (return m′))
+   M′ ← (→α M)
    M′
    "α"])
 
-(define -->α (call-with-values
-              (λ () (-->α-rule -->α))
-              compose1))
+(define step-->α (call-with-values (λ () (-->α)) compose1))
 
-(define-reduction (β-rule)
+(define-reduction (β)
   [`((λ ,X ,M₁) ,M₂)
    (subst M₁ X M₂)
    "β"])
 
-(define β (call-with-values
-           (λ () (β-rule))
-           compose1))
+(define step-β (call-with-values (λ () (β)) compose1))
 
-(define-reduction (-->β-rule -->β) #:super [(-->gen-rule -->β)]
+(define-reduction (-->β) #:super [(-->gen -->β)]
+  #:do [(define →β (reducer-of (β)))]
   [M
-   M′ ← (for/monad+ ([m′ (β M)]) (return m′))
+   M′ ← (→β M)
    M′
    "β"])
 
-(define -->β (call-with-values
-              (λ () (-->β-rule -->β))
-              compose1))
+(define step-->β (call-with-values (λ () (-->β)) compose1))
 
-(define-reduction (η-rule)
+(define-reduction (η)
   [`(λ ,X (,M ,X′))
    #:when (eq? X X′)
    #:when (not (∈ X (FV M)))
    M
    "η"])
 
-(define η (call-with-values
-           (λ () (η-rule))
-           compose1))
+(define step-η (call-with-values (λ () (η)) compose1))
 
-(define-reduction (-->η-rule -->η) #:super [(-->gen-rule -->η)]
+(define-reduction (-->η) #:super [(-->gen -->η)]
+  #:do [(define →η (reducer-of (η)))]
   [M
-   M′ ← (for/monad+ ([m′ (η M)]) (return m′))
+   M′ ← (→η M)
    M′
    "η"])
 
-(define -->η (call-with-values
-              (λ () (-->η-rule -->η))
-              compose1))
+(define step-->η (call-with-values (λ () (-->η)) compose1))
 
-(define-reduction (n-rule) #:super [#;(α-rule) (β-rule) (η-rule)])
+(define-reduction (n) #:super [#;(α) (β) (η)])
 
-(define n (call-with-values
-           (λ () (n-rule))
-           compose1))
+(define step-n (call-with-values (λ () (n)) compose1))
 
-(define-reduction (-->n-rule -->n) #:super [(-->gen-rule -->n)]
+(define-reduction (-->n) #:super [(-->gen -->n)]
+  #:do [(define →n (reducer-of (n)))]
   [M
-   M′ ← (for/monad+ ([m′ (n M)]) (return m′))
+   M′ ← (→n M)
    M′
    "n"])
 
-(define -->n (call-with-values
-              (λ () (-->n-rule -->n))
-              compose1))
+(define step-->n (call-with-values (λ () (-->n)) compose1))
 
-(define -->>n (compose1 car (repeated -->n)))
+(define -->>n (compose1 car (repeated step-->n)))
 
 (module+ test
   (check-equal? (-->>n '(λ x ((λ z z) x))) (set '(λ x x) '(λ z z)))
@@ -251,32 +239,32 @@
 
 (define Ω '((λ x (x x)) (λ x (x x))))
 
-(define-reduction (-->n̅-rules -->n̅)
+(define-reduction (-->n̅)
+  #:do [(define →β (reducer-of (β)))
+        (define →η (reducer-of (η)))]
   [M
-   M′ ← (for/monad+ ([m′ (β M)]) (return m′))
+   M′ ← (→β M)
    M′]
   [M
-   M′ ← (for/monad+ ([m′ (η M)]) (return m′))
+   M′ ← (→η M)
    M′]
   [`(λ ,X ,M)
-   #:when (∅? (η `(λ ,X ,M)))
+   #:when (∅? (step-η `(λ ,X ,M)))
    M′ ← (-->n̅ M)
    `(λ ,X ,M′)]
   [`(,M₁ ,M₂)
-   #:when (∅? (β `(,M₁ ,M₂)))
+   #:when (∅? (step-β `(,M₁ ,M₂)))
    M₁′ ← (-->n̅ M₁)
    `(,M₁′ ,M₂)]
   [`(,M₁ ,M₂)
-   #:when (∅? (β `(,M₁ ,M₂)))
+   #:when (∅? (→β `(,M₁ ,M₂)))
    #:when (∅? (-->n̅ M₁))
    M₂′ ← (-->n̅ M₂)
    `(,M₁ ,M₂′)])
 
-(define -->n̅ (call-with-values
-              (λ () (-->n̅-rules -->n̅))
-              compose1))
+(define step-->n̅ (call-with-values (λ () (-->n̅)) compose1))
 
-(define -->>n̅ (compose1 car (repeated -->n̅)))
+(define -->>n̅ (compose1 car (repeated step-->n̅)))
 
 (module+ test
   (check-equal? (-->>n̅ `((λ y (λ z z)) ,Ω)) (set '(λ z z))))

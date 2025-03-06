@@ -5,7 +5,9 @@
                      (only-in racket/list check-duplicates)
                      (only-in racket/match match match-define)
                      (only-in syntax/stx stx-map)
-                     (only-in "set.rkt" set list→set set→list ∈ ∪))
+                     (only-in "set.rkt" set list→set set→list ∈ ∪)
+                     ;; racket/pretty
+                     )
          (only-in racket/unit
                   define-signature unit import export link
                   compound-unit invoke-unit)
@@ -66,11 +68,11 @@
         ;; both can work
         ;; (inst-xformer #`(#,@args ς))
         (syntax-local-apply-transformer inst-xformer rid 'expression #f
-                                        #`(rid #,@args ς))
-      #:datum-literals [let nondet-match]
+                                        #`(#,rid #,@args ς))
+      #:datum-literals [define let nondet-match]
       ;; NOTE: this let form must be consistent with inst-xformer below
       [(let ()
-         (define _ M)
+         (define M′ M)
          (nondet-match _ _ #:do [do-body ...] rule ...))
        #`(M
           #,mrun
@@ -160,13 +162,15 @@
                  [(_ _ _ rnam _ ...)
                   (∈ (syntax-e #'rnam) rnams)])))]
 
+     #:with (sup-rid ...) #'opts.sup-names
+
      #:with (M-of-super
              mrun-of-super
              imports-of-super
              rules-of-super
              do-bodies-of-super) (get-supers-info
                                   stx
-                                  #'opts.sup-names
+                                  #'(sup-rid ...)
                                   #'opts.sup-argss)
 
      #:with M (if (syntax-e #'opts.monad)
@@ -204,7 +208,9 @@
                                 [(self param ... ς)
                                  (let-syntax
                                      ;; shwdows rid macro with reducer (self) 
-                                     ([rid (make-rename-transformer #'self)])
+                                     ([rid (make-rename-transformer #'self)]
+                                      [sup-rid (make-rename-transformer #'self)]
+                                      ...)
                                    ;; NOTE: this let form must be consistent
                                    ;; with inst-reduction-info above
                                    #'(let ()
@@ -213,6 +219,9 @@
                                         M′ ς
                                         #:do [do-body ...]
                                         rule ...)))])))
+
+     ;; #:do [(pretty-print (syntax->datum #'inst-xformer))]
+
      #'(begin
          (define-syntax rid
            (let ([rdesc (reduction-desc #'mrun #'imports inst-xformer)])
@@ -264,10 +273,10 @@
 ;;=============================================================================
 ;; shortcuts
 
-(define-syntax-rule (reducer-of runit)
-  (let-values ([(mrun reducer) runit])
+(define-syntax-rule (reducer-of x)
+  (let-values ([(mrun reducer) x])
     reducer))
 
-(define-syntax-rule (mrun-of runit)
-  (let-values ([(mrun reducer) runit])
+(define-syntax-rule (mrun-of x)
+  (let-values ([(mrun reducer) x])
     mrun))

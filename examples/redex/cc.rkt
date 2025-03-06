@@ -25,7 +25,7 @@
                              (app (λ (x) (λ () x)) □))])
   (syntax-parser [(_:id) #'#()]))
 
-(define-reduction (⊢->cc-rules)
+(define-reduction (⊢->cc)
   [`((,M₁ ,M₂) ,(ECxt (□)))
    #:when (not (V? M₁))
    `(,M₁ ,(ECxt `(,(□) ,M₂)))
@@ -62,7 +62,7 @@
    "cc6"])
 
 
-(define-reduction (⊢->cc′-rules)
+(define-reduction (⊢->cc′)
   #:monad (StateT #f (NondetT ID))
 
   [`(,M₁ ,M₂)
@@ -112,10 +112,8 @@
    `(,oⁿ ,@V′ ,V ,@M)
    "cc6"])
 
-(define ⊢->cc (call-with-values
-               (λ () (⊢->cc-rules))
-               compose1))
-(define ⊢->>cc (compose1 car (repeated ⊢->cc)))
+(define step⊢->cc (call-with-values (λ () (⊢->cc)) compose1))
+(define ⊢->>cc (compose1 car (repeated step⊢->cc)))
 
 (define-match-expander mkCC
   (syntax-parser
@@ -123,14 +121,11 @@
   (syntax-parser
     [(_ M ECxt) #'(cons M ECxt)]))
 
-(define ⊢->cc′ (call-with-values
-               (λ () (⊢->cc′-rules))
-               (λ (mrun reducer)
-                 (λ (ς)
-                   (match ς
-                     [(mkCC M ECxt)
-                      (mrun ECxt (reducer M))])))))
-(define ⊢->>cc′ (compose1 car (repeated ⊢->cc′)))
+(define step⊢->cc′ (let-values ([(mrun reducer) (⊢->cc′)])
+                     (match-λ
+                      [(mkCC M ECxt)
+                       (mrun ECxt (reducer M))])))
+(define ⊢->>cc′ (compose1 car (repeated step⊢->cc′)))
 
 (define/match (evalcc m)
   [M

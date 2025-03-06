@@ -49,23 +49,19 @@
    `(err ,L) ≔ e
    `(err ,L)])
 
-(define-reduction (w-rules) #:super [(δ-rule) (βv-rule)])
-(define-reduction (f-rules) #:super [(error-rule) (δerr-rule)])
-(define-reduction (e-rules) #:super [(w-rules) (f-rules)])
+(define-reduction (w) #:super [(δ-rule) (βv-rule)])
+(define-reduction (f) #:super [(error-rule) (δerr-rule)])
+(define-reduction (e) #:super [(w) (f)])
 
-(define e (call-with-values
-           (λ () (e-rules))
-           compose1))
+(define step-e (call-with-values (λ () (e)) compose1))
 
-(define-reduction (-->e-rules -->e) #:super [(e-rules)]
+(define-reduction (-->e) #:super [(e)]
   [(Cxt m)
    M′ ← (-->e m)
    (Cxt M′)])
 
-(define -->e (call-with-values
-              (λ () (-->e-rules -->e))
-              compose1))
-(define -->>e (compose1 car (repeated -->e)))
+(define step-->e (call-with-values (λ () (-->e)) compose1))
+(define -->>e (compose1 car (repeated step-->e)))
 
 (define/match (evalₑ m)
   [M
@@ -85,7 +81,7 @@
   (check-equal? (evalₑ '(add1 (λ x x))) '(err add1))
   (check-equal? (evalₑ '(/ 3 0)) '(err 0))
 
-  (check-equal? (-->e '(+ (- 4 (err a)) (err b)))
+  (check-equal? (step-->e '(+ (- 4 (err a)) (err b)))
                 (set '(+ (err a) (err b)) '(err a)))
   (check-equal? (-->>e '(+ (- 4 (err a)) (err b)))
                 (set '(err a))))

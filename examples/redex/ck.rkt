@@ -16,7 +16,7 @@
      `(ar ,M ,(? κ? κ))
      `(op ,(? list? VsOⁿ) ,(? list? Ns) ,(? κ? κ))])
 
-(define-reduction (⊢->ck-rules)
+(define-reduction (⊢->ck)
   #:monad (StateT #f (NondetT ID))
 
   [`(,M₁ ,M₂)
@@ -61,14 +61,11 @@
   (syntax-parser
     [(_ M κ) #'(cons M κ)]))
 
-(define ⊢->ck (call-with-values
-               (λ () (⊢->ck-rules))
-               (λ (mrun reducer)
-                 (λ (ς)
-                   (match ς
+(define step⊢->ck (let-values ([(mrun reducer) (⊢->ck)])
+                    (match-λ
                      [(mkCK M (? κ? κ))
-                      (mrun κ (reducer M))])))))
-(define ⊢->>ck (compose1 car (repeated ⊢->ck)))
+                      (mrun κ (reducer M))])))
+(define ⊢->>ck (compose1 car (repeated step⊢->ck)))
 
 (define/match (evalck m)
   [M

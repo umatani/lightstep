@@ -2,7 +2,7 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax
          (only-in racket/match define-match-expander)
-         (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ v-rules))
+         (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ v))
 (provide ECxt)
 
 (module+ test (require rackunit))
@@ -25,16 +25,14 @@
             `(,□ ,M)
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
-(define-reduction (⊢->v-rules)
-  #:do [(define v (reducer-of (v-rules)))]
+(define-reduction (⊢->v)
+  #:do [(define →v (reducer-of (v)))]
   [(ECxt m)
-   M′ ← (v m)
+   M′ ← (→v m)
    (ECxt M′)])
 
-(define ⊢->v (call-with-values
-             (λ () (⊢->v-rules))
-             compose1))
-(define ⊢->>v (compose1 car (repeated ⊢->v)))
+(define step⊢->v (call-with-values (λ () (⊢->v)) compose1))
+(define ⊢->>v (compose1 car (repeated step⊢->v)))
 
 (define/match (evalᵥˢ m)
   [M

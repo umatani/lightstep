@@ -2,10 +2,10 @@
 (require lightstep/base lightstep/syntax
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
-         (only-in "pcf-rho.rkt" vρ-rules)
-         (only-in "pcf-varsigma.rkt" -->vς-rules)
+         (only-in "pcf-rho.rkt" vρ)
+         (only-in "pcf-varsigma.rkt" -->vς)
          (only-in "pcf-sigma.rkt" PCFσ injσ formals alloc)
-         (only-in "pcf-sigma-alloc.rkt"-->vσ/alloc-rules))
+         (only-in "pcf-sigma-alloc.rkt"-->vσ/alloc))
 (module+ test (require rackunit))
 
 ;; Abstracting Abstract Machines from:
@@ -32,8 +32,7 @@
   ;; (alloc* `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) ()) ,(↦)))
   )
 
-(define-reduction (-->vσ*/alloc-rules alloc*)
-  #:super [(-->vσ/alloc-rules alloc*)]
+(define-reduction (-->vσ*/alloc alloc*) #:super [(-->vσ/alloc alloc*)]
 
   ; Eval
   [(and σ `(((if0 ,S₀ ,C₁ ,C₂) ,K) ,Σ))
@@ -65,9 +64,7 @@
    `(((,@V₀ ,V ,@C₀) ,K) ,Σ)
    "co-app"])
 
-(define -->vσ* (call-with-values
-                (λ () (-->vσ*/alloc-rules alloc*))
-                compose1))
+(define -->vσ* (call-with-values (λ () (-->vσ*/alloc alloc*)) compose1))
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))

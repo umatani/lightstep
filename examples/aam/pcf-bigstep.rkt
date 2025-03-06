@@ -22,7 +22,7 @@
      `((μ [,X : ,T] ,L) ,(? ρ?))]
   [ρ ∷= (? map?)])
 
-(define-reduction (⇓-rules ⇓)
+(define-reduction (⇓)
   [`(,N ,(? ρ?))
    ; -->
    N]
@@ -79,12 +79,12 @@
    ; -->
    V])
 
-(define (⇓ M ρ) (letrec-values ([(mrun reducer) (⇓-rules reducer)])
-                  (mrun (reducer `(,M ,ρ)))))
+(define (run-⇓ M ρ) (letrec-values ([(mrun reducer) (⇓)])
+                      (mrun (reducer `(,M ,ρ)))))
 
-(define (⇓? M ρ v) (∈ v (⇓ M ρ)))
+(define (⇓? M ρ v) (∈ v (run-⇓ M ρ)))
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))
-  (check-equal? (⇓ fact-5 (↦)) (set 120))
+  (check-equal? (run-⇓ fact-5 (↦)) (set 120))
   (check-true (⇓? fact-5 (↦) 120)))

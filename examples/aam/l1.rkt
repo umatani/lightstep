@@ -1,6 +1,6 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         "l0.rkt")
+         (only-in "l0.rkt" L₀ r₀ r₁ to-five))
 
 (module+ test (require rackunit))
 
@@ -17,18 +17,14 @@
   (check-true (M? 5))
   (check-true (M? "five")))
 
-(define-reduction (r₀′-rules) #:super [(r₀-rules)])
-(define r₀′ (call-with-values
-             (λ () (r₀′-rules))
-             compose1))
+(define-reduction (r₀′) #:super [(r₀)])
+(define step-r₀′ (call-with-values (λ () (r₀′)) compose1))
 
 (module+ test
-  (check-equal? (r₀′ "seven") (set 5)))
+  (check-equal? (step-r₀′ "seven") (set 5)))
 
-(define-reduction (r₁′-rules) #:super [(r₁-rules)])
-(define r₁′ (call-with-values
-             (λ () (r₁′-rules))
-             compose1))
+(define-reduction (r₁′) #:super [(r₁)])
+(define step-r₁′ (call-with-values (λ () (r₁′)) compose1))
 
 (module+ test
-  (check-exn #rx"no matching clause" (λ () (r₁′ "seven"))))
+  (check-exn #rx"no matching clause" (λ () (step-r₁′ "seven"))))

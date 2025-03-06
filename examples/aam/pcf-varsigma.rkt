@@ -2,8 +2,8 @@
 (require lightstep/base lightstep/syntax
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
-         (only-in "pcf-rho.rkt" PCFρ vρ-rules injρ))
-(provide PCFς -->vς-rules injς)
+         (only-in "pcf-rho.rkt" PCFρ vρ injρ))
+(provide PCFς -->vς injς)
 
 (module+ test (require rackunit))
 
@@ -30,13 +30,13 @@
      `(,C ,C′ ...)]
   [ς ∷= `(,C ,K) V])
 
-(define-reduction (-->vς-rules)
-  #:do [(define-reduction (rules) #:super [(vρ-rules)])
-        (define vρ (reducer-of (rules)))]
+(define-reduction (-->vς)
+  #:do [(define-reduction (rules) #:super [(vρ)])
+        (define →vρ (reducer-of (rules)))]
   ; Apply
   [`(,C ,K)
    ; where
-   C′ ← (vρ C)
+   C′ ← (→vρ C)
    ; -->
    `(,C′ ,K)
    "ap"]
@@ -68,16 +68,15 @@
    `((,@V₀ ,V ,@C₀) [,@F])
    "co-app"])
 
-(define -->vς (call-with-values
-               (λ () (-->vς-rules))
-               compose1))
+(define step-->vς (call-with-values (λ () (-->vς)) compose1))
 
 (define (injς M)
   `(,(injρ M) []))
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))
-  (check-equal? (car ((repeated -->vς) (injς fact-5)))
+  (check-equal? (car ((repeated step-->vς) (injς fact-5)))
                 (set 120))
-  (check-equal? (car ((repeated -->vς) (injς '((λ ([x : num]) x) (add1 5)))))
+  (check-equal? (car ((repeated step-->vς)
+                      (injς '((λ ([x : num]) x) (add1 5)))))
                 (set 6)))

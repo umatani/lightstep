@@ -3,7 +3,7 @@
          lightstep/base lightstep/syntax lightstep/transformers
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM FV δ))
-(provide CEK ⊢->cek-rules mkCEK)
+(provide CEK ⊢->cek mkCEK)
 
 (module+ test (require rackunit))
 
@@ -18,7 +18,7 @@
      `(op ,(? list? VξsOⁿ) ,(? list? Mξs) ,(? κ? κ))]
   [E ∷= (? map? X→VE)])
 
-(define-reduction (⊢->cek-rules)
+(define-reduction (⊢->cek)
   #:monad (StateT #f (StateT #f (NondetT ID)))
   #:do [(define get-E (bind get (compose1 return car)))
         (define get-κ (bind get (compose1 return cdr)))
@@ -89,14 +89,11 @@
   (syntax-parser
     [(_ M E κ) #'(cons (cons M E) κ)]))
 
-(define ⊢->cek (call-with-values
-                (λ () (⊢->cek-rules))
-                (λ (mrun reducer)
-                  (λ (ς)
-                    (match ς
+(define step⊢->cek (let-values ([(mrun reducer) (⊢->cek)])
+                     (match-λ
                       [(mkCEK M E (? κ? κ))
-                       (mrun κ E (reducer M))])))))
-(define ⊢->>cek (compose1 car (repeated ⊢->cek)))
+                       (mrun κ E (reducer M))])))
+(define ⊢->>cek (compose1 car (repeated step⊢->cek)))
 
 (define/match (evalcek m)
   [M

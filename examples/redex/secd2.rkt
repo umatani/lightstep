@@ -4,7 +4,7 @@
          (only-in racket/list append-map)
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" FV δ)
-         (only-in "secd.rkt" SECD  ⊢->secd-rules mkSECD))
+         (only-in "secd.rkt" SECD  ⊢->secd mkSECD))
 
 (module+ test (require rackunit))
 
@@ -15,7 +15,7 @@
   [C ∷= '(ap) `(prim ,(? oⁿ?)) (? b? b) X `(,X (,C ...))]
   [V ∷= (? b?) `((λ ,X (,C ...)) ,E)])
 
-(define-reduction (⊢->secd₂-rules) #:super [(⊢->secd-rules)]
+(define-reduction (⊢->secd₂) #:super [(⊢->secd)]
 
   [`((,(? oⁿ? oⁿ) ,M ...) ,C ...) (error "no such case") "secdPA"]
   [`((,M₁ ,M₂)            ,C ...) (error "no such case") "secdLA"]
@@ -37,14 +37,11 @@
    `(,@C′)
    "secd5"])
 
-(define ⊢->secd₂ (call-with-values
-                  (λ () (⊢->secd₂-rules))
-                  (λ (mrun reducer)
-                    (λ (ς)
-                      (match ς
+(define step⊢->secd₂ (let-values ([(mrun reducer) (⊢->secd₂)])
+                       (match-λ
                         [(mkSECD S E Cs D)
-                         (mrun D E S (reducer Cs))])))))
-(define ⊢->>secd₂ (compose1 car (repeated ⊢->secd₂)))
+                         (mrun D E S (reducer Cs))])))
+(define ⊢->>secd₂ (compose1 car (repeated step⊢->secd₂)))
 
 (define/match (compile m)
   [X
