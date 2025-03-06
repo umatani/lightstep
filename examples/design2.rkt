@@ -23,7 +23,7 @@
 (module+ test
   ;(printf "----- -->₃ ------------\n")
   (define -->₃ (call-with-values
-                (λ () (invoke-unit (-->₃-rule)))
+                (λ () (-->₃-rule))
                 (λ (mrun reducer) (compose1 mrun reducer))))
   (check-equal? (-->₃ '(g a)) (set '(<= 0 a))) ;; as usual
   (check-equal? (-->₃ '(f a)) (set '(+ a a))))
@@ -54,7 +54,7 @@
    (ECxt e′)
    "EC"])
 (define -->PCF₄ (call-with-values
-                 (λ () (invoke-unit (-->PCF₄-rule)))
+                 (λ () (-->PCF₄-rule))
                  (λ (mrun reducer) (compose1 mrun reducer))))
 (define -->>PCF₄ (repeated -->PCF₄))
 

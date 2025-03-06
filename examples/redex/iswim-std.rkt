@@ -1,9 +1,8 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
          (only-in racket/match define-match-expander)
-         (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ v))
+         (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ v-rules))
 (provide ECxt)
 
 (module+ test (require rackunit))
@@ -27,12 +26,13 @@
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
 (define-reduction (⊢->v-rules)
+  #:do [(define v (reducer-of (v-rules)))]
   [(ECxt m)
    M′ ← (v m)
    (ECxt M′)])
 
 (define ⊢->v (call-with-values
-             (λ () (invoke-unit (⊢->v-rules)))
+             (λ () (⊢->v-rules))
              compose1))
 (define ⊢->>v (compose1 car (repeated ⊢->v)))
 
@@ -46,5 +46,4 @@
   [_ (error 'evalᵥˢ "invalid input: ~a" m)])
 
 (module+ test
-  (check-equal? (evalᵥˢ '(+ ((λ x ((λ y y) x)) (- 2 1)) 8)) 9)
-  )
+  (check-equal? (evalᵥˢ '(+ ((λ x ((λ y y) x)) (- 2 1)) 8)) 9))

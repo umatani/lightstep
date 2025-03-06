@@ -1,6 +1,5 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
          (only-in "iswim.rkt" FV δ)
          (only-in "cek.rkt" CEK ⊢->cek-rules mkCEK))
 
@@ -45,7 +44,7 @@
    "cek6"])
 
 (define ⊢->cek/ss (call-with-values
-                   (λ () (invoke-unit (⊢->cek/ss-rules)))
+                   (λ () (⊢->cek/ss-rules))
                    (λ (mrun reducer)
                      (λ (ς)
                        (match ς

@@ -1,50 +1,49 @@
-#lang racket
+#lang racket/base
 (require lightstep/base
          (only-in lightstep/transformers
                   monad^ define-monad run-StateT StateT NondetT ID)
+         racket/unit
          (except-in rackunit fail))
 
  ;; test-reduction
 (define-reduction (r1 p)
   [(p a b) (p a a)]
   [(p a b) (p b b)])
-(define u1-1 (r1 list))
-(define-values (mrun1-1 reducer1-1) (invoke-unit u1-1))
+(define-values (mrun1-1 reducer1-1) (r1 list))
 (define -->1-1 (compose1 mrun1-1 reducer1-1))
 (check-equal? (-->1-1 '(2 3)) (set '(2 2) '(3 3)))
 
-(define u1-2 (r1 set))
-(define-values (mrun1-2 reducer1-2) (invoke-unit u1-2))
+(define-values (mrun1-2 reducer1-2) (r1 set))
 (define -->1-2 (compose1 mrun1-2 reducer1-2))
 (check-equal? (-->1-2 (set 2 3)) (set (set 2) (set 3)))
 
 (define-reduction (r2)
   [x x])
-(define-values (mrun2 reducer2) (invoke-unit (r2)))
+(define-values (mrun2 reducer2) (r2))
 (define -->2 (compose1 mrun2 reducer2))
 (check-equal? (-->2 'foo) (set 'foo))
 (check-equal? (-->2 100) (set 100))
 
 (define-reduction (r3) #:super [(r2)]
   [(? number? n) (+ n n)])
-(define-values (mrun3 reducer3) (invoke-unit (r3)))
+(define-values (mrun3 reducer3) (r3))
 (define -->3 (compose1 mrun3 reducer3))
 (check-equal? (-->3 100) (set 100 200))
 
 (define-reduction (r4) #:super [(r3)]
   [(? number? n) (* n n)])
-(define-values (mrun4 reducer4) (invoke-unit (r4)))
+(define-values (mrun4 reducer4) (r4))
 (define -->4 (compose1 mrun4 reducer4))
 (check-equal? (-->4 100) (set 100 200 10000))
 
 (define-reduction (r5)
   [`(,x ...) x])
-(define-values (mrun5 reducer5) (invoke-unit (r5)))
+(define-values (mrun5 reducer5) (r5))
 (define -->5 (compose1 mrun5 reducer5))
 (check-equal? (-->5 '(4 5 6 7)) (set '(4 5 6 7)))
 
 (define-reduction (r6) #:super [(r5)])
-(define-values (mrun6 reducer6) (invoke-unit (r6)))
+(define-values (mrun6 reducer6) (r6))
 (define -->6 (compose1 mrun6 reducer6))
 (check-equal? (-->6 '(8 9 10)) (set '(8 9 10)))
 
@@ -54,7 +53,7 @@
    #:when (< x 0)
    y ≔ (- x)
    y])
-(define-values (mrun-s1 reducer-s1) (invoke-unit (s1)))
+(define-values (mrun-s1 reducer-s1) (s1))
 (define -->s1 (compose1 mrun-s1 reducer-s1))
 (check-equal? (-->s1 -8) (set -16 -8 8))
 (check-equal? (-->s1 8) (set 16 8))
@@ -65,20 +64,18 @@
 (define-reduction (r11)
   [(list a b) a]
   [(list a b) b])
-(define-values (mrun11 reducer11) (invoke-unit (r11)))
+(define-values (mrun11 reducer11) (r11))
 (define -->11 (compose1 mrun11 reducer11))
 (check-equal? (car ((repeated -->11) '(1 (2 3)))) (set 1 2 3))
 
 (define-reduction (r12 p)
   [(p a b) a]
   [(p a b) b])
-(define u12-1 (r12 vector))
-(define-values (mrun12-1 reducer12-1) (invoke-unit u12-1))
+(define-values (mrun12-1 reducer12-1) (r12 vector))
 (define -->12-1 (compose1 mrun12-1 reducer12-1))
 (check-equal? (car ((repeated -->12-1) (vector 1 (vector 2 3))))
               (set 1 2 3))
-(define u12-2 (r12 set))
-(define-values (mrun12-2 reducer12-2) (invoke-unit u12-2))
+(define-values (mrun12-2 reducer12-2) (r12 set))
 (define -->12-2 (compose1 mrun12-2 reducer12-2))
 (check-equal? (car ((repeated -->12-2) (set 1 (set 2 3))))
               (set 1 2 3))
@@ -90,7 +87,7 @@
   [x (add1 x) "add"])
 (define-reduction (r32) #:super [(r31)]
   [x (add1 (add1 x)) "add"])
-(define-values (mrun32 reducer32) (invoke-unit (r32)))
+(define-values (mrun32 reducer32) (r32))
 (define -->32 (compose1 mrun32 reducer32))
 (check-equal? (-->32 0) (set 2))
 
@@ -102,12 +99,12 @@
   [x
    y ≔₁ x
    y])
-(define-values (mrun41 reducer41) (invoke-unit (r41 ≔)))
+(define-values (mrun41 reducer41) (r41 ≔))
 (define -->41 (compose1 mrun41 reducer41))
 (check-equal? (-->41 123) (set 123))
 (check-equal? (-->41 (set 123 456)) (set (set 123 456)))
 
-(define-values (mrun42 reducer42) (invoke-unit (r41 ←)))
+(define-values (mrun42 reducer42) (r41 ←))
 (define -->42 (compose1 mrun42 reducer42))
 (check-equal? (-->42 (set 123 456)) (set 123 456))
 
@@ -124,20 +121,13 @@
    y ← (--> x)
    y])
 
-(define u43-1 (r43 (call-with-values
-                    (λ () (invoke-unit (-->₁rule)))
-                    (λ (_mrun reducer) reducer))))
-(define-values (mrun43-1 reducer43-1) (invoke-unit u43-1))
+(define-values (mrun43-1 reducer43-1) (r43 (reducer-of (-->₁rule))))
 (define -->43-1 (compose1 mrun43-1 reducer43-1))
 (check-equal? (-->43-1 0) (set 1 10))
 
-(define u43-2 (r43 (call-with-values
-                    (λ () (invoke-unit (-->₂rule)))
-                    (λ (_mrun reducer) reducer))))
-(define-values (mrun43-2 reducer43-2) (invoke-unit u43-2))
+(define-values (mrun43-2 reducer43-2) (r43 (reducer-of (-->₂rule))))
 (define -->43-2 (compose1 mrun43-2 reducer43-2))
 (check-equal? (-->43-2 0) (set 2 20 200))
-
 
 (define-reduction (r44)
   [x
@@ -150,7 +140,7 @@
    #t ← (return x)
    'TRUE]
   [x x])
-(define-values (mrun44 reducer44) (invoke-unit (r44)))
+(define-values (mrun44 reducer44) (r44))
 (define -->44 (compose1 mrun44 reducer44))
 (check-equal? (-->44 8) (set 8 64))
 (check-equal? (-->44 'foo) (set 'foo))
@@ -211,7 +201,7 @@
 
 (define-reduction (r71)
   [(? number? n) n "special"])
-(define-values (mrun71 reducer71) (invoke-unit (r71)))
+(define-values (mrun71 reducer71) (r71))
 (define -->71 (λ (ς)
                 (match (mrun71 (reducer71 ς))
                   [(set) (set `(default ,ς))]
@@ -222,7 +212,7 @@
 
 (define-reduction (r72) #:super [(r71)]
   [(? symbol? s) (symbol->string s) "special"])
-(define-values (mrun72 reducer72) (invoke-unit (r72)))
+(define-values (mrun72 reducer72) (r72))
 (define -->72 (compose1 mrun72 reducer72))
 (check-equal? (-->72 8) (set))
 (check-equal? (-->72 'foo) (set "foo"))
@@ -238,7 +228,7 @@
       [ςs ςs])))
 (define-reduction (r73)
   [(? number? n) n "special"])
-(define-values (mrun73 reducer73) (invoke-unit (r73)))
+(define-values (mrun73 reducer73) (r73))
 (define -->73 (default-hook73 (compose1 mrun73 reducer73)))
 (check-equal? (-->73 8) (set 8))
 (check-equal? (-->73 'foo) ∅)
@@ -246,7 +236,7 @@
 
 (define-reduction (r74) #:super [(r73)]
   [(? symbol? s) (symbol->string s) "special"])
-(define-values (mrun74 reducer74) (invoke-unit (r74)))
+(define-values (mrun74 reducer74) (r74))
 (define -->74 (default-hook73 (compose1 mrun74 reducer74)))
 (check-equal? (-->74 8) ∅)
 (check-equal? (-->74 'foo) (set "foo"))
@@ -259,7 +249,7 @@
       [ςs ςs])))
 (define-reduction (r75 p q)
   [(? number? n) (+ n q) "special"])
-(define-values (mrun75 reducer75) (invoke-unit (r75 default 100)))
+(define-values (mrun75 reducer75) (r75 default 100))
 (define -->75 (default-hook75 (compose1 mrun75 reducer75) 'default))
 (check-equal? (-->75 8) (set 108))
 (check-equal? (-->75 'foo) (set '(default foo)))
@@ -267,7 +257,7 @@
 
 (define-reduction (r76 a b) #:super [(r75 b a)]
   [(? symbol? s) (symbol->string s) "special"])
-(define-values (mrun76 reducer76) (invoke-unit (r76 200 DEFAULT)))
+(define-values (mrun76 reducer76) (r76 200 DEFAULT))
 (define -->76 (default-hook75 (compose1 mrun76 reducer76) 'DEFAULT))
 (check-equal? (-->76 8) (set '(DEFAULT 8)))
 (check-equal? (-->76 'foo) (set "foo"))
@@ -278,7 +268,7 @@
   [(? number? n) (+ n 1)]
   [(? string? s) (string-append s s)])
 (define -->77 (call-with-values
-               (λ () (invoke-unit (r77)))
+               (λ () (r77))
                (λ (mrun reducer)
                  (λ (ς)
                    (match (mrun (cdr ς) (reducer (car ς)))
@@ -301,7 +291,7 @@
         ]
   [x (+ x y)])
 (check-equal? (call-with-values
-                (λ () (invoke-unit (r81 2)))
+                (λ () (r81 2))
                 (λ (mrun reducer)
                   (mrun (reducer 888))))
               (set 1110))
@@ -331,7 +321,7 @@
    (put (for/set ([v σ]) (cons v v)))
    (list y σ)]
   [(list a b c) (+ a b c)])
-(define-values (mrun91 reducer91) (invoke-unit (r91)))
+(define-values (mrun91 reducer91) (r91))
 (define -->91 (compose1 (λ (m) (mrun91 (set 'a 'b 'c) m)) reducer91))
 (check-equal? (-->91 '(1 2 3))
               (set (cons 6 (set 'a 'b 'c))
@@ -346,7 +336,7 @@
   [(? number? n)
    #:when (< n 0)
    (- n) "id"])
-(define-values (mrun93 reducer93) (invoke-unit (r93)))
+(define-values (mrun93 reducer93) (r93))
 (define -->93 (compose1 mrun93 reducer93))
 (check-equal? (-->93 -2) (set 2 90))
 
@@ -356,7 +346,7 @@
   [(? number? n)
    #:when (< n 0)
    (- n) "id"])
-(define-values (mrun94 reducer94) (invoke-unit (r94)))
+(define-values (mrun94 reducer94) (r94))
 (define (-->94 e σ) (mrun94 σ (reducer94 e)))
 (check-equal? (-->94 -2 ∅) (set (cons 2 ∅) (cons 90 ∅)))
 
@@ -373,7 +363,7 @@
      (put (σ 'Y x))
      xσ ← (return (list x (σ 'X x)))
      xσ])
-  (define-values (mrun95 reducer95) (invoke-unit (r95)))
+  (define-values (mrun95 reducer95) (r95))
   (define -->95 (compose1 mrun95 reducer95))
   -->95)
 
@@ -399,20 +389,20 @@
     [x (add x)])
   (define-reduction (r22) #:super [(r21)]
     [x (add (add x))])
-  (define-values (mrun22 reducer22) (invoke-unit (r22)))
+  (define-values (mrun22 reducer22) (r22))
   (define -->22 (compose1 mrun22 reducer22))
   (check-equal? (-->22 8) (set 9 10)))
 
 (module+ scope2
   (require (only-in (submod ".." scope1) r21))
-  (define-values (mrun21 reducer21) (invoke-unit (r21)))
+  (define-values (mrun21 reducer21) (r21))
   (define -->21 (compose1 mrun21 reducer21))
   (check-equal? (-->21 8) (set 9))
 
   (define (add x) (+ x 100))
   (define-reduction (r22) #:super [(r21)]
     [x (add (add x))])
-  (define-values (mrun22 reducer22) (invoke-unit (r22)))
+  (define-values (mrun22 reducer22) (r22))
   (define -->22 (compose mrun22 reducer22))
   (check-equal? (-->22 8) (set 108 208)))
 
@@ -427,7 +417,7 @@
    (put ∅)
    (list s x)])
 (define -->101 (call-with-values
-                (λ () (invoke-unit (r101)))
+                (λ () (r101))
                 (λ (mrun reducer) (λ (σ x) (mrun σ (reducer x))))))
 (check-equal? (-->101 (set 'a 'b 'c) 888)
               (set (cons '(a 888) ∅)
@@ -441,7 +431,7 @@
 (define-reduction (r112) [(? symbol? s) s "s"])
 (define-reduction (r113) #:super [(r111) (r112)])
 (define -->113 (call-with-values
-                (λ () (invoke-unit (r113)))
+                (λ () (r113))
                 compose1))
 (check-equal? (-->113 1) (set 1))
 (check-equal? (-->113 'foo) (set 'foo))

@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
-         (only-in racket/unit invoke-unit)
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM FV δ))
 (provide CEK ⊢->cek-rules mkCEK)
@@ -91,7 +90,7 @@
     [(_ M E κ) #'(cons (cons M E) κ)]))
 
 (define ⊢->cek (call-with-values
-                (λ () (invoke-unit (⊢->cek-rules)))
+                (λ () (⊢->cek-rules))
                 (λ (mrun reducer)
                   (λ (ς)
                     (match ς

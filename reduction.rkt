@@ -1,19 +1,20 @@
 #lang racket/base
-(require (for-syntax racket/base syntax/parse
+(require (for-syntax (for-syntax racket/base)
+                     racket/base syntax/parse
                      (only-in racket/syntax format-id)
                      (only-in racket/list check-duplicates)
                      (only-in racket/match match match-define)
                      (only-in syntax/stx stx-map)
                      (only-in "set.rkt" set list→set set→list ∈ ∪))
          (only-in racket/unit
-                 define-signature unit import export link
-                 compound-unit invoke-unit)
+                  define-signature unit import export link
+                  compound-unit invoke-unit)
          (only-in "set.rkt" set ∅? ⊆ set-add set-subtract)
          (only-in "transformers.rkt"
                   PowerO run-StateT define-monad with-monad
                   ID ReaderT WriterT StateT FailT NondetT)
          (only-in "nondet.rkt" NondetM nondet-match))
-(provide ReduceM define-reduction repeated)
+(provide ReduceM define-reduction repeated reducer-of mrun-of)
 
 (define ReduceM NondetM)
 
@@ -65,7 +66,7 @@
         ;; both can work
         ;; (inst-xformer #`(#,@args ς))
         (syntax-local-apply-transformer inst-xformer rid 'expression #f
-                                        #`(#,@args ς))
+                                        #`(rid #,@args ς))
       #:datum-literals [let nondet-match]
       ;; NOTE: this let form must be consistent with inst-xformer below
       [(let ()
@@ -93,8 +94,8 @@
          (cond
            [(check-duplicates (map syntax-e (syntax->list #'(rnam ... ...))))
             => (λ (rnam) (raise-syntax-error
-                          #f (format "duplicate rule ~s" rnam)
-                          orig-stx ruless))]
+                           #f (format "duplicate rule ~s" rnam)
+                           orig-stx ruless))]
            [else #'(rule ... ...)])]))
     (define (merge-do-bodies do-bodiess) ;; TODO: do something?
       (syntax-parse do-bodiess
@@ -106,8 +107,8 @@
       (cond
         [(check-duplicate-identifier (syntax->list rids))
          => (λ (id) (raise-syntax-error
-                     #f (format "duplicate super name ~s" (syntax-e id))
-                     orig-stx rids))]
+                      #f (format "duplicate super name ~s" (syntax-e id))
+                      orig-stx rids))]
         [else (with-syntax ([((M mrun imports rules do-bodies) ...)
                              (stx-map inst-reduction-info rids argss)])
                 (list (merge-M         #'(M ...))
@@ -200,15 +201,18 @@
      #:with inst-xformer (escape-elipsis
                           #'(λ (stx)
                               (syntax-parse stx
-                                [(param ... ς)
-                                 ;; NOTE: this let form must be consistent
-                                 ;; with inst-reduction-info above
-                                 #'(let ()
-                                     (define M′ M)
-                                     (nondet-match
-                                      M′ ς
-                                      #:do [do-body ...]
-                                      rule ...))])))
+                                [(self param ... ς)
+                                 (let-syntax
+                                     ;; shwdows rid macro with reducer (self) 
+                                     ([rid (make-rename-transformer #'self)])
+                                   ;; NOTE: this let form must be consistent
+                                   ;; with inst-reduction-info above
+                                   #'(let ()
+                                       (define M′ M)
+                                       (nondet-match
+                                        M′ ς
+                                        #:do [do-body ...]
+                                        rule ...)))])))
      #'(begin
          (define-syntax rid
            (let ([rdesc (reduction-desc #'mrun #'imports inst-xformer)])
@@ -227,10 +231,15 @@
      #:do [(match-define
              (reduction-desc mrun import-sigs inst-xformer)
              ((syntax-local-value #'rid)))]
-     #`(unit
-         (import #,@import-sigs) (export)
-         (define (reducer ς) #,(inst-xformer #'(arg ... ς)))
-         (values #,mrun reducer))]))
+     #:with (body ...) #`((import #,@import-sigs)
+                          (export)
+                          (define (reducer ς)
+                            #,(inst-xformer #'(reducer arg ... ς)))
+                          (values #,mrun reducer))
+     ;; TODO: invoke-unit with import-sig-specs?
+     (if (null? (syntax->list import-sigs))
+       #'(invoke-unit (unit body ...))
+       #'(unit body ...))]))
 
 ;;=============================================================================
 ;; reflexive and transitive closure
@@ -251,3 +260,14 @@
                                      (sub1 limit)
                                      #f)))))]))))
   (run-StateT (set ς) (search ς limit)))
+
+;;=============================================================================
+;; shortcuts
+
+(define-syntax-rule (reducer-of runit)
+  (let-values ([(mrun reducer) runit])
+    reducer))
+
+(define-syntax-rule (mrun-of runit)
+  (let-values ([(mrun reducer) runit])
+    mrun))

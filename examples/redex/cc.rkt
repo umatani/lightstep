@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
-         (only-in racket/unit invoke-unit)
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ))
 (provide ECxt □)
@@ -114,7 +113,7 @@
    "cc6"])
 
 (define ⊢->cc (call-with-values
-               (λ () (invoke-unit (⊢->cc-rules)))
+               (λ () (⊢->cc-rules))
                compose1))
 (define ⊢->>cc (compose1 car (repeated ⊢->cc)))
 
@@ -125,7 +124,7 @@
     [(_ M ECxt) #'(cons M ECxt)]))
 
 (define ⊢->cc′ (call-with-values
-               (λ () (invoke-unit (⊢->cc′-rules)))
+               (λ () (⊢->cc′-rules))
                (λ (mrun reducer)
                  (λ (ς)
                    (match ς

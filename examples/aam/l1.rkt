@@ -1,6 +1,5 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
          "l0.rkt")
 
 (module+ test (require rackunit))
@@ -20,7 +19,7 @@
 
 (define-reduction (r₀′-rules) #:super [(r₀-rules)])
 (define r₀′ (call-with-values
-             (λ () (invoke-unit (r₀′-rules)))
+             (λ () (r₀′-rules))
              compose1))
 
 (module+ test
@@ -28,7 +27,7 @@
 
 (define-reduction (r₁′-rules) #:super [(r₁-rules)])
 (define r₁′ (call-with-values
-             (λ () (invoke-unit (r₁′-rules)))
+             (λ () (r₁′-rules))
              compose1))
 
 (module+ test

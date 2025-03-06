@@ -1,6 +1,5 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
          (only-in lightstep/monad sequence)
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" PCF δ))
@@ -80,11 +79,8 @@
    ; -->
    V])
 
-(define (⇓ M ρ) (let ()
-                  (define ⇓ (call-with-values
-                             (λ () (invoke-unit (⇓-rules ⇓)))
-                             compose1))
-                  (⇓ `(,M ,ρ))))
+(define (⇓ M ρ) (letrec-values ([(mrun reducer) (⇓-rules reducer)])
+                  (mrun (reducer `(,M ,ρ)))))
 
 (define (⇓? M ρ v) (∈ v (⇓ M ρ)))
 

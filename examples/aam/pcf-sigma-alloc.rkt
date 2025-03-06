@@ -1,11 +1,11 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
          (only-in "pcf-rho.rkt" vρ-rules)
          (only-in "pcf-varsigma.rkt" -->vς-rules)
-         (rename-in "pcf-sigma.rkt" [PCFσ orig-PCFσ]))
+         (only-in "pcf-sigma.rkt"
+                  [PCFσ orig-PCFσ] -->vσ-rules injσ formals  alloc))
 (provide -->vσ/alloc-rules)
 
 (module+ test
@@ -26,7 +26,7 @@
 (define-reduction (-->vσ/alloc-rules alloc) #:super [(-->vσ-rules)])
 
 (define -->vσ (call-with-values
-               (λ () (invoke-unit (-->vσ/alloc-rules alloc)))
+               (λ () (-->vσ/alloc-rules alloc))
                compose1))
 
 (module+ test
@@ -39,7 +39,7 @@
 
 (module+ test
   (define --> (call-with-values
-               (λ () (invoke-unit (-->vσ/alloc-rules alloc-gensym)))
+               (λ () (-->vσ/alloc-rules alloc-gensym))
                compose1))
   ;(car ((repeated -->) (injσ '((λ ([x : num]) (λ ([y : num]) x)) 100))))
   (check-equal? (car ((repeated -->) (injσ fact-5))) (set 120)))
@@ -53,7 +53,7 @@
 
 (module+ test
   (define -->′ (call-with-values
-               (λ () (invoke-unit (-->vσ/alloc-rules alloc-nat)))
+               (λ () (-->vσ/alloc-rules alloc-nat))
                compose1))
   ;(car ((repeated -->′) (injσ '((λ ([x : num]) (λ ([y : num]) x)) 100))))
   (check-equal? (car ((repeated -->′) (injσ fact-5))) (set 120)))

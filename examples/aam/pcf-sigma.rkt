@@ -1,6 +1,5 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
          (only-in "pcf-rho.rkt" vρ-rules)
@@ -24,14 +23,12 @@
 
 (define-reduction (-->vσ-rules)
   #:do [(define-reduction (-->vς′-rules) #:super [(-->vς-rules)]
-          #:do[;; remove rules manually
-               (define-reduction (vρ′-rules) #:super [(vρ-rules)]
-                 [x #:when #f x "ρ-x"]
-                 [x #:when #f x "β"]
-                 [x #:when #f x "rec-β"])
-               (define vρ′ (call-with-values
-                            (λ () (invoke-unit (vρ′-rules)))
-                            compose1))]
+          #:do [;; remove rules manually
+                (define-reduction (vρ′-rules) #:super [(vρ-rules)]
+                  [x #:when #f x "ρ-x"]
+                  [x #:when #f x "β"]
+                  [x #:when #f x "rec-β"])
+                (define vρ′ (reducer-of (vρ′-rules)))]
           ; Apply
           [`(,C ,K)
            ; where
@@ -39,10 +36,7 @@
            ; -->
            `(,C′ ,K)
            "ap"])
-
-        (define -->vς′ (call-with-values
-                        (λ () (invoke-unit (-->vς′-rules)))
-                        compose1))]
+        (define -->vς′ (reducer-of (-->vς′-rules)))]
   [`(,(? ς? ς) ,Σ)
    ; where
    (? ς? ς′) ← (-->vς′ ς)
@@ -86,7 +80,7 @@
    "rec-β"])
 
 (define -->vσ (call-with-values
-               (λ () (invoke-unit (-->vσ-rules)))
+               (λ () (-->vσ-rules))
                compose1))
 
 (define (injσ M)

@@ -2,7 +2,6 @@
 (require (for-syntax racket/base
                      (only-in syntax/parse syntax-parser id))
          lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
          (only-in racket/match define-match-expander)
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
@@ -101,9 +100,7 @@
    "if-f"])
 
 (define-reduction (-->vρ-rules)
-  #:do [(define vρ (call-with-values
-                    (λ () (invoke-unit (vρ-rules)))
-                    compose1))]
+  #:do [(define vρ (reducer-of (vρ-rules)))]
   [(ECxt c)
    ; where
    C′ ← (vρ c)
@@ -112,7 +109,7 @@
    "EC"])
 
 (define -->vρ (call-with-values
-               (λ () (invoke-unit (-->vρ-rules)))
+               (λ () (-->vρ-rules))
                compose1))
 
 (define (injρ M)

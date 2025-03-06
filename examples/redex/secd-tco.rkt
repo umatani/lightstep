@@ -1,6 +1,6 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
+         (only-in racket/unit)
          (only-in "iswim.rkt" FV δ)
          (only-in "secd.rkt" SECD ⊢->secd-rules mkSECD))
 (provide ⊢->secd/tco-rules)
@@ -32,7 +32,7 @@
    "secd5-tc"])
 
 (define ⊢->secd/tco (call-with-values
-                     (λ () (invoke-unit (⊢->secd/tco-rules)))
+                     (λ () (⊢->secd/tco-rules))
                      (λ (mrun reducer)
                        (λ (ς)
                          (match ς

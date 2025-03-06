@@ -1,6 +1,5 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
          (only-in "pcf-rho.rkt" PCFρ vρ-rules injρ))
@@ -33,9 +32,7 @@
 
 (define-reduction (-->vς-rules)
   #:do [(define-reduction (rules) #:super [(vρ-rules)])
-        (define vρ (call-with-values
-                    (λ () (invoke-unit (rules)))
-                    compose1))]
+        (define vρ (reducer-of (rules)))]
   ; Apply
   [`(,C ,K)
    ; where
@@ -72,7 +69,7 @@
    "co-app"])
 
 (define -->vς (call-with-values
-               (λ () (invoke-unit (-->vς-rules)))
+               (λ () (-->vς-rules))
                compose1))
 
 (define (injς M)

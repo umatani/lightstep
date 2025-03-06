@@ -1,7 +1,8 @@
-#lang racket
+#lang racket/base
 (require lightstep/base
          (only-in lightstep/transformers
-                  with-monad run-StateT StateT NondetT ID))
+                  with-monad run-StateT StateT NondetT ID)
+         (only-in racket/match match-define))
 
 (module+ test (require rackunit))
 
@@ -38,7 +39,7 @@
    (* n₀ n₁)
    "product"])
 
-(define-values (mrun-a reducer-a) (invoke-unit (-->a-rules reducer-a)))
+(define-values (mrun-a reducer-a) (-->a-rules reducer-a))
 (define (-->a a [σ (↦)])
   (mrun-a σ (reducer-a a)))
 
@@ -122,8 +123,7 @@
    (or t₀ t₁)
    "or"])
 
-(define-values (mrun-b reducer-b)
-  (invoke-unit (-->b-rules reducer-a reducer-b)))
+(define-values (mrun-b reducer-b) (-->b-rules reducer-a reducer-b))
 (define (-->b b [σ (↦)])
   (mrun-b σ (reducer-b b)))
 
@@ -202,8 +202,7 @@
      #f
      "or-ff"])
 
-  (define-values (mrun-b′ reducer-b′)
-    (invoke-unit (-->b′-rules reducer-a reducer-b′)))
+  (define-values (mrun-b′ reducer-b′) (-->b′-rules reducer-a reducer-b′))
   (define (-->b′ b [σ (↦)])
     (mrun-b′ σ (reducer-b′ b)))
 
@@ -254,8 +253,7 @@
      #f
      "or-ff"])
 
-  (define-values (mrun-b′ reducer-b′)
-    (invoke-unit (-->b′-rules reducer-a reducer-b′)))
+  (define-values (mrun-b′ reducer-b′) (-->b′-rules reducer-a reducer-b′))
   (define (-->b′ b [σ (↦)])
     (mrun-b′ σ (reducer-b′ b)))
 
@@ -333,8 +331,7 @@
    σ
    "while-t"])
 
-(define-values (mrun-c reducer-c)
-  (invoke-unit (-->c-rules reducer-a reducer-b reducer-c)))
+(define-values (mrun-c reducer-c) (-->c-rules reducer-a reducer-b reducer-c))
 (define (-->c c [σ (↦)])
   (for/set ([vσ (mrun-c σ (reducer-c c))])
     (car vσ)))
@@ -409,7 +406,7 @@
   [`(× ,(? number? n₀) ,(? number? n₁))
    (* n₀ n₁)])
 
-(define-values (mrun₁-a reducer₁-a) (invoke-unit (-->₁a-rules reducer₁-a)))
+(define-values (mrun₁-a reducer₁-a) (-->₁a-rules reducer₁-a))
 (define (-->₁a aσ)
   (match-define (cons a σ) aσ)
   (mrun₁-a σ (reducer₁-a a)))
@@ -516,8 +513,7 @@
   [`(∨ ,(? boolean? t₀) ,(? boolean? t₁))
    (or t₀ t₁)])
 
-(define-values (mrun₁-b reducer₁-b)
-  (invoke-unit (-->₁b-rules reducer₁-a reducer₁-b)))
+(define-values (mrun₁-b reducer₁-b) (-->₁b-rules reducer₁-a reducer₁-b))
 (define (-->₁b bσ)
   (match-define (cons b σ) bσ)
   (mrun₁-b σ (reducer₁-b b)))
@@ -618,7 +614,7 @@
       skip)])
 
 (define-values (mrun₁-c reducer₁-c)
-  (invoke-unit (-->₁c-rules reducer₁-a reducer₁-b reducer₁-c)))
+  (-->₁c-rules reducer₁-a reducer₁-b reducer₁-c))
 (define (-->₁c cσ)
   (match-define (cons c σ) cσ)
   (mrun₁-c σ (reducer₁-c c)))

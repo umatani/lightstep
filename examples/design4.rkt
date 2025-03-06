@@ -16,7 +16,7 @@
 
 (define-values (-->PCF₆ reducer-PCF₆)
   (call-with-values
-   (λ () (invoke-unit (-->PCF₆-rule reducer-PCF₆ ≔ ←)))
+   (λ () (-->PCF₆-rule reducer-PCF₆ ≔ ←))
    (λ (mrun reducer) (values (compose1 mrun reducer) reducer))))
 (define -->>PCF₆ (repeated -->PCF₆))
 
@@ -34,7 +34,7 @@
 
 (define-values (-->PCF₆-v2 reducer-PCF₆-v2)
   (call-with-values
-   (λ () (invoke-unit (-->PCF₆-v2-rule reducer-PCF₆-v2)))
+   (λ () (-->PCF₆-v2-rule reducer-PCF₆-v2))
    (λ (mrun reducer) (values (compose1 mrun reducer) reducer))))
 (define -->>PCF₆-v2 (repeated -->PCF₆-v2))
 

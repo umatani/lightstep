@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 (require lightstep/base)
 
 (module+ test (require rackunit))
@@ -16,7 +16,7 @@
    #t ← (∈B b₁)
    #t])
 
-(define-values (mrun-∈B reducer-∈B) (invoke-unit (∈B-rules reducer-∈B)))
+(define-values (mrun-∈B reducer-∈B) (∈B-rules reducer-∈B))
 (define ∈B (compose1 mrun-∈B reducer-∈B))
 
 (define (B? B)
@@ -58,7 +58,7 @@
    B₁
    "c"])
 
-(define-values (mrun-r reducer-r) (invoke-unit (r-rules)))
+(define-values (mrun-r reducer-r) (r-rules))
 (define r (compose1 mrun-r reducer-r))
 (define ->>r (repeated r))
 
@@ -75,7 +75,7 @@
    B₂′ ← (-->r B₂)
    `(● ,B₁ ,B₂′)])
 
-(define-values (mrun-->r reducer-->r) (invoke-unit (-->r-rules reducer-->r)))
+(define-values (mrun-->r reducer-->r) (-->r-rules reducer-->r))
 (define -->r (compose1 mrun-->r reducer-->r))
 (define -->>r (repeated -->r))
 
@@ -92,7 +92,7 @@
   ['f
    #t])
 
-(define-values (mrun-∈R reducer-∈R) (invoke-unit (∈R-rules reducer-∈R)))
+(define-values (mrun-∈R reducer-∈R) (∈R-rules reducer-∈R))
 (define ∈R (compose1 mrun-∈R reducer-∈R))
 
 (define (R? B)

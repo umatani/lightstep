@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base)
-         lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit))
+         lightstep/base lightstep/syntax)
 (provide LAM FV subst)
 
 (module+ test (require rackunit))
@@ -80,7 +79,7 @@
    "α"])
 
 (define α (call-with-values
-           (λ () (invoke-unit (α-rule)))
+           (λ () (α-rule))
            compose1))
 
 (define-reduction (-->α-rule -->α) #:super [(-->gen-rule -->α)]
@@ -90,7 +89,7 @@
    "α"])
 
 (define -->α (call-with-values
-              (λ () (invoke-unit (-->α-rule -->α)))
+              (λ () (-->α-rule -->α))
               compose1))
 
 (define-reduction (β-rule)
@@ -99,7 +98,7 @@
    "β"])
 
 (define β (call-with-values
-           (λ () (invoke-unit (β-rule)))
+           (λ () (β-rule))
            compose1))
 
 (define-reduction (-->β-rule -->β) #:super [(-->gen-rule -->β)]
@@ -109,7 +108,7 @@
    "β"])
 
 (define -->β (call-with-values
-              (λ () (invoke-unit (-->β-rule -->β)))
+              (λ () (-->β-rule -->β))
               compose1))
 
 (define-reduction (η-rule)
@@ -120,7 +119,7 @@
    "η"])
 
 (define η (call-with-values
-           (λ () (invoke-unit (η-rule)))
+           (λ () (η-rule))
            compose1))
 
 (define-reduction (-->η-rule -->η) #:super [(-->gen-rule -->η)]
@@ -130,13 +129,13 @@
    "η"])
 
 (define -->η (call-with-values
-              (λ () (invoke-unit (-->η-rule -->η)))
+              (λ () (-->η-rule -->η))
               compose1))
 
 (define-reduction (n-rule) #:super [#;(α-rule) (β-rule) (η-rule)])
 
 (define n (call-with-values
-           (λ () (invoke-unit (n-rule)))
+           (λ () (n-rule))
            compose1))
 
 (define-reduction (-->n-rule -->n) #:super [(-->gen-rule -->n)]
@@ -146,7 +145,7 @@
    "n"])
 
 (define -->n (call-with-values
-              (λ () (invoke-unit (-->n-rule -->n)))
+              (λ () (-->n-rule -->n))
               compose1))
 
 (define -->>n (compose1 car (repeated -->n)))
@@ -274,7 +273,7 @@
    `(,M₁ ,M₂′)])
 
 (define -->n̅ (call-with-values
-              (λ () (invoke-unit (-->n̅-rules -->n̅)))
+              (λ () (-->n̅-rules -->n̅))
               compose1))
 
 (define -->>n̅ (compose1 car (repeated -->n̅)))

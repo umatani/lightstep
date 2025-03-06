@@ -1,6 +1,5 @@
 #lang racket/base
-(require lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit))
+(require lightstep/base lightstep/syntax)
 (provide L₀ r₀-rules to-five r₁-rules)
 
 (module+ test (require rackunit))
@@ -16,7 +15,7 @@
 (define-reduction (r₀-rules)
   [M 5])
 (define r₀ (call-with-values
-            (λ () (invoke-unit (r₀-rules)))
+            (λ () (r₀-rules))
             compose1))
 
 (module+ test
@@ -28,7 +27,7 @@
 (define-reduction (r₁-rules)
   [M (to-five M)])
 (define r₁ (call-with-values
-            (λ () (invoke-unit (r₁-rules)))
+            (λ () (r₁-rules))
             compose1))
 
 (module+ test

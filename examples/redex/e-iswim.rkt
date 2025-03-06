@@ -1,8 +1,8 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
          (only-in "iswim.rkt" ISWIM [FV orig-FV] subst [δ orig-δ] βv-rule Cxt)
          (only-in "iswim-std.rkt" ECxt))
+(provide E-ISWIM δ-rule δerr-rule)
 
 (module+ test (require rackunit))
 
@@ -49,11 +49,12 @@
    `(err ,L) ≔ e
    `(err ,L)])
 
-(define-reduction (e-rules)
-  #:super [(βv-rule) (δ-rule) (δerr-rule) (error-rule)])
+(define-reduction (w-rules) #:super [(δ-rule) (βv-rule)])
+(define-reduction (f-rules) #:super [(error-rule) (δerr-rule)])
+(define-reduction (e-rules) #:super [(w-rules) (f-rules)])
 
 (define e (call-with-values
-           (λ () (invoke-unit (e-rules)))
+           (λ () (e-rules))
            compose1))
 
 (define-reduction (-->e-rules -->e) #:super [(e-rules)]
@@ -62,7 +63,7 @@
    (Cxt M′)])
 
 (define -->e (call-with-values
-              (λ () (invoke-unit (-->e-rules -->e)))
+              (λ () (-->e-rules -->e))
               compose1))
 (define -->>e (compose1 car (repeated -->e)))
 
@@ -88,4 +89,3 @@
                 (set '(+ (err a) (err b)) '(err a)))
   (check-equal? (-->>e '(+ (- 4 (err a)) (err b)))
                 (set '(err a))))
-

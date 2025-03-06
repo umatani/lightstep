@@ -17,7 +17,9 @@
 (require (only-in "reduction.rkt"
                   ReduceM
                   define-reduction
-                  repeated))
+                  repeated
+                  reducer-of
+                  mrun-of))
 (provide (all-from-out "reduction.rkt"))
 
 ;; (require "syntax.rkt")

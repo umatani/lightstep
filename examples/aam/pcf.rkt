@@ -5,7 +5,6 @@
          (only-in racket/list split-at)
          (only-in racket/sequence sequence-map)
          (only-in racket/match match-define define-match-expander)
-         (only-in racket/unit invoke-unit)
          (only-in "common.rkt" mmap mmap-lookup mmap-ext reachable?))
 (provide PCF δ)
 
@@ -107,9 +106,8 @@
    `(,@T → ,Tₙ)
    "λ"])
 
-(define ⊢ (call-with-values
-           (λ () (invoke-unit (⊢-rules ⊢)))
-           (λ (mrun reducer) (compose1 mrun reducer))))
+(define ⊢ (letrec-values ([(mrun reducer) (⊢-rules reducer)])
+            (compose1 mrun reducer)))
 
 (define (⊢? ΓM T)
   (match (⊢ ΓM)
@@ -254,7 +252,7 @@
    "if-f"])
 
 (define r (call-with-values
-           (λ () (invoke-unit (r-rules)))
+           (λ () (r-rules))
            compose1))
 
 (module+ test
@@ -304,9 +302,8 @@
    M′
    "if-cxt"])
 
-(define -->ᵣ (call-with-values
-              (λ () (invoke-unit (-->ᵣ-rules -->ᵣ)))
-              compose1))
+(define -->ᵣ (letrec-values ([(mrun reducer) (-->ᵣ-rules reducer)])
+               (compose1 mrun reducer)))
 
 (module+ test
   (check-equal? (car ((repeated -->ᵣ) '((λ ([x : num]) x) (add1 5))))
@@ -363,13 +360,14 @@
                  `(if0 ,□ ,M₁ ,M₂)))]))
 
 (define-reduction (-->ₙ-rules)
+  #:do [(define r (reducer-of (r-rules)))]
   [(ECxtₙ m)
    M′ ← (r m)
    (ECxtₙ M′)
    "ECxtₙ"])
 
 (define -->ₙ (call-with-values
-              (λ () (invoke-unit (-->ₙ-rules)))
+              (λ () (-->ₙ-rules))
               compose1))
 
 (module+ test
@@ -416,16 +414,15 @@
           [`((λ ([,X : ,T] ...) ,M₀) ,V ...)
            ((apply subst (map list X V)) M₀)
            "β"])
-        (define v (call-with-values
-                   (λ () (invoke-unit (v-rules)))
-                   compose1))]
+        (define v (letrec-values ([(mrun reducer) (v-rules)])
+                    reducer))]
   [(ECxtᵥ m)
    M′ ← (v m)
    (ECxtᵥ M′)
    "ECxtᵥ"])
 
 (define -->ᵥ (call-with-values
-              (λ () (invoke-unit (-->ᵥ-rules)))
+              (λ () (-->ᵥ-rules))
               compose1))
 
 (module+ test

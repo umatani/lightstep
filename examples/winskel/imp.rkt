@@ -1,4 +1,4 @@
-#lang racket
+#lang racket/base
 (require lightstep/base)
 
 (module+ test (require rackunit))
@@ -6,7 +6,7 @@
 ;;=============================================================================
 ;; 2.2 The evaluation of arithmetic expressions
 
-(define-reduction (-->a-rules -->a)
+(define-reduction (-->a-r)
   [`(,(? number? n) ,σ)
    n
    "number"]
@@ -16,24 +16,24 @@
    "location"]
 
   [`((+ ,a₀ ,a₁) ,σ)
-   n₀ ← (-->a `(,a₀ ,σ))
-   n₁ ← (-->a `(,a₁ ,σ))
+   n₀ ← (-->a-r `(,a₀ ,σ))
+   n₁ ← (-->a-r `(,a₁ ,σ))
    (+ n₀ n₁)
    "sum"]
 
   [`((- ,a₀ ,a₁) ,σ)
-   n₀ ← (-->a `(,a₀ ,σ))
-   n₁ ← (-->a `(,a₁ ,σ))
+   n₀ ← (-->a-r `(,a₀ ,σ))
+   n₁ ← (-->a-r `(,a₁ ,σ))
    (- n₀ n₁)
    "subtract"]
 
   [`((× ,a₀ ,a₁) ,σ)
-   n₀ ← (-->a `(,a₀ ,σ))
-   n₁ ← (-->a `(,a₁ ,σ))
+   n₀ ← (-->a-r `(,a₀ ,σ))
+   n₁ ← (-->a-r `(,a₁ ,σ))
    (* n₀ n₁)
    "product"])
 
-(define-values (mrun-a reducer-a) (invoke-unit (-->a-rules reducer-a)))
+(define-values (mrun-a reducer-a) (-->a-r))
 (define -->a (compose1 mrun-a reducer-a))
 
 (define ((~a a₀ a₁) σ)
@@ -111,8 +111,7 @@
    (or t₀ t₁)
    "or"])
 
-(define-values (mrun-b reducer-b)
-  (invoke-unit (-->b-rules reducer-a reducer-b)))
+(define-values (mrun-b reducer-b) (-->b-rules reducer-a reducer-b))
 (define -->b (compose1 mrun-b reducer-b))
 
 (define ((~b b₀ b₁) σ)
@@ -183,8 +182,7 @@
      #f
      "or-ff"])
 
-  (define-values (mrun-b′ reducer-b′)
-    (invoke-unit (-->b′-rules reducer-a reducer-b′)))
+  (define-values (mrun-b′ reducer-b′) (-->b′-rules reducer-a reducer-b′))
   (define -->b′ (compose1 mrun-b′ reducer-b′))
 
   (check-equal? (-->b′ `(#t ,(↦))) (set #t))
@@ -227,8 +225,7 @@
      #f
      "or-ff"])
 
-  (define-values (mrun-b′ reducer-b′)
-    (invoke-unit (-->b′-rules reducer-a reducer-b′)))
+  (define-values (mrun-b′ reducer-b′) (-->b′-rules reducer-a reducer-b′))
   (define -->b′ (compose1 mrun-b′ reducer-b′))
 
   (check-equal? (-->b′ `(#t ,(↦))) (set #t))
@@ -289,8 +286,7 @@
    σ′
    "while-t"])
 
-(define-values (mrun-c reducer-c)
-  (invoke-unit (-->c-rules reducer-a reducer-b reducer-c)))
+(define-values (mrun-c reducer-c) (-->c-rules reducer-a reducer-b reducer-c))
 (define -->c (compose1 mrun-c reducer-c))
 
 (define ((~c c₀ c₁) σ)
@@ -359,7 +355,7 @@
    p ≔ (* n m)
    `(,p ,σ)])
 
-(define-values (mrun₁-a reducer₁-a) (invoke-unit (-->₁a-rules reducer₁-a)))
+(define-values (mrun₁-a reducer₁-a) (-->₁a-rules reducer₁-a))
 (define -->₁a (compose1 mrun₁-a reducer₁-a))
 (define -->>₁a (repeated -->₁a))
 
@@ -462,8 +458,7 @@
   [`((∨ ,(? boolean? t₀) ,(? boolean? t₁)) ,σ)
    `(,(or t₀ t₁) ,σ)])
 
-(define-values (mrun₁-b reducer₁-b)
-  (invoke-unit (-->₁b-rules reducer₁-a reducer₁-b)))
+(define-values (mrun₁-b reducer₁-b) (-->₁b-rules reducer₁-a reducer₁-b))
 (define -->₁b (compose1 mrun₁-b reducer₁-b))
 (define -->>₁b (repeated -->₁b))
 
@@ -562,7 +557,7 @@
        skip) ,σ)])
 
 (define-values (mrun₁-c reducer₁-c)
-  (invoke-unit (-->₁c-rules reducer₁-a reducer₁-b reducer₁-c)))
+  (-->₁c-rules reducer₁-a reducer₁-b reducer₁-c))
 (define -->₁c (compose1 mrun₁-c reducer₁-c))
 (define -->>₁c (repeated -->₁c))
 

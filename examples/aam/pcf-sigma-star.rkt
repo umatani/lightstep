@@ -1,6 +1,5 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         (only-in racket/unit invoke-unit)
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
          (only-in "pcf-rho.rkt" vρ-rules)
@@ -67,7 +66,7 @@
    "co-app"])
 
 (define -->vσ* (call-with-values
-                (λ () (invoke-unit (-->vσ*/alloc-rules alloc*)))
+                (λ () (-->vσ*/alloc-rules alloc*))
                 compose1))
 
 (module+ test

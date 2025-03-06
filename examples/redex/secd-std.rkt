@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
-         (only-in racket/unit invoke-unit)
          (only-in racket/list append-map)
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" FV δ)
@@ -39,7 +38,7 @@
    "secd5"])
 
 (define ⊢->secd₂ (call-with-values
-                  (λ () (invoke-unit (⊢->secd₂-rules)))
+                  (λ () (⊢->secd₂-rules))
                   (λ (mrun reducer)
                     (λ (ς)
                       (match ς

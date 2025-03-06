@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
-         (only-in racket/unit invoke-unit)
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ)
          (only-in "cc.rkt" ECxt □))
@@ -59,7 +58,7 @@
     [(_ M ECxt) #'(cons M ECxt)]))
 
 (define ⊢->scc (call-with-values
-                (λ () (invoke-unit (⊢->scc-rules)))
+                (λ () (⊢->scc-rules))
                 (λ (mrun reducer)
                   (λ (ς)
                     (match ς

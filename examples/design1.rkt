@@ -13,7 +13,7 @@
   [(cons x y) x "car"])
 
 ;; parameterized rule set のため (引数ありは後述2)
-(define-values (mrun₀ reducer₀) (invoke-unit (-->₀-rule)))
+(define-values (mrun₀ reducer₀) (-->₀-rule))
 (define -->₀ (compose1 mrun₀ reducer₀))
 
 (module+ test
@@ -35,7 +35,7 @@
   [(cons x y) x "car"]
   [(cons x y) y "cdr"])
 
-(define-values (mrun₁ reducer₁) (invoke-unit (-->₁-rule)))
+(define-values (mrun₁ reducer₁) (-->₁-rule))
 (define -->₁ (compose1 mrun₁ reducer₁))
 
 (module+ test
@@ -60,7 +60,7 @@
 (define-reduction (-->LAM₀-rule)
   [`((λ (,x) ,e₁) ,e₂) (subst e₁ x e₂) "β"])
 
-(define-values (mrun-LAM₀ reducer-LAM₀) (invoke-unit (-->LAM₀-rule)))
+(define-values (mrun-LAM₀ reducer-LAM₀) (-->LAM₀-rule))
 (define -->LAM₀ (compose1 mrun-LAM₀ reducer-LAM₀))
 (define -->>LAM₀ (repeated -->LAM₀))
 
@@ -105,7 +105,7 @@
    `((λ (,x) ,e) (λ (,y) ((fix (λ (,x) ,e)) ,y)))
    "fix"])
 
-(define-values (mrun-PCF₀ reducer-PCF₀) (invoke-unit (-->PCF₀-rule)))
+(define-values (mrun-PCF₀ reducer-PCF₀) (-->PCF₀-rule))
 (define -->PCF₀ (compose1 mrun-PCF₀ reducer-PCF₀))
 (define -->>PCF₀ (repeated -->PCF₀))
 
@@ -143,7 +143,7 @@
    `(if ,e₁′ ,e₂ ,e₃)
    "ECif"])
 
-(define-values (mrun-PCF₁ reducer-PCF₁) (invoke-unit (-->PCF₁-rule)))
+(define-values (mrun-PCF₁ reducer-PCF₁) (-->PCF₁-rule))
 (define -->PCF₁ (compose1 mrun-PCF₁ reducer-PCF₁))
 (define -->>PCF₁ (repeated -->PCF₁))
 
@@ -229,7 +229,7 @@
    `(fix ,e′)
    "EC-fix"])
 
-(define-values (mrun-PCF₂ reducer-PCF₂) (invoke-unit (-->PCF₂-rule)))
+(define-values (mrun-PCF₂ reducer-PCF₂) (-->PCF₂-rule))
 (define -->PCF₂ (compose1 mrun-PCF₂ reducer-PCF₂))
 (define -->>PCF₂ (repeated -->PCF₂))
 
@@ -404,7 +404,7 @@
    (ECxt e′)
    "EC"])
 
-(define-values (mrun-PCF₃ reducer-PCF₃) (invoke-unit (-->PCF₃-rule)))
+(define-values (mrun-PCF₃ reducer-PCF₃) (-->PCF₃-rule))
 (define -->PCF₃ (compose1 mrun-PCF₃ reducer-PCF₃))
 (define -->>PCF₃ (repeated -->PCF₃))
 
@@ -477,6 +477,6 @@
 
 (module+ test
   ;(printf "----- -->₂ ------------\n")
-  (define-values (mrun₂ reducer₂) (invoke-unit (-->₂-rule)))
+  (define-values (mrun₂ reducer₂) (-->₂-rule))
   (define -->₂ (compose1 mrun₂ reducer₂))
   (check-equal? (-->₂ '(f a)) (set '(+ a 1))))

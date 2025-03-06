@@ -2,9 +2,8 @@
 (require (for-syntax racket/base)
          lightstep/base lightstep/syntax
          (only-in lightstep/monad sequence)
-         (only-in racket/unit invoke-unit)
          (prefix-in lam: (only-in "lam.rkt" LAM FV subst)))
-(provide ISWIM FV subst δ βv-rule v Cxt)
+(provide ISWIM FV subst δ βv-rule v-rules Cxt)
 
 (module+ test (require rackunit))
 
@@ -88,7 +87,7 @@
 (define-reduction (v-rules) #:super [(βv-rule) (δ-rule)])
 
 (define v (call-with-values
-           (λ () (invoke-unit (v-rules)))
+           (λ () (v-rules))
            compose1))
 
 ;; ECxt of iswim-std.rkt is same, but deterministic
@@ -108,7 +107,7 @@
    (Cxt M′)])
 
 (define -->v (call-with-values
-              (λ () (invoke-unit (-->v-rules -->v)))
+              (λ () (-->v-rules -->v))
               compose1))
 (define -->>v (compose1 car (repeated -->v)))
 
@@ -178,7 +177,7 @@
    `(,oⁿ ,@M′)])
 
 (define ↪v (call-with-values
-            (λ () (invoke-unit (↪v-rules ↪v)))
+            (λ () (↪v-rules ↪v))
             compose1))
 
 (module+ test
