@@ -1,8 +1,9 @@
 #lang racket/base
-(require lightstep/base lightstep/syntax
-         (only-in "iswim.rkt" ISWIM [FV orig-FV] subst [δ orig-δ] βv-rule Cxt)
-         (only-in "iswim-std.rkt" ECxt))
-(provide E-ISWIM δ-rule δerr-rule)
+(require (for-syntax racket/base syntax/parse)
+         lightstep/base lightstep/syntax
+         (only-in racket/match define-match-expander)
+         (only-in "iswim.rkt" ISWIM [FV orig-FV] subst [δ orig-δ] βv-rule Cxt))
+(provide E-ISWIM ECxt FV δ δ-rule δerr-rule)
 
 (module+ test (require rackunit))
 
@@ -13,6 +14,16 @@
   [M   ∷= .... `(err ,L)]
   [L   ∷= (or (? symbol?) (? number?))]
   [o²  ∷= .... '/])
+
+;; re-interpret oⁿ?
+(define-match-expander ECxt
+  (syntax-parser
+    [(ECxt □)
+     #'(cxt ECxt [□ (and □ (or `(,(? V?) ,(? V?))
+                               `(,(? oⁿ?) ,(? V?) (... ...))))]
+            `(,V ,□)
+            `(,□ ,M)
+            `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
 (define/match (FV m) #:super orig-FV
   [`(err ,L) ∅])

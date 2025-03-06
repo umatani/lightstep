@@ -44,6 +44,7 @@
   (require (submod lightstep/examples/redex/cek-ss test))
   (require (submod lightstep/examples/redex/secd-tco-ss test))
   (require (submod lightstep/examples/redex/e-iswim test))
+  (require (submod lightstep/examples/redex/e-iswim-std test))
 
   ;; aam
   (require (submod lightstep/examples/aam/common test))
