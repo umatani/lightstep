@@ -62,7 +62,7 @@
   [`(catch (throw ,(? b? b)) with (λ ,X ,M))
    `((λ ,X ,M) ,b)])
 
-(define-reduction (δerr-rule)
+(define-reduction (δerr-rule δ)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    e ← (match (δ oⁿ b)
          [`(err ,(? b? b)) (return `(throw ,b))]
@@ -75,7 +75,7 @@
   [`(,(? b? b) ,V)
    `(throw ,b)])
 
-(define-reduction (h) #:super [(βv-rule) (δ-rule) (δerr-rule)
+(define-reduction (h) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)
                                          (throw-rule)
                                          (return-rule)
                                          (catch-rule)])

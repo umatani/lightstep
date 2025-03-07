@@ -80,11 +80,11 @@
   (let ([X ((symbol-not-in (FV M) (FV N)) 'if0)])
     `((((iszero ,L) (λ ,X ,M)) (λ ,X ,N)) 0)))
 
-(define-reduction (δ-rule)
+(define-reduction (δ-rule δ)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    (δ oⁿ b)])
 
-(define-reduction (v) #:super [(βv-rule) (δ-rule)])
+(define-reduction (v) #:super [(βv-rule) (δ-rule δ)])
 
 (define step-v (call-with-values (λ () (v)) compose1))
 

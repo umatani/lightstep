@@ -34,14 +34,14 @@
   [('/ `(,(? number? m) ,(? number? n)))
    (/ m n)])
 
-(define-reduction (δ-rule)
+(define-reduction (δ-rule δ)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    v ← (match (δ oⁿ b)
          [`(err ,L) mzero]
          [V         (return V)])
    v])
 
-(define-reduction (δerr-rule)
+(define-reduction (δerr-rule δ)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    e ← (match (δ oⁿ b)
           [`(err ,L) (return `(err ,L))]
@@ -60,8 +60,8 @@
    `(err ,L) ≔ e
    `(err ,L)])
 
-(define-reduction (w) #:super [(δ-rule) (βv-rule)])
-(define-reduction (f) #:super [(error-rule) (δerr-rule)])
+(define-reduction (w) #:super [(δ-rule δ) (βv-rule)])
+(define-reduction (f) #:super [(error-rule) (δerr-rule δ)])
 (define-reduction (e) #:super [(w) (f)])
 
 (define step-e (call-with-values (λ () (e)) compose1))

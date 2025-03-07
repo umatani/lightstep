@@ -6,6 +6,7 @@
          (only-in "e-iswim.rkt" δ δ-rule)
          (only-in "h-iswim.rkt" [H-ISWIM orig-H-ISWIM] FV subst FCxt
                   δerr-rule return-rule catch-rule))
+(provide ECxt)
 
 (module+ test (require rackunit))
 
@@ -24,7 +25,7 @@
                  `(catch ,□ with (λ ,X ,M)) ;; NEW
                  ))]))
 
-(define-reduction (h̃) #:super [(βv-rule) (δ-rule) (δerr-rule)
+(define-reduction (h̃) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)
                                          (return-rule)
                                          (catch-rule)])
 

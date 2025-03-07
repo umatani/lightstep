@@ -12,7 +12,7 @@
 (define-language E-ISWIM #:super orig-E-ISWIM
   [Mre ∷= `(,V ,V) `(,(? oⁿ?) ,V ...) `(err ,L)])
 
-(define-reduction (ẽ) #:super [(βv-rule) (δ-rule) (δerr-rule)])
+(define-reduction (ẽ) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)])
 
 (define-reduction (⊢->e)
   #:do [(define →ẽ (reducer-of (ẽ)))]
