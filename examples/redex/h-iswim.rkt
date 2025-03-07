@@ -31,8 +31,8 @@
 
 (define-match-expander FCxt
   (syntax-parser
-    [(ECxt p)
-     #'(... (cxt ECxt [□ p]
+    [(FCxt p)
+     #'(... (cxt FCxt [□ p]
                  `(,V ,□)
                  `(,□ ,M)
                  `(,(? oⁿ?) ,V ... ,□ ,M ...)))]))
