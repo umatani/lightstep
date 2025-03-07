@@ -9,11 +9,10 @@
 ;;=============================================================================
 ;; 8.1 Standard Reduction for Error ISWIM 
 
-(define-language E-ISWIM #:super orig-E-ISWIM)
+(define-language E-ISWIM #:super orig-E-ISWIM
+  [Mre ∷= `(,V ,V) `(,(? oⁿ?) ,V ...) `(err ,L)])
 
 (define-reduction (ẽ) #:super [(βv-rule) (δ-rule) (δerr-rule)])
-
-(define step-ẽ (call-with-values (λ () (ẽ)) compose1))
 
 (define-reduction (⊢->e)
   #:do [(define →ẽ (reducer-of (ẽ)))]

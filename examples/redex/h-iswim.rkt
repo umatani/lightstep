@@ -1,0 +1,117 @@
+#lang racket/base
+(require (for-syntax racket/base syntax/parse)
+         lightstep/base lightstep/syntax
+         (only-in racket/match define-match-expander)
+         (only-in "iswim.rkt" ISWIM [FV orig-FV] [subst orig-subst] βv-rule)
+         (only-in "e-iswim.rkt" δ δ-rule))
+(provide H-ISWIM FV subst FCxt δerr-rule return-rule catch-rule)
+
+(module+ test (require rackunit))
+
+;;=============================================================================
+;; 8.3 Handler ISWIM
+
+(define-language H-ISWIM #:super ISWIM
+  [M  ∷= ....
+      `(throw ,(? b?))
+      `(catch ,M₁ with (λ ,X ,M₂))]
+  [L ∷= (? number?)]
+  [o² ∷= .... '/])
+
+(define/match (FV m) #:super orig-FV
+  [`(throw ,(? b?)) ∅]
+  [`(catch ,M₁ with (λ ,X ,M₂))
+   (∪ (FV M₁) (FV `(λ ,X ,M₂)))])
+
+(define/match (subst m₁ x₂ m₂) #:super orig-subst
+  [(`(throw ,(? b? b)) X₂ M₂)
+   `(throw ,b)]
+  [(`(catch ,M with (λ ,X ,M′)) X₂ M₂)
+   `(catch ,(subst M X₂ M₂) with ,(subst (λ ,X ,M′) X₂ M₂))])
+
+(define-match-expander FCxt
+  (syntax-parser
+    [(ECxt p)
+     #'(... (cxt ECxt [□ p]
+                 `(,V ,□)
+                 `(,□ ,M)
+                 `(,(? oⁿ?) ,V ... ,□ ,M ...)))]))
+
+;; re-interpret oⁿ and add catch
+(define-nondet-match-expander Cxt
+  (λ (stx)
+    (syntax-case stx ()
+      [(Cxt □)
+       #'(nondet-cxt Cxt □
+                     ;`(λ ,X ,(? M? □)) ;; non-termination
+                     `(,(? M? □) ,M)
+                     `(,V ,(? M? □))
+                     `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...))
+                     `(catch ,(? M? □) with (λ ,X ,M)))])))
+
+(define-reduction (throw-rule)
+  [(and x (FCxt `(throw ,(? b? b))))
+   #:when (not (equal? x `(throw ,b)))
+   `(throw ,b)])
+
+(define-reduction (return-rule)
+  [`(catch ,V with (λ ,X ,M))
+   V])
+
+(define-reduction (catch-rule)
+  [`(catch (throw ,(? b? b)) with (λ ,X ,M))
+   `((λ ,X ,M) ,b)])
+
+(define-reduction (δerr-rule)
+  [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
+   e ← (match (δ oⁿ b)
+         [`(err ,(? b? b)) (return `(throw ,b))]
+         [V         mzero])
+   e]
+
+  [`(,(? oⁿ? oⁿ) ,(? b? b) ... (λ ,X ,M) ,V ...)
+   `(throw ,(length b))]
+
+  [`(,(? b? b) ,V)
+   `(throw ,b)])
+
+(define-reduction (h) #:super [(βv-rule) (δ-rule) (δerr-rule)
+                                         (throw-rule)
+                                         (return-rule)
+                                         (catch-rule)])
+
+(define step-h (call-with-values (λ () (h)) compose1))
+
+(define-reduction (-->h) #:super [(h)]
+  [(Cxt m)
+   M′ ← (-->h m)
+   (Cxt M′)])
+
+(define step-->h (call-with-values (λ () (-->h)) compose1))
+(define -->>h (compose1 car (repeated step-->h)))
+
+(define/match (evalₕ m)
+  [M
+   #:when (∅? (FV M))
+   (match (-->>h M)
+    [(set (? b? b)) b]
+    [(set `(λ ,X ,M)) 'function]
+    [(set `(throw ,(? b? b))) `(err ,b)]
+    [x (error 'evalₕ "invalid answer: ~a" x)])]
+  [_ (error 'evalₕ "invalid input: ~a" m)])
+
+(module+ test
+  (check-exn #rx"invalid input" (λ () (evalₕ '(+ 1 x))))
+  (check-equal? (evalₕ '(+ ((λ x x) 8) 2)) 10)
+  (check-equal? (evalₕ '((λ x x) (λ x x))) 'function)
+  
+  (check-equal? (evalₕ '(add1 (λ x x))) '(err 0))
+  (check-equal? (evalₕ '(/ 3 0)) '(err 0))
+
+  (check-equal? (step-->h '(+ (- 4 (throw 1)) (throw 2)))
+                (set '(+ (throw 1) (throw 2)) '(throw 1)))
+  (check-equal? (-->>h '(+ (- 4 (throw 1)) (throw 2)))
+                (set '(throw 1)))
+
+  (check-equal? (evalₕ '(catch (add1 (/ 3 0)) with (λ x (add1 x)))) 1)  
+  (check-equal? (evalₕ '(catch (+ (* 4 2) (throw 3)) with (λ x (add1 x)))) 4))

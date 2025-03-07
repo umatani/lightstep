@@ -12,7 +12,7 @@
 
 (define-language E-ISWIM #:super ISWIM
   [M   ∷= .... `(err ,L)]
-  [L   ∷= (or (? symbol?) (? number?))]
+  [L   ∷= (or (? b?) (? symbol?))]
   [o²  ∷= .... '/])
 
 ;; re-interpret oⁿ?
