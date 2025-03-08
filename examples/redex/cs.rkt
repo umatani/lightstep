@@ -60,10 +60,10 @@
   [(`(set ,X ,M) X₂ M₂)
    `(set ,X ,(subst M X₂ M₂))])
 
-(define-match-expander ECxt
+(define-match-expander E
   (syntax-parser
-    [(ECxt p)
-     #'(... (cxt ECxt [□ p]
+    [(E p)
+     #'(... (cxt E [□ p]
                  `(,V ,□)
                  `(,□ ,M)
                  `(,(? oⁿ?) ,V ... ,□ ,M ...)
@@ -73,32 +73,32 @@
 (define-reduction (⊢->cs)
   #:monad (StateT #f (NondetT ID))
 
-  [(ECxt `((λ ,X ,M) ,V))
+  [(E `((λ ,X ,M) ,V))
    #:when (not (∈ X (AV M)))
-   (ECxt (subst M X V))
+   (E (subst M X V))
    "csfiᵥ"]
   
-  [(ECxt `((λ ,X ,M) ,V))
+  [(E `((λ ,X ,M) ,V))
    #:when (∈ X (AV M))
    Σ ← get
-   X′ ≔ ((symbol-not-in (dom Σ) (FV (ECxt `(λ ,X ,M)))) X)
+   X′ ≔ ((symbol-not-in (dom Σ) (FV (E `(λ ,X ,M)))) X)
    (put (Σ X′ V))
-   (ECxt (subst M X X′))
+   (E (subst M X X′))
    "csfiₛ"]
 
-  [(ECxt (? X? x))
+  [(E (? X? x))
    (↦ [x V]) ← get
-   (ECxt V)
+   (E V)
    "cs!"]
 
-  [(ECxt `(set ,(? X? x) ,V))
+  [(E `(set ,(? X? x) ,V))
    (and Σ (↦ [x V′])) ← get
    (put (Σ x V))
-   (ECxt V′)
+   (E V′)
    "cs="]
 
-  [(ECxt `(,(? oⁿ? oⁿ) ,V ...))
-   (ECxt (δ oⁿ V))
+  [(E `(,(? oⁿ? oⁿ) ,V ...))
+   (E (δ oⁿ V))
    "csffi"])
 
 (define-match-expander mkCS

@@ -78,8 +78,8 @@
 
       [p (raise-syntax-error 'with-ctor/list "unknown pattern" #'p)]))
 
-  (define (with-ctor/quasi stx)
-    (syntax-parse stx
+  (define (with-ctor/quasi qp)
+    (syntax-parse qp
       #:literals (unquote unquote-splicing)
 
       [() #'(() '())]
@@ -121,8 +121,8 @@
 
       [p (raise-syntax-error 'with-ctor/quasi "unknown pattern" #'p)]))
   
-  (define (with-ctor stx)
-    (syntax-parse stx
+  (define (with-ctor pat)
+    (syntax-parse pat
       #:literals (quote quasiquote list cons)
 
       [(quote x)

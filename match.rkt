@@ -38,14 +38,41 @@
              (format-id id "~a?" (list->string front))
              #f))))
 
+  (define (convert-category-id/quasi qp)
+    (syntax-parse qp
+      #:literals [unquote unquote-splicing]
+      [() #'()]
+      [x:id #'x]
+      [(unquote p) #`(unquote #,(convert-category-id #'p))]
+      [((unquote-splicing p₀) qp₁ ...)
+       #:with p₀′ (convert-category-id #'p₀)
+       #:with (qp₁′ ...) (convert-category-id/quasi #'(qp₁ ...))
+       #'((unquote-splicing p₀′) qp₁′ ...)]
+      [(qp₀ (~datum ...) qp₁ ...)
+       #:with qp₀′ (convert-category-id/quasi #'qp₀)
+       #:with (qp₁′ ...) (convert-category-id/quasi #'(qp₁ ...))
+       #'(qp₀′ (... ...) qp₁′ ...)]
+      [(qp₀ qp₁ ...)
+       #:with qp₀′ (convert-category-id/quasi #'qp₀)
+       #:with (qp₁′ ...) (convert-category-id/quasi #'(qp₁ ...))
+       #'(qp₀′ qp₁′ ...)]
+      [qp #'qp]))
+
   (define (convert-category-id pat)
     (syntax-parse pat
+      #:literals [quote quasiquote]
+      [(quote x) #'(quote x)]
+      [(quasiquote qp)
+       #`(quasiquote #,(convert-category-id/quasi #'qp))]
       [x:id
        (if (category-id? #'x)
          #`(? #,(category-id→pred-id #'x) x)
          #'x)]
       [((~datum ?) e p ...)
        #'(? e p ...)]
+      [(p₁:id p ...)
+       #:with (p′ ...) (stx-map convert-category-id #'(p ...))
+       #'(p₁ p′ ...)]
       [(p ...)
        #:with (p′ ...) (stx-map convert-category-id #'(p ...))
        #'(p′ ...)]
