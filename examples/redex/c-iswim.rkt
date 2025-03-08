@@ -1,11 +1,12 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
-         lightstep/base lightstep/syntax lightstep/transformers
+         lightstep/base lightstep/syntax
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM βv-rule)
          (only-in "e-iswim.rkt" δ δ-rule)
          (only-in "h-iswim.rkt" [FV orig-FV] [subst orig-subst]
                   throw-rule return-rule δerr-rule))
+(provide C-ISWIM FV subst FCxt)
 
 (module+ test (require rackunit))
 
