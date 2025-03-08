@@ -4,7 +4,8 @@
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM [FV orig-FV] [subst orig-subst] βv-rule)
          (only-in "e-iswim.rkt" δ δ-rule))
-(provide H-ISWIM FV subst FCxt δerr-rule return-rule catch-rule)
+(provide H-ISWIM FV subst FCxt
+         throw-rule return-rule catch-rule δerr-rule)
 
 (module+ test (require rackunit))
 
@@ -15,7 +16,6 @@
   [M  ∷= ....
       `(throw ,(? b?))
       `(catch ,M₁ with (λ ,X ,M₂))]
-  [L ∷= (? number?)]
   [o² ∷= .... '/])
 
 (define/match (FV m) #:super orig-FV
@@ -37,7 +37,7 @@
                  `(,□ ,M)
                  `(,(? oⁿ?) ,V ... ,□ ,M ...)))]))
 
-;; re-interpret oⁿ and add catch
+;; re-interpret oⁿ, M, and add catch
 (define-nondet-match-expander Cxt
   (λ (stx)
     (syntax-case stx ()

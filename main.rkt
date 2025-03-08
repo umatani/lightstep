@@ -49,6 +49,7 @@
   (require (submod lightstep/examples/redex/h-iswim-std test))
   (require (submod lightstep/examples/redex/cc+h test))
   (require (submod lightstep/examples/redex/chc test))
+  (require (submod lightstep/examples/redex/c-iswim test))
 
   ;; aam
   (require (submod lightstep/examples/aam/common test))

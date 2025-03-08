@@ -11,8 +11,7 @@
 ;; 8.1 Error ISWIM
 
 (define-language E-ISWIM #:super ISWIM
-  [M   ∷= .... `(err ,L)]
-  [L   ∷= (or (? b?) (? symbol?))]
+  [M   ∷= .... `(err ,(? b?))]
   [o²  ∷= .... '/])
 
 ;; re-interpret oⁿ?
@@ -26,7 +25,7 @@
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
 (define/match (FV m) #:super orig-FV
-  [`(err ,L) ∅])
+  [`(err ,(? b?)) ∅])
 
 (define/match (δ o bs) #:super orig-δ
   [('/ `(,(? number? m) 0))
@@ -37,19 +36,19 @@
 (define-reduction (δ-rule δ)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    v ← (match (δ oⁿ b)
-         [`(err ,L) mzero]
+         [`(err ,(? b?)) mzero]
          [V         (return V)])
    v])
 
 (define-reduction (δerr-rule δ)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    e ← (match (δ oⁿ b)
-          [`(err ,L) (return `(err ,L))]
+          [`(err ,(? b? b)) (return `(err ,b))]
           [V         mzero])
    e]
 
   [`(,(? oⁿ? oⁿ) ,(? b? b) ... (λ ,X ,M) ,V ...)
-   `(err ,oⁿ)]
+   `(err ,(length b))]
 
   [`(,(? b? b) ,V)
    `(err ,b)])
@@ -57,8 +56,8 @@
 (define-reduction (error-rule)
   [(and x (ECxt e))
    #:when (not (equal? x e))
-   `(err ,L) ≔ e
-   `(err ,L)])
+   `(err ,(? b? b)) ≔ e
+   `(err ,b)])
 
 (define-reduction (w) #:super [(δ-rule δ) (βv-rule)])
 (define-reduction (f) #:super [(error-rule) (δerr-rule δ)])
@@ -80,7 +79,7 @@
    (match (-->>e M)
     [(set (? b? b)) b]
     [(set `(λ ,X ,M)) 'function]
-    [(set `(err ,L)) `(err ,L)]
+    [(set `(err ,(? b? b))) `(err ,b)]
     [x (error 'evalₑ "invalid answer: ~a" x)])]
   [_ (error 'evalₑ "invalid input: ~a" m)])
 
@@ -89,10 +88,10 @@
   (check-equal? (evalₑ '(+ ((λ x x) 8) 2)) 10)
   (check-equal? (evalₑ '((λ x x) (λ x x))) 'function)
   
-  (check-equal? (evalₑ '(add1 (λ x x))) '(err add1))
+  (check-equal? (evalₑ '(add1 (λ x x))) '(err 0))
   (check-equal? (evalₑ '(/ 3 0)) '(err 0))
 
-  (check-equal? (step-->e '(+ (- 4 (err a)) (err b)))
-                (set '(+ (err a) (err b)) '(err a)))
-  (check-equal? (-->>e '(+ (- 4 (err a)) (err b)))
-                (set '(err a))))
+  (check-equal? (step-->e '(+ (- 4 (err 1)) (err 2)))
+                (set '(+ (err 1) (err 2)) '(err 1)))
+  (check-equal? (-->>e '(+ (- 4 (err 1)) (err 2)))
+                (set '(err 1))))
