@@ -45,10 +45,9 @@
    `(,@C)
    "secd1"]
 
-  [`(,X ,C ...)
+  [`(,(? X? x) ,C ...)
    S ← get-S
-   E ← get-E
-   V ≔ (E X)
+   (↦ [x V]) ← get-E
    (put-S (cons V S))
    `(,@C)
    "secd2"]

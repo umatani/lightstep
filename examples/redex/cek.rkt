@@ -76,9 +76,8 @@
    M
    "cek6"]
 
-  [X
-   E ← get-E
-   `(,V ,E′) ≔ (E X)
+  [(? X? x)
+   (↦ [x `(,V ,E′)]) ← get-E
    (put-E E′)
    V
    "cek7"])
