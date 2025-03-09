@@ -346,35 +346,35 @@
 ;;-----------------------------------------------------------------------------
 ;; 3.3 Call-by-value and call-by-name: Strategies, contexts, and axioms
 
-(define-match-expander ECxtₙ
+(define-match-expander Eₙ
   (syntax-parser
-    [(ECxtₙ □:id)
-     #'(... (cxt ECxtₙ [□ (and □ (? redex?))]
+    [(Eₙ □:id)
+     #'(... (cxt Eₙ [□ (and □ (? redex?))]
                  `(,□ ,M ...)
                  `(,O ,V ... ,□ ,M ...)
                  `(if0 ,□ ,M₁ ,M₂)))]))
 
 (define-reduction (-->ₙ)
   #:do [(define →r (reducer-of (r)))]
-  [(ECxtₙ m)
+  [(Eₙ m)
    M′ ← (→r m)
-   (ECxtₙ M′)
-   "ECxtₙ"])
+   (Eₙ M′)
+   "Eₙ"])
 
 (define step-->ₙ (call-with-values (λ () (-->ₙ)) compose1))
 
 (module+ test
   ;; (match '(add1 5)
-  ;;   [(ECxtₙ M)
-  ;;    (ECxtₙ M)])
+  ;;   [(Eₙ M)
+  ;;    (Eₙ M)])
 
   ;; (match '(* 5 2)
-  ;;   [(ECxtₙ M)
-  ;;    (ECxtₙ M)])
+  ;;   [(Eₙ M)
+  ;;    (Eₙ M)])
 
   ;; (match '(if0 5 8 9)
-  ;;   [(ECxtₙ M)
-  ;;    (ECxtₙ M)])
+  ;;   [(Eₙ M)
+  ;;    (Eₙ M)])
 
   (check-equal? (step-->ₙ '((λ ([x : num]) x) (add1 5))) (set '(add1 5)))
   (check-equal? (car ((repeated step-->ₙ) '((λ ([x : num]) x) (add1 5))))
@@ -395,10 +395,10 @@
   ;; (reachable? -->ᵣ fact-5 120)
   )
 
-(define-match-expander ECxtᵥ
+(define-match-expander Eᵥ
   (syntax-parser
-    [(ECxtᵥ □:id)
-     #'(... (cxt ECxtᵥ [□ (and □ (? redex?))]
+    [(Eᵥ □:id)
+     #'(... (cxt Eᵥ [□ (and □ (? redex?))]
                  `(,V ... ,□ ,M ...)
                  `(if0 ,□ ,M₁ ,M₂)))]))
 
@@ -408,10 +408,10 @@
            ((apply subst (map list X V)) M₀)
            "β"])
         (define →v (reducer-of (v)))]
-  [(ECxtᵥ m)
+  [(Eᵥ m)
    M′ ← (→v m)
-   (ECxtᵥ M′)
-   "ECxtᵥ"])
+   (Eᵥ M′)
+   "Eᵥ"])
 
 (define step-->ᵥ (call-with-values (λ () (-->ᵥ)) compose1))
 

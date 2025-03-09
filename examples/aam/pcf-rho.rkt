@@ -36,10 +36,10 @@
          `(,O ,V ...)
          `(if0 ,N ,C₁ ,C₂)])
 
-(define-match-expander ECxt
+(define-match-expander E
   (syntax-parser
-    [(ECxt □:id)
-     #'(... (cxt ECxt [□ (and □ (? redex?))]
+    [(E □:id)
+     #'(... (cxt E [□ (and □ (? redex?))]
                  `(,V ... ,(? C? □) ,C ...)
                  `(if0 ,(? C? □) ,C₁ ,C₂)))]))
 
@@ -101,11 +101,11 @@
 
 (define-reduction (-->vρ)
   #:do [(define →vρ (reducer-of (vρ)))]
-  [(ECxt c)
+  [(E c)
    ; where
    C′ ← (→vρ c)
    ; -->
-   (ECxt C′)
+   (E C′)
    "EC"])
 
 (define step-->vρ (call-with-values (λ () (-->vρ)) compose1))

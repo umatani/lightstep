@@ -212,7 +212,6 @@
 
   ;; slow
   ;(check-equal? (-->>n̅ `((,MULT ,(MKNUM 2)) ,(MKNUM 2))) (set (MKNUM 4)))
-
   )
 
 (define MKMK '(λ k (λ t (t ((k k) t)))))
