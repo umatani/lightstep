@@ -12,9 +12,6 @@
   (require rackunit)
   (require (only-in (submod "pcf.rkt" test) fact-5)))
 
-;; Abstracting Abstract Machines from:
-;;   https://dvanhorn.github.io/redex-aam-tutorial/
-
 ;; TODO: monadic version
 
 ;;-----------------------------------------------------------------------------

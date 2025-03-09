@@ -8,9 +8,6 @@
          (only-in "pcf-sigma-alloc.rkt"-->vσ/alloc))
 (module+ test (require rackunit))
 
-;; Abstracting Abstract Machines from:
-;;   https://dvanhorn.github.io/redex-aam-tutorial/
-
 ;; TODO: monadic version
 
 ;;-----------------------------------------------------------------------------

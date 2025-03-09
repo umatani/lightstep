@@ -7,10 +7,6 @@
 
 (module+ test (require rackunit))
 
-;; Abstracting Abstract Machines from:
-;;   https://dvanhorn.github.io/redex-aam-tutorial/
-
-
 ;;=============================================================================
 ;; Utils
 

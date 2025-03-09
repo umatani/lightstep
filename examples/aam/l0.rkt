@@ -4,9 +4,6 @@
 
 (module+ test (require rackunit))
 
-;; Abstracting Abstract Machines from:
-;;   https://dvanhorn.github.io/redex-aam-tutorial/
-
 ;;-----------------------------------------------------------------------------
 ;; 3.5 A brief aside on the caveats of language extensions
 

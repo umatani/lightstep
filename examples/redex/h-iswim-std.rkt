@@ -11,7 +11,7 @@
 (module+ test (require rackunit))
 
 ;;=============================================================================
-;; 8.3 Standard Reduction for Handler ISWIM 
+;; 8.3 Standard Reduction for Handler ISWIM
 
 (define-language H-ISWIM #:super orig-H-ISWIM)
 
