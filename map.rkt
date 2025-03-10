@@ -46,7 +46,13 @@
 
 (define-match-expander ↦
   (λ (stx)
-    (syntax-case stx ()
+    (syntax-case stx (... ...)
+      [(_ (x y) (... ...))
+       #'(? map? (app (λ (x) (for/fold ([kvs (cons '() '())])
+                                        ([kv (map->list x)])
+                                (cons (cons (car kv) (car kvs))
+                                      (cons (cdr kv) (cdr kvs)))))
+                      (cons x y)))]
       [(_ (x y) ...)
        #'(? map? (app repl->hash (hash* (x y) ...)))]))
   (λ (stx)

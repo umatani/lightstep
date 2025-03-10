@@ -2,7 +2,7 @@
 
 ## List of Examples
 
-* [2 B language](b.rkt)
+* [1 B language](b.rkt)
 * [3 λ-Calculus](lam.rkt)
 * [4 ISWIM](iswim.rkt)
 * [5 An Abstract Syntax Machine](iswim-std.rkt)
@@ -24,3 +24,4 @@
 * [8.4 The Control ISWIM](c-iswim.rkt)
 * [8.4 Standard Reduction for Control ISWIM](c-iswim-std.rkt)
 * [9.2 The CS Machine](cs.rkt)
+* [9.3 The State ISWIM Calculus](s-iswim.rkt)

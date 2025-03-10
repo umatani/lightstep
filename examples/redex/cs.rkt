@@ -3,6 +3,7 @@
          lightstep/base lightstep/syntax lightstep/transformers
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM [FV orig-FV] [subst orig-subst] δ))
+(provide S-ISWIM AV FV subst)
 
 (module+ test (require rackunit))
 
@@ -58,7 +59,8 @@
    #:when (eq? X X₂)
    `(set ,X₂′ ,(subst M X₂ X₂′))]
   [(`(set ,X ,M) X₂ M₂)
-   `(set ,X ,(subst M X₂ M₂))])
+   `(set ,X ,(subst M X₂ M₂))]
+  )
 
 (define-match-expander E
   (syntax-parser

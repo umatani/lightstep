@@ -1,7 +1,7 @@
 #lang racket/base
 (require (for-syntax racket/base)
          lightstep/base lightstep/syntax)
-(provide LAM FV subst)
+(provide LAM FV subst α)
 
 (module+ test (require rackunit))
 

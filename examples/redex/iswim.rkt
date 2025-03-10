@@ -3,7 +3,7 @@
          lightstep/base lightstep/syntax
          (only-in lightstep/monad sequence)
          (prefix-in lam: (only-in "lam.rkt" LAM FV subst)))
-(provide ISWIM FV subst δ βv-rule v Cxt)
+(provide ISWIM FV subst βv-rule δ δ-rule v Cxt)
 
 (module+ test (require rackunit))
 

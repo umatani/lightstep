@@ -265,9 +265,7 @@
           (define ((make-cxt i) M)
             (define-values (l r) (split-at Ms i))
             `(,@l ,M ,@(cdr r)))
-          (sequence-map (λ (iM)
-                          (match-define (cons i M) iM)
-                          (values (make-cxt i) M))
+          (sequence-map (match-λ [(cons i M) (values (make-cxt i) M)])
                         (map cons (build-list (length Ms) (λ (x) x)) Ms)))]
 
   [`(λ ([,X : ,T] ...) ,M)
