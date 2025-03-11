@@ -26,3 +26,4 @@
 * [9.2 The CS Machine](cs.rkt)
 * [9.3 The State ISWIM Calculus](s-iswim.rkt)
 * [9.3 Standard Reduction for State ISWIM](s-iswim-std.rkt)
+* [9.3 Revised Standard Reduction for State ISWIM](s-iswim-std2.rkt)

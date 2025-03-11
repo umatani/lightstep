@@ -8,7 +8,7 @@
          (only-in racket/match define-match-expander)
          (only-in "match.rkt" match match-λ category-id?)
          (only-in "nondet.rkt" define-nondet-match-expander nondet))
-(provide define-language cxt nondet-cxt unique symbol-not-in)
+(provide define-language cxt1 cxt nondet-cxt unique symbol-not-in)
 
 (module+ test (require rackunit))
 
@@ -174,6 +174,16 @@
      #:with (p′ ...) (stx-map (λ (p) (nondet-cxt1 #`(C hole #,p))) #'(p ...))
      #'(nondet p′ ...)]))
 
+
+(define-match-expander cxt1
+  (syntax-parser
+    [(_ C:id [□:id p₁] p ...)
+     #:with ((p′ c) ...) (stx-map with-ctor #'(p ...))
+     #'(app (λ (e) (match e
+                     [p′ (cons (λ (□) c) □)]
+                     ...
+                     [_ #f]))
+            (cons C p₁))]))
 
 (define-match-expander cxt
   (syntax-parser
