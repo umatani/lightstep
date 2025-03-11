@@ -3,7 +3,7 @@
          lightstep/base lightstep/syntax lightstep/transformers
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM [FV orig-FV] [subst orig-subst] δ))
-(provide S-ISWIM AV FV subst ⊢->cs mkCS)
+(provide S-ISWIM AV FV subst ⊢->cs mkCS LET SEQ)
 
 (module+ test (require rackunit))
 
@@ -125,7 +125,6 @@
       'function]
      [x (error 'evalcs "invalid final state: ~a" x)])]
   [_ (error 'evalcs "invalid input: ~a" m)])
-
 
 (module+ test
   (check-equal? (evalcs `((λ x ,(SEQ '(set x (* x x)) '(add1 x))) 8)) 65)

@@ -56,6 +56,7 @@
   (require [submod lightstep/examples/redex/s-iswim-std test])
   (require [submod lightstep/examples/redex/s-iswim-std2 test])
   (require [submod lightstep/examples/redex/cs2 test])
+  (require [submod lightstep/examples/redex/cesk test])
 
   ;; aam
   (require (submod lightstep/examples/aam/common test))

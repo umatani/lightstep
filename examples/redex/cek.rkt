@@ -13,9 +13,9 @@
 (define-language CEK #:super ISWIM
   [κ ∷=
      'mt
-     `(fn (,V ,ξ) ,(? κ? κ))
-     `(ar (,M ,ξ) ,(? κ? κ))
-     `(op ,(? list? VξsOⁿ) ,(? list? Mξs) ,(? κ? κ))]
+     `(fn (,V ,E) ,(? κ? κ))
+     `(ar (,M ,E) ,(? κ? κ))
+     `(op ,(? list? VEsOⁿ) ,(? list? MEs) ,(? κ? κ))]
   [E ∷= (? map? X→VE)])
 
 (define-reduction (⊢->cek)
