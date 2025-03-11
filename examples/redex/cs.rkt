@@ -3,7 +3,7 @@
          lightstep/base lightstep/syntax lightstep/transformers
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM [FV orig-FV] [subst orig-subst] δ))
-(provide S-ISWIM AV FV subst)
+(provide S-ISWIM AV FV subst ⊢->cs mkCS)
 
 (module+ test (require rackunit))
 

@@ -71,8 +71,6 @@
      [x (error 'evalₛ₂ "invalid answer: ~a" x)])]
   [_ (error 'evalₛ₂ "invalid input: ~a" m)])
 
-
-
 (module+ test
   (check-equal? (evalₛ₂ '((λ y (+ 1 ((λ x (* (add1 x) y)) (set y 3)))) 2))
                 10)
