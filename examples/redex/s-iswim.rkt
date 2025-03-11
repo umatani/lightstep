@@ -7,6 +7,7 @@
          (only-in "iswim.rkt" δ δ-rule)
          (only-in "cs.rkt" [S-ISWIM orig-S-ISWIM]
                   [AV orig-AV] [FV orig-FV] [subst orig-subst]))
+(provide S-ISWIM FV s step-s)
 
 (module+ test (require rackunit))
 
@@ -155,6 +156,8 @@
                                          (assign)
                                          (lift)
                                          (merge)])
+
+(define step-s (call-with-values (λ () (s)) compose1))
 
 (define-reduction (-->s) #:super [(s)]
   [(Cxt m)
