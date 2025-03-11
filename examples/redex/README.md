@@ -29,3 +29,4 @@
 * [9.3 Revised Standard Reduction for State ISWIM](s-iswim-std2.rkt)
 * [9.3 The CS Machine extended with letrec construct](cs2.rkt)
 * [9.4 The CESK Machine](cesk.rkt)
+* [9.5 The CS Machine with GC](cs+gc.rkt)
