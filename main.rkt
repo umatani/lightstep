@@ -59,6 +59,7 @@
   (require [submod lightstep/examples/redex/cesk test])
   (require [submod lightstep/examples/redex/cs+gc test])
   (require [submod lightstep/examples/redex/cesk+gc test])
+  (require [submod lightstep/examples/redex/st-iswim test])
 
   ;; aam
   (require (submod lightstep/examples/aam/common test))
