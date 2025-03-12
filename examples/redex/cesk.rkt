@@ -4,6 +4,7 @@
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" δ)
          (only-in "s-iswim.rkt" S-ISWIM FV))
+(provide CESK ⊢->cesk mkCESK)
 
 (module+ test (require rackunit))
 
