@@ -32,3 +32,4 @@
 * [9.5 The CS Machine with GC](cs+gc.rkt)
 * [9.5 The CESK Machine with GC](cesk+gc.rkt)
 * [10.1 Simply Typed ISWIM](st-iswim.rkt)
+* [10.3 Recursive Simply Typed ISWIM](rec-st-iswim.rkt)

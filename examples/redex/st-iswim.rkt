@@ -2,21 +2,23 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/monad
          (only-in racket/match define-match-expander)
-         (only-in "iswim.rkt" [FV orig-FV] [subst orig-subst] [v orig-v] δ))
+         (only-in "iswim.rkt" [FV orig-FV] [subst orig-subst]
+                  [v orig-v] [δ orig-δ]))
+(provide ST-ISWIM FV subst ℬ Δ ⊢ v δ)
 
 (module+ test (require rackunit))
 
 ;;=============================================================================
 ;; 10.1 Simply Typed ISWIM
 
-(module BASE-T-ISWIM racket/base
+(module BASE-ST-ISWIM racket/base
   (require lightstep/base lightstep/syntax)  
-  (provide BASE-T-ISWIM)
+  (provide BASE-ST-ISWIM)
 
   (define (b? . _)  (error "to be implemented"))
   (define (B? . _)  (error "to be implemented"))
   (define (oⁿ? . _) (error "to beimplemented"))
-  (define-language BASE-T-ISWIM
+  (define-language BASE-ST-ISWIM
     [M ∷=
        X
        `(λ [,X : ,T] ,M)
@@ -32,9 +34,9 @@
 
     [Γ ∷= (? map? X→T)]))
 
-(require (submod "." BASE-T-ISWIM))
+(require (submod "." BASE-ST-ISWIM))
 
-(define-language T-ISWIM #:super BASE-T-ISWIM
+(define-language ST-ISWIM #:super BASE-ST-ISWIM
   [B ∷= 'num]
   [b ∷= (? number?)]
   [oⁿ ∷= (? o¹?) (? o²?)]
@@ -119,6 +121,13 @@
             `(,V ,□)
             `(,□ ,M)
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
+
+(define/match (δ o bs) #:super orig-δ
+  [('iszero `(0))
+   '(λ [x : num] (λ [y : num] x))]
+  [('iszero `(,(? number? n)))
+   #:when (not (zero? n))
+   '(λ [x : num] (λ [y : num] y))])
 
 (define-reduction (v) #:super [(orig-v)]
   [`((λ [,X : ,T] ,M) ,V)
