@@ -29,12 +29,18 @@
              #:when (regexp-match #px"-{3,}"
                                   (symbol->string (syntax-e #'x)))))
 
-  (define-splicing-syntax-class options
-    (pattern (~seq (~alt (~optional (~seq #:forms ([pat #:where . rhs] ...))
-                                    #:name "#:forms option"
-                                    #:defaults ([(pat 1) '()]
-                                                [(rhs 1) '()])))
-                   ...)))
+  (define-splicing-syntax-class (options rid)
+    (pattern (~seq (~alt (~optional
+                          (~seq #:forms ((~or* (~datum ....) [p₀ #:where . r₀])
+                                         [p #:where . r] ...))
+                          #:name "#:forms option"
+                          #:defaults ([p₀ #'`(,i:i → ,o:o)]
+                                      [r₀ #`(o ← (#,rid i))]
+                                      [(p 1) '()]
+                                      [(r 1) '()])))
+                   ...)
+             #:with (pat ...) #'(p₀ p ...)
+             #:with (rhs ...) #'(r₀ r ...)))
 
   (define (name&mode id)
     (define id-str (symbol->string (syntax-e id)))
@@ -62,7 +68,9 @@
       ;;  #'(void)]
 
       [((p₀ p₁ ...) (f₀ f₁ ...))
-       (match-form/list #'(p₁ ...) #'(f₁ ...) (match-form #'p₀ #'f₀ σ))]
+       (match (match-form #'p₀ #'f₀ σ)
+         [`(ERR ,msg) `(ERR ,msg)]
+         [σ′ (match-form/list #'(p₁ ...) #'(f₁ ...) σ′)])]
 
       [_ (err)]))
 
@@ -94,8 +102,9 @@
       ;;  #'(void)]
 
       [((qp₀ qp₁ ...) (f₀ f₁ ...))
-       (match-form/quasi #'(qp₁ ...) #'(f₁ ...)
-                         (match-form/quasi #'qp₀ #'f₀ σ))]
+       (match (match-form/quasi #'qp₀ #'f₀ σ)
+         [`(ERR ,msg) `(ERR ,msg)]
+         [σ′ (match-form/quasi #'(qp₁ ...) #'(f₁ ...) σ′)])]
 
       [(b:boolean b′)
        (if (equal? (syntax->datum #'b) (syntax->datum #'b′)) σ (err))]
@@ -130,7 +139,9 @@
        (match-form/list #'(p ...) #'(f ...) σ)]
 
       [((cons p₀ p₁) (cons f₀ f₁))
-       (match-form #'p₁ #'f₁ (match-form #'p₀ #'f₀ σ))]
+       (match (match-form #'p₀ #'f₀ σ)
+         [`(ERR ,msg) `(ERR ,msg)]
+         [σ′ (match-form #'p₁ #'f₁ σ′)])]
       ;; =============================================================
 
       ;; necessary?
@@ -138,7 +149,9 @@
        (for/fold ([σ σ])
                  ([pp (syntax->list #'(p  ...))]
                   [ff (syntax->list #'(f ...))])
-         (match-form pp ff σ))]
+         (match σ
+           [`(ERR ,msg) `(ERR ,msg)]
+           [σ′ (match-form pp ff σ′)]))]
 
       [(x:id f)
        (match (name&mode #'x)
@@ -202,7 +215,7 @@
   (syntax-parse stx
     [(_ (rid:id param:id ...)
         ropts:roptions
-        opts:options
+        (~var opts (options #'rid))
         [frm ...
          _:hbar (~optional rnam:string
                            #:defaults ([rnam (gen-rname #'rid 'r)]))
@@ -252,7 +265,7 @@
   (check-equal? (step-r (cons 1 2)) (set 1))
 
   (define-inference (r2)
-    #:forms ([`(,I:i → ,O:o) #:where O ← (r2 I)])
+    ;#:forms ([`(,I:i → ,O:o) #:where O ← (r2 I)])
 
     [`(,(cons a b) → ,(cons a′ d′))  ;; TODO `(,a → (,a′ . ,d′))
      ------------------------------ "caar"
@@ -270,7 +283,7 @@
 
 
   (define-inference (r3)
-    #:forms ([`(,I:i → ,O:o) #:where O ← (r3 I)])
+    ;#:forms ([`(,I:i → ,O:o) #:where O ← (r3 I)])
 
     [`(,(cons a b) → (,a′ . ,d′))
      ------------------------------ "caar"
@@ -287,7 +300,7 @@
                 (set 1 (cons 1 2) (cons (cons 1 2) 3)))
 
   (define-inference (r4)
-    #:forms ([`(,I:i → ,O:o) #:where O ← (r4 I)])
+    ;#:forms ([`(,I:i → ,O:o) #:where O ← (r4 I)])
 
     [`(,(cons a b) → ,c)
      `(,c → ,d)

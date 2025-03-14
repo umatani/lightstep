@@ -1,5 +1,5 @@
 #lang racket
-(require lightstep/base lightstep/syntax
+(require lightstep/base lightstep/syntax lightstep/inference
          (only-in "design01.rkt" [subst LAM:subst])
          (only-in "design02.rkt" -->PCF₀)
          (only-in "design03.rkt" PCF₂ E -->₂ -->PCF₃))
@@ -19,8 +19,12 @@
 (define (f x) `(+ ,x ,x))
 (define (g x) `(<= 0 ,x))
 
-(define-reduction (-->₃) #:super [(-->₂)]
-  [`(g ,x) (g x) "g"])
+;; ちなみに，下の簡潔な例で，Redexとは異なり，quasiquote, unquote
+;; を明示的に書くRacketのパターンの美しさが際立つ．
+;; xは常にメタ変数を意味することや，gは両方の世界にありそれぞれどちらに属するかが一目瞭然．
+(define-inference (-->₃) #:super [(-->₂)]
+  [------------------ "g"
+   `((g ,x) → ,(g x))])
 
 (module+ test
   ;(printf "----- -->₃ ------------\n")
@@ -44,7 +48,7 @@
   [(`(fix ,M′) X M)
    `(fix ,(subst M′ X M))])
 
-(define-reduction (-->PCF₄) #:super [(-->PCF₃)])
+(define-inference (-->PCF₄) #:super [(-->PCF₃)])
 (define step-->PCF₄ (call-with-values (λ () (-->PCF₄)) compose1))
 (define -->>PCF₄ (compose1 car (repeated step-->PCF₄)))
 

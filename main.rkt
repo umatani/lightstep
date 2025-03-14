@@ -25,6 +25,13 @@
   (require (submod lightstep/examples/sac24/reduction/design05 test))
   (require (submod lightstep/examples/sac24/reduction/design06 test))
   (require (submod lightstep/examples/sac24/reduction/design07 test))
+  (require (submod lightstep/examples/sac24/inference/design01 test))
+  (require (submod lightstep/examples/sac24/inference/design02 test))
+  (require (submod lightstep/examples/sac24/inference/design03 test))
+  (require (submod lightstep/examples/sac24/inference/design04 test))
+  (require (submod lightstep/examples/sac24/inference/design05 test))
+  (require (submod lightstep/examples/sac24/inference/design06 test))
+  (require (submod lightstep/examples/sac24/inference/design07 test))
 
   ;; winskel
   (require (submod lightstep/examples/winskel/imp test))

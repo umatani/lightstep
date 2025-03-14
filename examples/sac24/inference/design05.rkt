@@ -1,6 +1,6 @@
 #lang racket
 (require (for-syntax syntax/parse)
-         lightstep/base lightstep/syntax
+         lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/random random-ref)
          (only-in "design03.rkt" PCF₂)
          (only-in "design04.rkt" [subst orig:subst]))
@@ -56,30 +56,41 @@
 (define (select es)
   (random-ref es))
 
-(define-reduction (-->PCF₅ ≔<1> ≔<2>)
-  #:do [(define-reduction (PCF₅)
-          [`((λ (,X) ,M) ,V) (subst M X V) "β"]
-          [`(+ ,N₁ ,N₂) (+ N₁ N₂) "add"]
-          [`(<= ,N₁ ,N₂)
-           M ≔<1> (<= N₁ N₂)
-           M "le"]
-          [`(if #f ,M₂ ,M₃) M₃ "if-false"]
-          [`(if ,V₁ ,M₂ ,M₃)
-           #:when (not (false? V₁))
-           M₂ "if-true"]
-          [`(fix (λ (,X) ,M))
-           X′ ≔<1> (gensym X)
-           `((λ (,X) ,M) (λ (,X′) ((fix (λ (,X) ,M)) ,X′)))
-           "fix"]
-          [`(amb ,M ...)
-           M′ ≔<2> (select M)
-           M′
-           "amb"])
+(define-inference (-->PCF₅ ≔<1> ≔<2>)
+  #:do [(define-inference (PCF₅)
+          [------------------------------------ "β"
+           `(((λ (,X) ,M) ,V) → ,(subst M X V))]
+
+          [--------------------------- "add"
+           `((+ ,N₁ ,N₂) → ,(+ N₁ N₂))]
+
+          [M ≔<1> (<= N₁ N₂)
+           -------------------- "le"
+           `((<= ,N₁ ,N₂) → ,M)]
+
+          [------------------------ "if-false"
+           `((if #f ,M₂ ,M₃) → ,M₃)]
+
+          [#:when (not (false? V₁))
+           ------------------------- "if-true"
+           `((if ,V₁ ,M₂ ,M₃) → ,M₂)]
+
+          [X′ ≔<1> (gensym X)
+           ---------------------------------------- "fix"
+           `((fix (λ (,X) ,M))
+             → ((λ (,X) ,M)
+                (λ (,X′) ((fix (λ (,X) ,M)) ,X′))))]
+
+          [M′ ≔<2> (select M)
+           --------------------- "amb"
+           `((amb ,M ...) → ,M′)])
+
         (define →PCF₅ (reducer-of (PCF₅)))]
-  [(E m)
-   M′ ← (→PCF₅ m)
-   (E M′)
-   "EC"])
+  #:forms (.... [`(,i →₅ ,o) #:where o ← (→PCF₅ i)])
+
+  [`(,m →₅ ,M′)
+   ------------------- "EC"
+   `(,(E m) → ,(E M′))])
 
 ;; One benefit of parameterization over non-lexical extension is ...
 (define step-->PCF₅ (call-with-values (λ () (-->PCF₅ ≔ ≔)) compose1))
