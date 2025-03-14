@@ -16,7 +16,8 @@
                   PowerO run-StateT define-monad with-monad
                   ID ReaderT WriterT StateT FailT NondetT)
          (only-in "nondet.rkt" NondetM nondet-match))
-(provide ReduceM define-reduction repeated reducer-of mrun-of)
+(provide ReduceM define-reduction repeated reducer-of mrun-of
+         (for-syntax options gen-rname))
 
 (define ReduceM NondetM)
 
@@ -24,24 +25,29 @@
 ;; define-reduction
 
 (begin-for-syntax
+  
   (define-splicing-syntax-class options
-    (pattern (~seq (~alt (~optional (~seq #:monad m)
-                                    #:name "#:monad option")
-                         (~optional (~seq #:mrun mr)
-                                    #:name "#:mrun option")
-                         (~optional (~seq #:super [(sname:id sarg ...) ...])
-                                    #:name "#:super option")
-                         (~optional (~seq #:import [sig-spec ...])
-                                    #:name "#:import option")
+    (pattern (~seq (~alt (~optional (~seq #:monad monad)
+                                    #:name "#:monad option"
+                                    #:defaults ([monad #'#f]))
+                         (~optional (~seq #:mrun mrun)
+                                    #:name "#:mrun option"
+                                    #:defaults ([mrun #'#f]))
+                         (~optional (~seq #:super [(sup-name:id sup-arg ...)
+                                                   ...])
+                                    #:name "#:super option"
+                                    #:defaults ([(sup-name 1) '()]
+                                                [(sup-arg  2) '()]))
+                         (~optional (~seq #:import [import ...])
+                                    #:name "#:import option"
+                                    #:defaults ([(import 1) '()]))
                          (~optional (~seq #:do [do-body ...])
-                                    #:name "#:do option"))
-                   ...)
-             #:with monad     #'(~? m                 #f)
-             #:with mrun      #'(~? mr                #f)
-             #:with sup-names  #'(~? (sname ...)      ())
-             #:with sup-argss  #'(~? ((sarg ...) ...) ())
-             #:with imports   #'(~? (sig-spec ...)    ())
-             #:with do-bodies #'(~? (do-body ...)     ())))
+                                    #:name "#:do option"
+                                    #:defaults ([(do-body 1) '()])))
+                   ...)))
+
+  (define (gen-rname stx sym)
+    (datum->syntax stx (symbol->string (gensym sym))))
 
   (define (replace-lexical-context lctx stx)
     (datum->syntax lctx (syntax->datum stx)))
@@ -96,8 +102,8 @@
          (cond
            [(check-duplicates (map syntax-e (syntax->list #'(rnam ... ...))))
             => (λ (rnam) (raise-syntax-error
-                           #f (format "duplicate rule ~s" rnam)
-                           orig-stx ruless))]
+                          #f (format "duplicate rule ~s" rnam)
+                          orig-stx ruless))]
            [else #'(rule ... ...)])]))
     (define (merge-do-bodies do-bodiess) ;; TODO: do something?
       (syntax-parse do-bodiess
@@ -109,8 +115,8 @@
       (cond
         [(check-duplicate-identifier (syntax->list rids))
          => (λ (id) (raise-syntax-error
-                      #f (format "duplicate super name ~s" (syntax-e id))
-                      orig-stx rids))]
+                     #f (format "duplicate super name ~s" (syntax-e id))
+                     orig-stx rids))]
         [else (with-syntax ([((M mrun imports rules do-bodies) ...)
                              (stx-map inst-reduction-info rids argss)])
                 (list (merge-M         #'(M ...))
@@ -145,14 +151,11 @@
       [_ (raise-syntax-error 'derive-mrun "unknown monad" M)])))
 
 (define-syntax (define-reduction stx)
-  (define (gen-rnam stx sym)
-    (datum->syntax stx (symbol->string (gensym sym))))
-
   (syntax-parse stx
     [(_ (rid:id param:id ...)
         opts:options
         [pat body ... (~and e (~not :string))
-             (~optional rnam:string #:defaults ([rnam (gen-rnam #'rid 'r)]))]
+             (~optional rnam:string #:defaults ([rnam (gen-rname #'rid 'r)]))]
         ...)
      #:do [(define (rescope stx)
              (replace-lexical-context #'rid stx))
@@ -162,7 +165,7 @@
                  [(_ _ _ rnam _ ...)
                   (∈ (syntax-e #'rnam) rnams)])))]
 
-     #:with (sup-rid ...) #'opts.sup-names
+     #:with (sup-rid ...) #'(opts.sup-name ...)
 
      #:with (M-of-super
              mrun-of-super
@@ -171,7 +174,7 @@
              do-bodies-of-super) (get-supers-info
                                   stx
                                   #'(sup-rid ...)
-                                  #'opts.sup-argss)
+                                  #'((opts.sup-arg ...) ...))
 
      #:with M (if (syntax-e #'opts.monad)
                 #'opts.monad
@@ -186,7 +189,7 @@
                    [else (derive-mrun #'M)])
 
      #:with imports (stx-map rescope #`(#,@#'imports-of-super
-                                        #,@#'opts.imports))
+                                        #,@#'(opts.import ...)))
 
      #:with (sup-rule ...) (let ([rnams (list→set
                                          (syntax->datum #'(rnam ...)))])
@@ -199,7 +202,7 @@
 
      #:with (do-body ...) (stx-map rescope
                                    #`(#,@#'do-bodies-of-super
-                                      #,@#'opts.do-bodies))
+                                      #,@#'(opts.do-body ...)))
      
      #:with M′ (format-id #'rid "~a" (gensym 'M))
      #:with inst-xformer (escape-elipsis
