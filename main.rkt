@@ -2,24 +2,29 @@
 
 (require "base.rkt"
          "syntax.rkt"
-         "transformers.rkt")
+         "transformers.rkt"
+         "inference.rkt")
 (provide (all-from-out "base.rkt")
          (all-from-out "syntax.rkt")
-         (all-from-out "transformers.rkt"))
+         (all-from-out "transformers.rkt")
+         (all-from-out "inference.rkt"))
 
 (module+ test
   (require (submod lightstep/nondet test))
   (require (submod lightstep/transformers test))
   (require (submod lightstep/syntax test))
+  (require (submod lightstep/inference test))
 
   (require (submod lightstep/examples/unit-tests scope2))
 
   ;; SAC'24
-  (require (submod lightstep/examples/design1 test))
-  (require (submod lightstep/examples/design2 test))
-  (require (submod lightstep/examples/design3 test))
-  (require (submod lightstep/examples/design4 test))
-  (require (submod lightstep/examples/design5 test))
+  (require (submod lightstep/examples/sac24/reduction/design01 test))
+  (require (submod lightstep/examples/sac24/reduction/design02 test))
+  (require (submod lightstep/examples/sac24/reduction/design03 test))
+  (require (submod lightstep/examples/sac24/reduction/design04 test))
+  (require (submod lightstep/examples/sac24/reduction/design05 test))
+  (require (submod lightstep/examples/sac24/reduction/design06 test))
+  (require (submod lightstep/examples/sac24/reduction/design07 test))
 
   ;; winskel
   (require (submod lightstep/examples/winskel/imp test))

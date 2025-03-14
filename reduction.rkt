@@ -16,7 +16,7 @@
                   PowerO run-StateT define-monad with-monad
                   ID ReaderT WriterT StateT FailT NondetT)
          (only-in "nondet.rkt" NondetM nondet-match))
-(provide ReduceM define-reduction repeated reducer-of mrun-of
+(provide ReduceM define-reduction repeated reducer-of mrun-of red^
          (for-syntax options gen-rname))
 
 (define ReduceM NondetM)
@@ -237,6 +237,8 @@
 ;;=============================================================================
 ;; inst-reduction
 
+(define-signature red^ (mrun reducer))
+
 (define-syntax (inst-reduction stx)
   (syntax-parse stx
     [(_ rid:id arg ...)
@@ -244,10 +246,11 @@
              (reduction-desc mrun import-sigs inst-xformer)
              ((syntax-local-value #'rid)))]
      #:with (body ...) #`((import #,@import-sigs)
-                          (export)
+                          (export red^)
                           (define (reducer ς)
                             #,(inst-xformer #'(reducer arg ... ς)))
-                          (values #,mrun reducer))
+                          (define mrun #,mrun)
+                          (values mrun reducer))
      ;; TODO: invoke-unit with import-sig-specs?
      (if (null? (syntax->list import-sigs))
        #'(invoke-unit (unit body ...))

@@ -19,7 +19,8 @@
                   define-reduction
                   repeated
                   reducer-of
-                  mrun-of))
+                  mrun-of
+                  red^))
 (provide (all-from-out "reduction.rkt"))
 
 ;; (require "syntax.rkt")
