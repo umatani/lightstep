@@ -2,34 +2,34 @@
 
 ## List of Examples
 
-* 1 B language ([reduction](reduction/b.rkt)/inference)
-* 3 λ-Calculus ([reduction](reduction/lam.rkt)/inference)
-* 4 ISWIM ([reduction](reduction/iswim.rkt)/inference)
-* 5 An Abstract Syntax Machine ([reduction](reduction/iswim-std.rkt)/inference)
-* 6.1 The CC Machine ([reduction](reduction/cc.rkt)/inference)
-* 6.2 The SCC Machine ([reduction](reduction/scc.rkt)/inference)
-* 6.3 The CK Machine ([reduction](reduction/ck.rkt)/inference)
-* 6.4 The CEK Machine ([reduction](reduction/cek.rkt)/inference)
-* 7.1 SECD Machine ([reduction](reduction/secd.rkt)/inference)
-* Exercise 7.1 SECD machine with byte-code compiler ([reduction](reduction/secd2.rkt)/inference)
-* Exercise 7.4 SECD machine with TCO (Tail Call Optimization) ([reduction](reduction/secd-tco.rkt)/inference)
-* Exercise 7.5 CEK with SS (Safe for Space) ([reduction](reduction/cek-ss.rkt)/inference)
-* Exercise 7.7 SECD with TCO (Tail Call Optimization) and SS (Safe for Space) ([reduction](reduction/secd-tco-ss.rkt)/inference)
-* 8.1 Error ISWIM ([reduction](reduction/e-iswim.rkt)/inference)
-* 8.1 Standard Reduction for Error ISWIM ([reduction](reduction/e-iswim-std.rkt)/inference)
-* 8.3 Handler ISWIM ([reduction](reduction/h-iswim.rkt)/inference)
-* 8.3 Standard Reduction for Handler ISWIM ([reduction](reduction/h-iswim-std.rkt)/inference)
-* 8.3 The Handler CC Machine ([reduction](reduction/cc+h.rkt)/inference)
-* 8.3 The CHC Machine ([reduction](reduction/chc.rkt)/inference)
-* 8.4 The Control ISWIM ([reduction](reduction/c-iswim.rkt)/inference)
-* 8.4 Standard Reduction for Control ISWIM ([reduction](reduction/c-iswim-std.rkt)/inference)
-* 9.2 The CS Machine ([reduction](reduction/cs.rkt)/inference)
-* 9.3 The State ISWIM Calculus ([reduction](reduction/s-iswim.rkt)/inference)
-* 9.3 Standard Reduction for State ISWIM ([reduction](reduction/s-iswim-std.rkt)/inference)
-* 9.3 Revised Standard Reduction for State ISWIM ([reduction](reduction/s-iswim-std2.rkt)/inference)
-* 9.3 The CS Machine extended with letrec construct ([reduction](reduction/cs2.rkt)/inference)
-* 9.4 The CESK Machine ([reduction](reduction/cesk.rkt)/inference)
-* 9.5 The CS Machine with GC ([reduction](reduction/cs+gc.rkt)/inference)
-* 9.5 The CESK Machine with GC ([reduction](reduction/cesk+gc.rkt)/inference)
-* 10.1 Simply Typed ISWIM ([reduction](reduction/st-iswim.rkt)/inference)
-* 10.3 Recursive Simply Typed ISWIM ([reduction](reduction/rec-st-iswim.rkt)/inference)
+* 1 B language [[reduction](reduction/b.rkt)/inference]
+* 3 λ-Calculus [[reduction](reduction/lam.rkt)/inference]
+* 4 ISWIM [[reduction](reduction/iswim.rkt)/inference]
+* 5 An Abstract Syntax Machine [[reduction](reduction/iswim-std.rkt)/inference]
+* 6.1 The CC Machine [[reduction](reduction/cc.rkt)/inference]
+* 6.2 The SCC Machine [[reduction](reduction/scc.rkt)/inference]
+* 6.3 The CK Machine [[reduction](reduction/ck.rkt)/inference]
+* 6.4 The CEK Machine [[reduction](reduction/cek.rkt)/inference]
+* 7.1 SECD Machine [[reduction](reduction/secd.rkt)/inference]
+* Exercise 7.1 SECD machine with byte-code compiler [[reduction](reduction/secd2.rkt)/inference]
+* Exercise 7.4 SECD machine with TCO (Tail Call Optimization) [[reduction](reduction/secd-tco.rkt)/inference]
+* Exercise 7.5 CEK with SS (Safe for Space) [[reduction](reduction/cek-ss.rkt)/inference]
+* Exercise 7.7 SECD with TCO (Tail Call Optimization) and SS (Safe for Space) [[reduction](reduction/secd-tco-ss.rkt)/inference]
+* 8.1 Error ISWIM [[reduction](reduction/e-iswim.rkt)/inference]
+* 8.1 Standard Reduction for Error ISWIM [[reduction](reduction/e-iswim-std.rkt)/inference]
+* 8.3 Handler ISWIM [[reduction](reduction/h-iswim.rkt)/inference]
+* 8.3 Standard Reduction for Handler ISWIM [[reduction](reduction/h-iswim-std.rkt)/inference]
+* 8.3 The Handler CC Machine [[reduction](reduction/cc+h.rkt)/inference]
+* 8.3 The CHC Machine [[reduction](reduction/chc.rkt)/inference]
+* 8.4 The Control ISWIM [[reduction](reduction/c-iswim.rkt)/inference]
+* 8.4 Standard Reduction for Control ISWIM [[reduction](reduction/c-iswim-std.rkt)/inference]
+* 9.2 The CS Machine [[reduction](reduction/cs.rkt)/inference]
+* 9.3 The State ISWIM Calculus [[reduction](reduction/s-iswim.rkt)/inference]
+* 9.3 Standard Reduction for State ISWIM [[reduction](reduction/s-iswim-std.rkt)/inference]
+* 9.3 Revised Standard Reduction for State ISWIM [[reduction](reduction/s-iswim-std2.rkt)/inference]
+* 9.3 The CS Machine extended with letrec construct [[reduction](reduction/cs2.rkt)/inference]
+* 9.4 The CESK Machine [[reduction](reduction/cesk.rkt)/inference]
+* 9.5 The CS Machine with GC [[reduction](reduction/cs+gc.rkt)/inference]
+* 9.5 The CESK Machine with GC [[reduction](reduction/cesk+gc.rkt)/inference]
+* 10.1 Simply Typed ISWIM [[reduction](reduction/st-iswim.rkt)/inference]
+* 10.3 Recursive Simply Typed ISWIM [[reduction](reduction/rec-st-iswim.rkt)/inference]
