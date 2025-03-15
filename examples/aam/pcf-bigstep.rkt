@@ -1,6 +1,6 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax
-         (only-in lightstep/monad sequence)
+         (only-in lightstep/monad mapM)
          (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" PCF δ))
 (provide PCF⇓)
@@ -54,7 +54,7 @@
   [`((,M₀ ,M₁ ...) ,(? ρ? ρ))
    ; where
    O ← (⇓ `(,M₀ ,ρ))
-   `(,N₁ ...) ← (sequence (map (λ (m) (⇓ `(,m ,ρ))) M₁))
+   `(,N₁ ...) ← (mapM (λ (m) (⇓ `(,m ,ρ))) M₁)
    N ≔ (δ `(,O ,@N₁))
    ; -->
    N]
@@ -62,7 +62,7 @@
   [`((,M₀ ,M₁ ...) ,(? ρ? ρ))
    ; where
    `((λ ([,X₁ : ,T] ...) ,M) ,(? ρ? ρ₁)) ← (⇓ `(,M₀ ,ρ))
-   `(,V₁ ...) ← (sequence (map (λ (m) (⇓ `(,m ,ρ))) M₁))
+   `(,V₁ ...) ← (mapM (λ (m) (⇓ `(,m ,ρ))) M₁)
    V ← (⇓ `(,M ,(apply mmap-ext ρ₁ (map list X₁ V₁))))
    ; -->
    V]
@@ -71,7 +71,7 @@
    ; where
    (and f `((μ [,X : ,T₁] (λ ([,X₁ : ,T₂] ...) ,M))
             ,(? ρ? ρ₁))) ← (⇓ `(,M₀ ,ρ))
-   `(,V₁ ...) ← (sequence (map (λ (m) (⇓ `(,m ,ρ))) M₁))
+   `(,V₁ ...) ← (mapM (λ (m) (⇓ `(,m ,ρ))) M₁)
    V ← (⇓ `(,M ,(apply mmap-ext ρ₁ `[,X ,f] (map list X₁ V₁))))
    ; -->
    V])

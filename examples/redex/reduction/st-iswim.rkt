@@ -85,7 +85,7 @@
    T′]
 
   [`(,Γ (,(? oⁿ? oⁿ) ,M ...))
-   `(,B ...) ← (sequence (map (λ (m) (⊢ `(,Γ ,m))) M))
+   `(,B ...) ← (mapM (λ (m) (⊢ `(,Γ ,m))) M)
    (Δ oⁿ B)])
 
 (define step-⊢ (call-with-values (λ () (⊢)) compose1))

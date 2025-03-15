@@ -1,7 +1,7 @@
 #lang racket/base
 (require (for-syntax racket/base)
          lightstep/base lightstep/syntax
-         (only-in lightstep/monad sequence)
+         (only-in lightstep/monad mapM)
          (prefix-in lam: (only-in "lam.rkt" LAM FV subst)))
 (provide ISWIM FV subst βv-rule δ δ-rule v Cxt)
 
@@ -168,7 +168,7 @@
    M′ ← (↪v M)
    `(λ ,X ,M′)]
   [`(,(? oⁿ? oⁿ) ,M ...)
-   `(,M′ ...) ← (sequence (map ↪v M))
+   `(,M′ ...) ← (mapM ↪v M)
    `(,oⁿ ,@M′)])
 
 (define step-↪v (call-with-values (λ () (↪v)) compose1))

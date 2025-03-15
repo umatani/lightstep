@@ -1,7 +1,7 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax
-         (only-in lightstep/monad sequence)
+         (only-in lightstep/monad mapM)
          (only-in racket/list split-at)
          (only-in racket/sequence sequence-map)
          (only-in racket/match match-define define-match-expander)
@@ -91,7 +91,7 @@
 
   [`(,Γ (,M₀ ,M₁ ...))
    `(,T₁  ... → ,T) ← (⊢ `(,Γ ,M₀))
-   `(,T₁′ ...)      ← (sequence (for/list ([M M₁]) (⊢ `(,Γ ,M))))
+   `(,T₁′ ...)      ← (mapM (λ (m) (⊢ `(,Γ ,m))) M₁)
    #:when (andmap equal? T₁ T₁′)
    T
    "app"]
