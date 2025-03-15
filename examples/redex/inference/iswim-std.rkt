@@ -1,6 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
-         lightstep/base lightstep/syntax
+         lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ v))
 
@@ -24,11 +24,12 @@
             `(,□ ,M)
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
-(define-reduction (⊢->v)
-  #:do [(define →v (reducer-of (v)))]
-  [(E m)
-   M′ ← (→v m)
-   (E M′)])
+(define-inference (⊢->v)
+  #:do [(define rv (reducer-of (v)))]
+  #:forms (.... [`(,i →v ,o) #:where o ← (rv i)])
+  [`(,m →v ,M′)
+   -------------------------
+   `(,(E m) → ,(E M′))])
 
 (define step⊢->v (call-with-values (λ () (⊢->v)) compose1))
 (define ⊢->>v (compose1 car (repeated step⊢->v)))

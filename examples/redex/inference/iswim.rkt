@@ -1,6 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base)
-         lightstep/base lightstep/syntax
+         lightstep/base lightstep/syntax lightstep/inference
          (only-in lightstep/monad sequence)
          (prefix-in lam: (only-in "lam.rkt" LAM FV subst)))
 (provide ISWIM FV subst βv-rule δ δ-rule v Cxt)
@@ -52,9 +52,9 @@
 ;;=============================================================================
 ;; 4.2  Calculating with ISWIM
 
-(define-reduction (βv-rule)
-  [`((λ ,X ,M) ,V)
-   (subst M X V)])
+(define-inference (βv-rule)
+  [----------------------------------
+   `(((λ ,X ,M) ,V) → ,(subst M X V))])
 
 (define/match (δ o bs)
   [('add1 `(,(? number? m)))
@@ -80,11 +80,11 @@
   (let ([X ((symbol-not-in (FV M) (FV N)) 'if0)])
     `((((iszero ,L) (λ ,X ,M)) (λ ,X ,N)) 0)))
 
-(define-reduction (δ-rule δ)
-  [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
-   (δ oⁿ b)])
+(define-inference (δ-rule δ)
+  [------------------------------------------
+   `((,(? oⁿ? oⁿ) ,(? b? b) ...) → ,(δ oⁿ b))])
 
-(define-reduction (v) #:super [(βv-rule) (δ-rule δ)])
+(define-inference (v) #:super [(βv-rule) (δ-rule δ)])
 
 (define step-v (call-with-values (λ () (v)) compose1))
 
@@ -99,10 +99,10 @@
                      `(,V ,(? M? □))
                      `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...)))])))
 
-(define-reduction (-->v) #:super [(v)]
-  [(Cxt m)
-   M′ ← (-->v m)
-   (Cxt M′)])
+(define-inference (-->v) #:super [(v)]
+  [`(,m → ,M′)
+   -----------------------
+   `(,(Cxt m) → ,(Cxt M′))])
 
 (define step-->v (call-with-values (λ () (-->v)) compose1))
 (define -->>v (compose1 car (repeated step-->v)))
@@ -152,24 +152,30 @@
 ;;=============================================================================
 ;; 4.6  Consistency
 
-(define-reduction (↪v)
-  [M M]
-  [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
-   (δ oⁿ b)]
-  [`((λ ,X ,M) ,V)
-   M′ ← (↪v M)
-   V′ ← (↪v V)
-   (subst M′ X V′)]
-  [`(,M₁ ,M₂)
-   M₁′ ← (↪v M₁)
-   M₂′ ← (↪v M₂)
-   `(,M₁′ ,M₂′)]
-  [`(λ ,X ,M)
-   M′ ← (↪v M)
-   `(λ ,X ,M′)]
-  [`(,(? oⁿ? oⁿ) ,M ...)
-   `(,M′ ...) ← (sequence (map ↪v M))
-   `(,oⁿ ,@M′)])
+(define-inference (↪v)
+  #:forms ([`(,i:i ↪ ,o:o) #:where o ← (↪v i)])
+
+  [----------
+   `(,M ↪ ,M)]
+
+  [------------------------------------------
+   `((,(? oⁿ? oⁿ) ,(? b? b) ...) ↪ ,(δ oⁿ b))]
+
+  [   `(,M ↪ ,M′)      `(,V ↪ ,V′)
+   ------------------------------------
+   `(((λ ,X ,M) ,V) ↪ ,(subst M′ X V′))]
+
+  [`(,M₁ ↪ ,M₁′)    `(,M₂ ↪ ,M₂′)
+   -------------------------------
+     `((,M₁ ,M₂) ↪ (,M₁′ ,M₂′))   ]
+
+  [       `(,M ↪ ,M′)
+   -------------------------
+   `((λ ,X ,M) ↪ (λ ,X ,M′))]
+
+  [`(,M′ ...) ← (sequence (map ↪v M))
+   ------------------------------------
+   `((,(? oⁿ? oⁿ) ,M ...) ↪ (,oⁿ ,@M′))])
 
 (define step-↪v (call-with-values (λ () (↪v)) compose1))
 

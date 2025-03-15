@@ -134,6 +134,8 @@
 
       [((quasiquote qp) (quasiquote qf))
        (match-form/quasi #'qp #'qf σ)]
+      [((quasiquote qp) (quote qf))
+       (match-form/quasi #'qp #'qf σ)]
 
       [((list p ...) (list f ...))
        (match-form/list #'(p ...) #'(f ...) σ)]
@@ -203,7 +205,7 @@
 
     (define out-expr
       (syntax-parse (free-id-table-values σₒ)
-        [() (raise-syntax-error #f "no output specified in #:forms" main-pat)]
+        [() #'#t]
         [(form) #'form]
         [(form ...) #'(list form ...)]))
 

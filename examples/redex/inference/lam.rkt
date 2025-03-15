@@ -1,6 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base)
-         lightstep/base lightstep/syntax)
+         lightstep/base lightstep/syntax lightstep/inference)
 (provide LAM FV subst α)
 
 (module+ test (require rackunit))
@@ -67,72 +67,73 @@
                      `(,(? M? □) ,M)
                      `(,M ,(? M? □)))])))
 
-(define-reduction (-->gen r)
-  [(Cxt m)
-   M′ ← (r m)
-   (Cxt M′)])
+(define-inference (-->gen r)
+  #:forms (.... [`(,i →ᵣ ,o) #:where o ← (r i)])
 
-(define-reduction (α)
-  [`(λ ,X₁ ,M)
-   X₂ ≔ ((symbol-not-in (FV M)) X₁)
-   `(λ ,X₂ ,(subst M X₁ X₂))
-   "α"])
+  [`(,m →ᵣ ,M′)
+   -----------------------
+   `(,(Cxt m) → ,(Cxt M′))])
+
+(define-inference (α)
+  [X₂ ≔ ((symbol-not-in (FV M)) X₁)
+   ---------------------------------------- "α"
+   `((λ ,X₁ ,M) → (λ ,X₂ ,(subst M X₁ X₂)))    ])
 
 (define step-α (call-with-values (λ () (α)) compose1))
 
-(define-reduction (-->α) #:super [(-->gen -->α)]
-  #:do [(define →α (reducer-of (α)))]
-  [M
-   M′ ← (→α M)
-   M′
-   "α"])
+(define-inference (-->α) #:super [(-->gen -->α)]
+  #:do [(define rα (reducer-of (α)))]
+  #:forms (.... [`(,i →α ,o) #:where o ← (rα i)])
+
+  [`(,M →α ,M′)
+   ------------ "α"
+   `(,M → ,M′)     ])
 
 (define step-->α (call-with-values (λ () (-->α)) compose1))
 
-(define-reduction (β)
-  [`((λ ,X ,M₁) ,M₂)
-   (subst M₁ X M₂)
-   "β"])
+(define-inference (β)
+  [-------------------------------------- "β"
+   `(((λ ,X ,M₁) ,M₂) → ,(subst M₁ X M₂))    ])
 
 (define step-β (call-with-values (λ () (β)) compose1))
 
-(define-reduction (-->β) #:super [(-->gen -->β)]
-  #:do [(define →β (reducer-of (β)))]
-  [M
-   M′ ← (→β M)
-   M′
-   "β"])
+(define-inference (-->β) #:super [(-->gen -->β)]
+  #:do [(define rβ (reducer-of (β)))]
+  #:forms (.... [`(,i →β ,o) #:where o ← (rβ i)])
+  
+  [`(,M →β ,M′)
+   ------------ "β"
+   `(,M → ,M′)     ])
 
 (define step-->β (call-with-values (λ () (-->β)) compose1))
 
-(define-reduction (η)
-  [`(λ ,X (,M ,X′))
-   #:when (eq? X X′)
+(define-inference (η)
+  [#:when (eq? X X′)
    #:when (not (∈ X (FV M)))
-   M
-   "η"])
+   ------------------------- "η"
+   `((λ ,X (,M ,X′)) → ,M)      ])
 
 (define step-η (call-with-values (λ () (η)) compose1))
 
-(define-reduction (-->η) #:super [(-->gen -->η)]
-  #:do [(define →η (reducer-of (η)))]
-  [M
-   M′ ← (→η M)
-   M′
-   "η"])
+(define-inference (-->η) #:super [(-->gen -->η)]
+  #:do [(define rη (reducer-of (η)))]
+  #:forms (.... [`(,i →η ,o) #:where o ← (rη i)])
+  [`(,M →η ,M′)
+   ------------ "η"
+   `(,M → ,M′)     ])
 
 (define step-->η (call-with-values (λ () (-->η)) compose1))
 
-(define-reduction (n) #:super [#;(α) (β) (η)])
+(define-inference (n) #:super [#;(α) (β) (η)])
 
 (define step-n (call-with-values (λ () (n)) compose1))
 
-(define-reduction (-->n) #:super [(-->gen -->n)]
-  #:do [(define →n (reducer-of (n)))]
-  [M
-   M′ ← (→n M)
-   M′
-   "n"])
+(define-inference (-->n) #:super [(-->gen -->n)]
+  #:do [(define rn (reducer-of (n)))]
+  #:forms (.... [`(,i →n ,o) #:where o ← (rn i)])
+  [`(,M →n ,M′)
+   ------------ "n"
+   `(,M → ,M′)     ])
 
 (define step-->n (call-with-values (λ () (-->n)) compose1))
 
@@ -238,28 +239,36 @@
 
 (define Ω '((λ x (x x)) (λ x (x x))))
 
-(define-reduction (-->n̅)
-  #:do [(define →β (reducer-of (β)))
-        (define →η (reducer-of (η)))]
-  [M
-   M′ ← (→β M)
-   M′]
-  [M
-   M′ ← (→η M)
-   M′]
-  [`(λ ,X ,M)
-   #:when (∅? (step-η `(λ ,X ,M)))
-   M′ ← (-->n̅ M)
-   `(λ ,X ,M′)]
-  [`(,M₁ ,M₂)
-   #:when (∅? (step-β `(,M₁ ,M₂)))
-   M₁′ ← (-->n̅ M₁)
-   `(,M₁′ ,M₂)]
-  [`(,M₁ ,M₂)
-   #:when (∅? (step-β `(,M₁ ,M₂)))
+(define-inference (-->n̅)
+  #:do [(define rβ (reducer-of (β)))
+        (define rη (reducer-of (η)))]
+  #:forms ([`(,i:i →n̅ ,o:o) #:where o ← (-->n̅ i)]
+           [`(,i   →β ,o  ) #:where o ← (rβ   i)]
+           [`(,i   →η ,o  ) #:where o ← (rη   i)])
+
+  [`(,M →β ,M′)
+   ------------
+   `(,M →n̅ ,M′)]
+
+  [`(,M →η ,M′)
+   ------------
+   `(,M →n̅ ,M′)]
+
+  [#:when (∅? (step-η `(λ ,X ,M)))
+   `(,M →n̅ ,M′)
+   -------------------------------
+   `((λ ,X ,M) →n̅ (λ ,X ,M′))     ]
+
+  [#:when (∅? (step-β `(,M₁ ,M₂)))
+   `(,M₁ →n̅ ,M₁′)
+   -------------------------------
+   `((,M₁ ,M₂) →n̅ (,M₁′ ,M₂))     ]
+
+  [#:when (∅? (step-β `(,M₁ ,M₂)))
    #:when (∅? (step-->n̅ M₁))
-   M₂′ ← (-->n̅ M₂)
-   `(,M₁ ,M₂′)])
+   `(,M₂ →n̅ ,M₂′)
+   -------------------------------
+   `((,M₁ ,M₂) →n̅ (,M₁ ,M₂′))     ])
 
 (define step-->n̅ (call-with-values (λ () (-->n̅)) compose1))
 
