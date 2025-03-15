@@ -10,14 +10,9 @@
 ;;=============================================================================
 ;; Utils
 
-(define-syntax (match? stx)
-  (syntax-parse stx
-    [(_ p x)
-     #'(match x
-         [p #t]
-         [_ #f])]))
+(define-syntax match? (syntax-parser [(_ p x) #'(match x [p #t] [_ #f])]))
 
-;; multi-map: A → 𝒫(B)
+;; multi-map: α → 𝒫(β)
 
 (define (mmap . bs)
   (match bs
@@ -58,7 +53,7 @@
     [`([,x ,t] ,@bs′) (mmap-ext1 (apply mmap-ext m bs′) x t)]))
 
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;=============================================================================
 ;; reachable? (useless)
 
 (struct Queueof (head tail) #:transparent #:mutable
@@ -92,7 +87,7 @@
       (if (queue-empty? wl)
         #f
         (begin
-          (for ([ς′ (in-set (→ (dequeue! wl)))]
+          (for ([ς′ (∈ (→ (dequeue! wl)))]
                 #:unless (r:set-member? Σ ς′))
             (enqueue! wl ς′)
             (r:set-add! Σ ς′))

@@ -54,12 +54,12 @@
 (define (Γ? Γ)
   (and (map? Γ)
        (for/and ([x  (dom Γ)]) (X? x))
-       (for/and ([ts (rng Γ)]) (for/and ([t (in-set ts)]) (T? t)))))
+       (for/and ([ts (rng Γ)]) (for/and ([t (∈ ts)]) (T? t)))))
 
 
 (define-reduction (⊢)
   [`(,Γ ,X)
-   T ← (for/monad+ ([T (in-set (mmap-lookup Γ X))])
+   T ← (for/monad+ ([T (∈ (mmap-lookup Γ X))])
          (return T))
    T
    "var"]

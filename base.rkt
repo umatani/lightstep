@@ -2,10 +2,12 @@
 
 (require "set.rkt")
 (define set-∅ ∅)
+(define set-∅? ∅?)
 (define set-∈ ∈)
-(provide (all-from-out "set.rkt") set-∅ set-∈)
+(define set-size size)
+(provide (all-from-out "set.rkt") set-∅ set-∅? set-∈ set-size)
 
-(require (rename-in "map.rkt" [∅ map-∅] [∈ map-∈]))
+(require (rename-in "map.rkt" [∅ map-∅] [∅? map-∅?] [∈ map-∈] [size map-size]))
 (provide (all-from-out "map.rkt"))
 
 (require "match.rkt")

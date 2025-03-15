@@ -38,7 +38,7 @@
 
   [`(,X ,(? ρ? ρ))
    ; where
-   V ← (for/monad+ ([V (in-set (mmap-lookup ρ X))])
+   V ← (for/monad+ ([V (∈ (mmap-lookup ρ X))])
          (return V))
    ; -->
    V]
