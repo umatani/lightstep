@@ -97,8 +97,8 @@
     [(set (? b? b)) b]
     [(set `(λ ,X ,M)) 'function]
     [(set `(throw ,(? b? b))) `(err ,b)]
-    [x (error 'evalc "invalid answer: ~a" x)])]
-  [_ (error 'evalc "invalid input: ~a" m)])
+    [x (error 'evalc "invalid answer: ~s" x)])]
+  [_ (error 'evalc "invalid input: ~s" m)])
 
 (module+ test
   (check-exn #rx"invalid input" (λ () (evalc '(+ 1 x))))

@@ -23,108 +23,90 @@
      `(set ,(? σ?) ,(? κ?))])
 
 (define-reduction (⊢->cesk)
-  #:monad (StateT #f (StateT #f (StateT #f (NondetT ID))))
-  #:do [(define get-E (bind get (compose1 return car)))
-        (define get-Σ (bind get (compose1 return cadr)))
-        (define get-κ (bind get (compose1 return cddr)))
-        (define (put-E E)
-          (do `(,_ ,Σ . ,κ) ← get
-              (put `(,E ,Σ . ,κ))))
+  #:monad (StateT #f (StateT #f (NondetT ID)))
+  #:do [(define get-Σ (bind get (compose1 return car)))
+        (define get-κ (bind get (compose1 return cdr)))
         (define (put-Σ Σ)
-          (do `(,E ,_ . ,κ) ← get
-              (put `(,E ,Σ . ,κ))))
+          (do `(,_ . ,κ) ← get
+              (put `(,Σ . ,κ))))
         (define (put-κ κ)
-          (do `(,E ,Σ . ,_) ← get
-              (put `(,E ,Σ . ,κ))))]
+          (do `(,Σ . ,_) ← get
+              (put `(,Σ . ,κ))))]
 
-  [`(,M₁ ,M₂)
-   E ← get-E
+  [`((,M₁ ,M₂) ,E)
    κ ← get-κ
    (put-κ `(ar (,M₂ ,E) ,κ))
-   M₁
+   `(,M₁ ,E)
    "cesk1"]
 
-  [`(,(? oⁿ? oⁿ) ,M₁ ,M ...)
-   E ← get-E
+  [`((,(? oⁿ? oⁿ) ,M₁ ,M ...) ,E)
    κ ← get-κ
    (put-κ `(op (,oⁿ) ,(map (λ (m) `(,m ,E)) M) ,κ))
-   M₁
+   `(,M₁ ,E)
    "cesk2"]
   
-  [V
+  [`(,V ,E)
    #:when (not (X? V))
-   E ← get-E
-   Σ ← get-Σ
    `(fn ((λ ,X ,M) ,E′) ,κ) ← get-κ
+   Σ ← get-Σ
    σ ≔ ((symbol-not-in (dom Σ)) X)
-   (put-E (E′ X σ))
    (put-Σ (Σ σ `(,V ,E)))
    (put-κ κ)
-   M
+   `(,M ,(E′ X σ))
    "cesk3"]
 
-  [V
+  [`(,V ,E)
    #:when (not (X? V))
-   E ← get-E
    `(ar (,M ,E′) ,κ) ← get-κ
-   (put-E E′)
    (put-κ `(fn (,V ,E) ,κ))
-   M
+   `(,M ,E′)
    "cesk4"]
 
-  [(? b? bₙ)
+  [`(,(? b? bₙ) ,E)
    `(op ((,(? b? b) ,_) ... ,(? oⁿ? oⁿ)) () ,κ) ← get-κ
-   (put-E (↦))
    (put-κ κ)
-   (δ oⁿ (reverse (cons bₙ b)))
+   `(,(δ oⁿ (reverse (cons bₙ b))) ,(↦))
    "cesk5"]
 
-  [V
+  [`(,V ,E)
    #:when (not (X? V))
-   E ← get-E
    `(op (,c ... ,oⁿ) ((,M ,Eₘ) ,c′ ...) ,κ) ← get-κ
-   (put-E Eₘ)
    (put-κ `(op ((,V ,E) ,@c ,oⁿ) (,@c′) ,κ))
-   M
+   `(,M ,Eₘ)
    "cesk6"]
   
-  [X
-   E ← get-E
+  [`(,X ,E)
    Σ ← get-Σ
    `(,V ,E′) ≔ (Σ (E X))
-   (put-E E′)
-   V
+   `(,V ,E′)
    "cesk7"]
 
-  [`(set ,X ,M)
-   E ← get-E
+  [`((set ,X ,M) ,E)
    κ ← get-κ
    (put-κ `(set ,(E X) ,κ))
-   M
+   `(,M ,E)
    "cesk8"]
 
-  [V
+  [`(,V ,E)
    #:when (not (X? V))
-   E ← get-E
-   Σ ← get-Σ
    `(set ,σ ,κ) ← get-κ
+   Σ ← get-Σ
    `(,V′ ,E′) ≔ (Σ σ)
-   (put-E E′)
    (put-Σ (Σ σ `(,V ,E)))
    (put-κ κ)
-   V′
+   `(,V′ ,E′)
    "cesk9"])
 
 (define-match-expander mkCESK
   (syntax-parser
-    [(_ C E S K) #'(cons (cons (cons C E) S) K)])
+    [(_ C E S K) #'(cons (cons `(,C ,E) S) K)])
   (syntax-parser
-    [(_ C E S K) #'(cons (cons (cons C E) S) K)]))
+    [(_ C E S K) #'(cons (cons `(,C ,E) S) K)]))
 
 (define step⊢->cesk (let-values ([(mrun reducer) (⊢->cesk)])
                       (match-λ
                        [(mkCESK M E Σ (? κ? κ))
-                        (mrun κ Σ E (reducer M))])))
+                        (mrun κ Σ (reducer `(,M ,E)))])))
 (define ⊢->>cesk (compose1 car (repeated step⊢->cesk)))
 
 (define/match (evalcesk m)
@@ -135,8 +117,8 @@
       b]
      [(set (mkCESK `(λ ,X ,M) E Σ 'mt))
       'function]
-     [x (error 'evalcesk "invalid final state: ~a" x)])]
-  [_ (error 'evalcesk "invalid input: ~a" m)])
+     [x (error 'evalcesk "invalid final state: ~s" x)])]
+  [_ (error 'evalcesk "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in "cs.rkt" LET SEQ))

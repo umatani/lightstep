@@ -17,30 +17,27 @@
 
 (define-reduction (⊢->secd₂) #:super [(⊢->secd)]
 
-  [`((,(? oⁿ? oⁿ) ,M ...) ,C ...) (error "no such case") "secdPA"]
-  [`((,M₁ ,M₂)            ,C ...) (error "no such case") "secdLA"]
+  [`(((,(? oⁿ? oⁿ) ,M ...) ,C ...) ,E) (error "no such case") "secdPA"]
+  [`(((,M₁ ,M₂)            ,C ...) ,E) (error "no such case") "secdLA"]
 
-  [`((,X (,C′ ...)) ,C ...)
+  [`(((,X (,C′ ...)) ,C ...) ,E)
    S ← get-S
-   E ← get-E
    (put-S (cons `((λ ,X (,@C′)) ,E) S))
-   `(,@C)
+   `((,@C) ,E)
    "secd4"]
 
-  [`((ap) ,C ...)
+  [`(((ap) ,C ...) ,E)
    `(,V ((λ ,X (,C′ ...)) ,E′) ,V′ ...) ← get-S
-   E ← get-E
-   D ← get-D
    (put-S '())
-   (put-E (E′ X V))
+   D ← get-D
    (put-D `((,@V′) ,E (,@C) ,D))
-   `(,@C′)
+   `((,@C′) ,(E′ X V))
    "secd5"])
 
 (define step⊢->secd₂ (let-values ([(mrun reducer) (⊢->secd₂)])
                        (match-λ
                         [(mkSECD S E Cs D)
-                         (mrun D E S (reducer Cs))])))
+                         (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd₂ (compose1 car (repeated step⊢->secd₂)))
 
 (define/match (compile m)
@@ -67,8 +64,8 @@
       b]
      [(set (mkSECD `(((λ ,X (,C ...)) ,E′)) E '() 'ϵ))
       'function]
-     [x (error 'evalsecd₂ "invalid final state: ~a" x)])]
-  [_ (error 'evalsecd₂ "invalid input: ~a" m)])
+     [x (error 'evalsecd₂ "invalid final state: ~s" x)])]
+  [_ (error 'evalsecd₂ "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in (submod "cc.rkt" test) Ω))

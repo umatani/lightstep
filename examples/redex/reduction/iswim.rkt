@@ -140,8 +140,8 @@
    (match (-->>v M)
     [(set (? b? b)) b]
     [(set `(λ ,X ,M)) 'function]
-    [x (error 'evalᵥ "invalid answer: ~a" x)])]
-  [_ (error 'evalᵥ "invalid input: ~a" m)])
+    [x (error 'evalᵥ "invalid answer: ~s" x)])]
+  [_ (error 'evalᵥ "invalid input: ~s" m)])
 
 (module+ test
   (check-exn #rx"invalid input" (λ () (evalᵥ '(+ 1 x))))

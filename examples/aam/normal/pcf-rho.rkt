@@ -1,12 +1,10 @@
 #lang racket/base
-(require (for-syntax racket/base
-                     (only-in syntax/parse syntax-parser id))
-         lightstep/base lightstep/syntax
+(require (for-syntax racket/base (only-in syntax/parse syntax-parser))
+         lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/match define-match-expander)
-         (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" δ)
          (only-in "pcf-bigstep.rkt" PCF⇓))
-(provide PCFρ vρ injρ)
+(provide PCFρ vρ-rules injρ)
 
 (module+ test (require rackunit))
 
@@ -19,8 +17,8 @@
   [C ∷=
      V
      `(,M ,(? ρ?))
-     `(if0 ,C₀ ,C₁ ,C₂)
-     `(,C₀ ,C₁ ...)]
+     `(if0 ,C₁ ,C₂ ,C₃)
+     `(,C₀ ,C ...)]
 
   [redex ∷=
          `((if0 ,M ...) ,(? ρ?))
@@ -35,81 +33,68 @@
 
 (define-match-expander E
   (syntax-parser
-    [(E □:id)
-     #'(... (cxt E [□ (and □ (? redex?))]
+    [(E p)
+     #'(... (cxt E [□ (and p (? redex?))]
                  `(,V ... ,(? C? □) ,C ...)
-                 `(if0 ,(? C? □) ,C₁ ,C₂)))]))
+                 `(if0 ,(? C? □) ,C₂ ,C₃)))]))
 
-(define-reduction (vρ)
-  [`((if0 ,M ...) ,(? ρ? ρ))
-   ; -->
-   `(if0 ,@(map (λ (m) `(,m ,ρ)) M))
-   "ρ-if"]
+;; C --> C
+(define-inference (vρ-rules)
+  #:do [(define (ext Γ xs vs)
+          (foldr (λ (x v Γ) (Γ x v)) Γ xs vs))]
+  
+  [-------------------------------------------------------------- "ρ-if"
+   `(((if0 ,M ...) ,(? ρ? ρ)) → (if0 ,@(map (λ (m) `(,m ,ρ)) M)))       ]
 
-  [`((,M ...) ,(? ρ? ρ))
-   ; -->
-   `(,@(map (λ (m) `(,m ,ρ)) M))
-   "ρ-app"]
+  [------------------------------------------------------ "ρ-app"
+   `(((,M ...) ,(? ρ? ρ)) → (,@(map (λ (m) `(,m ,ρ)) M)))        ]
 
-  [`(,O ,(? ρ? ρ))
-   ; -->
-   O
-   "ρ-op"]
+  [---------------------- "ρ-op"
+   `((,O ,(? ρ? ρ)) → ,O)       ]
 
-  [`(,N ,(? ρ? ρ))
-   ; -->
-   N
-   "ρ-num"]
+  [---------------------- "ρ-num"
+   `((,N ,(? ρ? ρ)) → ,N)        ]
 
-  [`(,X ,(? ρ? ρ))
-   ; where
-   V ← (for/monad+ ([v (mmap-lookup ρ X)]) (return v))
-   ; -->
-   V
-   "ρ-x"]
+  [V ≔ (ρ X)
+   ---------------------- "ρ-x"
+   `((,X ,(? ρ? ρ)) → ,V)      ]
 
-  [`(((λ ([,X : ,T] ...) ,M) ,(? ρ? ρ)) ,V ...)
-   ; -->
-   `(,M ,(apply mmap-ext ρ (map list X V) ))
-   "β"]
+  [------------------------------------------------------------------ "β"
+   `((((λ ([,X : ,T] ...) ,M) ,(? ρ? ρ)) ,V ...) → (,M ,(ext ρ X V)))    ]
 
-  [`(,(and f `((μ [,X′ : ,T′] (λ ([,X : ,T] ...) ,M)) ,(? ρ? ρ))) ,V ...)
-   ; -->
-   `(,M ,(apply mmap-ext ρ `[,X′ ,f] (map list X V)))
-   "rec-β"]
+  [----------------------------------------------------------- "rec-β"
+   `((,(and f `((μ [,Xₐ : ,Tₐ]
+                   (λ ([,X : ,T] ...) ,M)) ,(? ρ? ρ))) ,V ...)
+     → (,M ,(ext ρ (cons Xₐ X) (cons f V))))                          ]
 
-  [`(,O ,V ...)
-   ; where
-   V₁ ≔ (δ `(,O ,@V))
-   ; -->
-   V₁
-   "δ"]
+  [V₁ ≔ (δ `(,O ,@V))
+   -------------------- "δ"
+   `((,O ,V ...) → ,V₁)    ]
 
-  [`(if0 0 ,C₁ ,C₂)
-   ; -->
-   C₁
-   "if-t"]
+  [------------------------ "if-t"
+   `((if0 0 ,C₁ ,C₂) → ,C₁)       ]
 
-  [`(if0 ,N ,C₁ ,C₂)
-   #:when (not (equal? 0 N))
-   ; -->
-   C₂
-   "if-f"])
+  [#:when (not (zero? N))
+   ------------------------- "if-f"
+   `((if0 ,N ,C₁ ,C₂) → ,C₂)       ])
 
-(define-reduction (-->vρ)
-  #:do [(define →vρ (reducer-of (vρ)))]
-  [(E c)
-   ; where
-   C′ ← (→vρ c)
-   ; -->
-   (E C′)
-   "EC"])
+;; C --> C
+(define-inference (-->vρ-rules)
+  #:do [(define rvρ (reducer-of (vρ-rules)))]
+  #:forms (.... [`(,i →vρ ,o) #:where o ← (rvρ i)])
 
-(define step-->vρ (call-with-values (λ () (-->vρ)) compose1))
+  [`(,C →vρ ,C′)
+   ------------------- "EC"
+   `(,(E C) → ,(E C′))     ])
 
+;; C → 𝒫(C)
+(define -->vρ (call-with-values (λ () (-->vρ-rules)) compose1))
+
+;; M → C
 (define (injρ M)
   `(,M ,(↦)))
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))
-  (check-equal? (car ((repeated step-->vρ) (injρ fact-5))) (set 120)))
+
+  (check-equal? (car ((repeated -->vρ) (injρ fact-5))) (set 120)))

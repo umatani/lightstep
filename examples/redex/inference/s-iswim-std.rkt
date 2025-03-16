@@ -48,8 +48,8 @@
    (match (⊢->>s M)
     [(set (or (? b? b) `(letrec ,(? Σ?) ,(? b? b)))) b]
     [(set (or `(λ ,X ,M) `(letrec ,(? Σ?) (λ ,X ,M)))) 'function]
-    [x (error 'evalₛˢ "invalid answer: ~a" x)])]
-  [_ (error 'evalₛˢ "invalid input: ~a" m)])
+    [x (error 'evalₛˢ "invalid answer: ~s" x)])]
+  [_ (error 'evalₛˢ "invalid input: ~s" m)])
 
 (module+ test
   (check-equal? (evalₛˢ `((λ x (+ 3 (letrec ,(↦ ['y 1])

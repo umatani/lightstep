@@ -15,6 +15,7 @@
         `((μ [,X : ,T] ,L) ,(? ρ?))]
   [ρ ∷= (? map? X→V)])
 
+;; M ρ ⇓ V
 (define-inference (⇓-rules)
   #:do [(define (ext Γ xs vs)
           (foldr (λ (x v Γ) (Γ x v)) Γ xs vs))]
@@ -60,9 +61,11 @@
    -------------------------------------------------------------------
    `((,M₀ ,M₁ ...) ,(? ρ? ρ) ⇓ ,V)                                    ])
 
+;; M ρ → V
 (define (⇓ M ρ) (letrec-values ([(mrun reducer) (⇓-rules)])
                       (mrun (reducer `(,M ,ρ)))))
 
+;; M ρ V → Boolean
 (define (⇓? M ρ v) (∈ v (⇓ M ρ)))
 
 (module+ test

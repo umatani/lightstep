@@ -148,8 +148,8 @@
    (match (⊢->>v M)
     [(set (? b? b)) b]
     [(set `(λ [,X : ,T] ,M)) 'function]
-    [x (error 'evalᵥˢ "invalid answer: ~a" x)])]
-  [_ (error 'evalᵥˢ "invalid input: ~a" m)])
+    [x (error 'evalᵥˢ "invalid answer: ~s" x)])]
+  [_ (error 'evalᵥˢ "invalid input: ~s" m)])
 
 (module+ test
   (check-equal? (evalᵥˢ '(+ ((λ [x : num] ((λ [y : num] y) x)) (- 2 1)) 8)) 9))

@@ -36,35 +36,31 @@
 (define ⊢->>gc (compose1 car (repeated ⊢->gc)))
 
 (define-inference (⊢->gc-in-cesk-rules)
-  #:monad (StateT #f (StateT #f (StateT #f (NondetT ID))))
-  #:do [(define get-E (bind get (compose1 return car)))
-        (define get-Σ (bind get (compose1 return cadr)))
-        (define get-κ (bind get (compose1 return cddr)))
-        (define (put-E E)
-          (do `(,_ ,Σ . ,κ) ← get
-              (put `(,E ,Σ . ,κ))))
+  #:monad (StateT #f (StateT #f (NondetT ID)))
+  #:do [(define get-Σ (bind get (compose1 return car)))
+        (define get-κ (bind get (compose1 return cdr)))
         (define (put-Σ Σ)
-          (do `(,E ,_ . ,κ) ← get
-              (put `(,E ,Σ . ,κ))))
+          (do `(,_ . ,κ) ← get
+              (put `(,Σ . ,κ))))
         (define (put-κ κ)
-          (do `(,E ,Σ . ,_) ← get
-              (put `(,E ,Σ . ,κ))))]
+          (do `(,Σ . ,_) ← get
+              (put `(,Σ . ,κ))))]
 
-  [E ← get-E    Σ ← get-Σ    κ ← get-κ
+  [Σ ← get-Σ        κ ← get-κ
    (set `(,∅ ,Live ,_)) ≔ (⊢->>gc `(,(∪ (LL E) (LL κ)) ,∅ ,Σ))
    (put-Σ (restrict Σ Live))
    ----------------------------------------------------------- "ceskgcI"
-   `(,M → ,M)                                                           ])
+   `((,M ,E) → (,M ,E))                                                 ])
 
 (define ⊢->gc-in-cesk (let-values ([(mrun reducer) (⊢->gc-in-cesk-rules)])
                         (match-λ
                          [(mkCESK M E Σ (? κ? κ))
-                          (mrun κ Σ E (reducer M))])))
+                          (mrun κ Σ (reducer `(,M ,E)))])))
 
 (define ⊢->cesk (let-values ([(mrun reducer) (⊢->cesk-rules)])
                   (match-λ
                    [(mkCESK M E Σ (? κ? κ))
-                    (mrun κ Σ E (reducer M))])))
+                    (mrun κ Σ (reducer `(,M ,E)))])))
 
 (define (⊢->cesk+gc ς)
   (apply ∪ (set-map ⊢->gc-in-cesk #; set ;; to compare with no-gc
@@ -80,8 +76,8 @@
       b]
      [(set (mkCESK `(λ ,X ,M) E Σ 'mt))
       'function]
-     [x (error 'evalcesk+gc "invalid final state: ~a" x)])]
-  [_ (error 'evalcesk+gc "invalid input: ~a" m)])
+     [x (error 'evalcesk+gc "invalid final state: ~s" x)])]
+  [_ (error 'evalcesk+gc "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in "cs.rkt" LET SEQ))

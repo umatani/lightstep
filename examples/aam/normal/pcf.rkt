@@ -137,7 +137,7 @@
                        '(μ [x : (num → num)] (λ ([y : num]) (+ x y))))
                 '(μ [x : (num → num)] (λ ([y : num]) (+ x y)))))
 
-
+;; M --> M
 (define-inference (r-rule)
   [---------------------------------------- "μ"
    `((μ [,X : ,T] ,M)
@@ -158,6 +158,7 @@
    ------------------------- "if-f"
    `((if0 ,N ,M₁ ,M₂) → ,M₂)       ])
 
+;; M → 𝒫(M)
 (define r (call-with-values (λ () (r-rule)) compose1))
 
 (module+ test
@@ -173,6 +174,7 @@
                 (set '(sub1 ((λ ([x : num]) x) (add1 5))))))
 
 ;; TODO: extend cxt pattern to support non-deterministic compatible-closure
+;; M --> M
 (define-inference (-->ᵣ-rules) #:super [(r-rule)]
   #:do [(define (split-app-cxt Ms)
           (define ((make-cxt i) M)
@@ -201,6 +203,7 @@
    ----------------------------------------------------------- "if-cxt"
    `((if0 ,M₁ ,M₂ ,M₃) → ,M′)                                          ])
 
+;; M → 𝒫(M)
 (define -->ᵣ (call-with-values (λ () (-->ᵣ-rules)) compose1))
 
 (module+ test
@@ -257,6 +260,7 @@
                  `(,O ,V ... ,□ ,M ...)
                  `(if0 ,□ ,M₁ ,M₂)))]))
 
+;; M --> M
 (define-inference (-->ₙ-rule)
   #:do [(define rr (reducer-of (r-rule)))]
   #:forms (.... [`(,i →r ,o) #:where o ← (rr i)])
@@ -265,6 +269,7 @@
    --------------------- "Eₙ"
    `(,(Eₙ M) → ,(Eₙ M′))     ])
 
+;; M → 𝒫(M)
 (define -->ₙ (call-with-values (λ () (-->ₙ-rule)) compose1))
 
 (module+ test
@@ -306,6 +311,7 @@
                  `(,V ... ,□ ,M ...)
                  `(if0 ,□ ,M₁ ,M₂)))]))
 
+;; M --> M
 (define-inference (-->ᵥ-rule)
   #:do [(define-inference (v-rule) #:super [(r-rule)]
           [---------------------------------- "β"
@@ -318,6 +324,7 @@
    --------------------- "Eᵥ"
    `(,(Eᵥ M) → ,(Eᵥ M′))     ])
 
+;; M → 𝒫(M)
 (define -->ᵥ (call-with-values (λ () (-->ᵥ-rule)) compose1))
 
 (module+ test

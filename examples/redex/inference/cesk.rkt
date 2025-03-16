@@ -24,93 +24,81 @@
      `(set ,(? σ?) ,(? κ?))])
 
 (define-inference (⊢->cesk-rules)
-  #:monad (StateT #f (StateT #f (StateT #f (NondetT ID))))
-  #:do [(define get-E (bind get (compose1 return car)))
-        (define get-Σ (bind get (compose1 return cadr)))
-        (define get-κ (bind get (compose1 return cddr)))
-        (define (put-E E)
-          (do `(,_ ,Σ . ,κ) ← get
-              (put `(,E ,Σ . ,κ))))
+  #:monad (StateT #f (StateT #f (NondetT ID)))
+  #:do [(define get-Σ (bind get (compose1 return car)))
+        (define get-κ (bind get (compose1 return cdr)))
         (define (put-Σ Σ)
-          (do `(,E ,_ . ,κ) ← get
-              (put `(,E ,Σ . ,κ))))
+          (do `(,_ . ,κ) ← get
+              (put `(,Σ . ,κ))))
         (define (put-κ κ)
-          (do `(,E ,Σ . ,_) ← get
-              (put `(,E ,Σ . ,κ))))]
+          (do `(,Σ . ,_) ← get
+              (put `(,Σ . ,κ))))]
 
-  [E ← get-E    κ ← get-κ
+  [κ ← get-κ
    (put-κ `(ar (,M₂ ,E) ,κ))
-   ------------------------- "cesk1"
-   `((,M₁ ,M₂) → ,M₁)               ]
+   ---------------------------- "cesk1"
+   `(((,M₁ ,M₂) ,E) → (,M₁ ,E))        ]
 
-  [E ← get-E    κ ← get-κ
+  [κ ← get-κ
    (put-κ `(op (,oⁿ) ,(map (λ (m) `(,m ,E)) M) ,κ))
    ------------------------------------------------ "cesk2"
-   `((,(? oⁿ? oⁿ) ,M₁ ,M ...) → ,M₁)                       ]
+   `(((,(? oⁿ? oⁿ) ,M₁ ,M ...) ,E) → (,M₁ ,E))             ]
   
   [#:when (not (X? V))
-   E ← get-E    Σ ← get-Σ
    `(fn ((λ ,X ,M) ,E′) ,κ) ← get-κ
+   Σ ← get-Σ
    σ ≔ ((symbol-not-in (dom Σ)) X)
-   (put-E (E′ X σ))
    (put-Σ (Σ σ `(,V ,E)))
    (put-κ κ)
    -------------------------------- "cesk3"
-   `(,V → ,M)                              ]
+   `((,V ,E) → (,M ,(E′ X σ)))             ]
 
   [#:when (not (X? V))
-   E ← get-E
    `(ar (,M ,E′) ,κ) ← get-κ
-   (put-E E′)
    (put-κ `(fn (,V ,E) ,κ))
    ------------------------- "cesk4"
-   `(,V → ,M)                       ]
+   `((,V ,E) → (,M ,E′))            ]
 
-  [`(op ((,(? b? b) ,_) ... ,(? oⁿ? oⁿ)) () ,κ) ← get-κ
-   (put-E (↦))    (put-κ κ)
-   ---------------------------------------------------- "cesk5"
-   `(,(? b? bₙ) → ,(δ oⁿ (reverse (cons bₙ b))))               ]
+  [`(op ((,(? b? b) ,E′) ... ,(? oⁿ? oⁿ)) () ,κ) ← get-κ
+   (put-κ κ)
+   --------------------------------------------------------- "cesk5"
+   `((,(? b? bₙ) ,E) → (,(δ oⁿ (reverse (cons bₙ b))) ,(↦)))        ]
 
   [#:when (not (X? V))
-   E ← get-E
    `(op (,c ... ,oⁿ) ((,M ,Eₘ) ,c′ ...) ,κ) ← get-κ
-   (put-E Eₘ)
    (put-κ `(op ((,V ,E) ,@c ,oⁿ) (,@c′) ,κ))
    ------------------------------------------------ "cesk6"
-   `(,V → ,M)                                              ]
+   `((,V ,E) → (,M ,Eₘ))                                   ]
   
-  [E ← get-E    Σ ← get-Σ
+  [Σ ← get-Σ
    `(,V ,E′) ≔ (Σ (E X))
-   (put-E E′)
-   ---------------------- "cesk7"
-   `(,X → ,V)                    ]
+   --------------------- "cesk7"
+   `((,X ,E) → (,V ,E′))        ]
 
-  [E ← get-E    κ ← get-κ
+  [κ ← get-κ
    (put-κ `(set ,(E X) ,κ))
-   ------------------------ "cesk8"
-   `((set ,X ,M) → ,M)             ]
+   ----------------------------- "cesk8"
+   `(((set ,X ,M) ,E) → (,M ,E))        ]
 
   [#:when (not (X? V))
-   E ← get-E    Σ ← get-Σ
    `(set ,σ ,κ) ← get-κ
+   Σ ← get-Σ
    `(,V′ ,E′) ≔ (Σ σ)
-   (put-E E′)
    (put-Σ (Σ σ `(,V ,E)))
    (put-κ κ)
    ---------------------- "cesk9"
-   `(,V → ,V′)
-   ])
+   `((,V ,E) → (,V′ ,E′))        ])
 
 (define-match-expander mkCESK
   (syntax-parser
-    [(_ C E S K) #'(cons (cons (cons C E) S) K)])
+    [(_ C E S K) #'(cons (cons `(,C ,E) S) K)])
   (syntax-parser
-    [(_ C E S K) #'(cons (cons (cons C E) S) K)]))
+    [(_ C E S K) #'(cons (cons `(,C ,E) S) K)]))
 
 (define ⊢->cesk (let-values ([(mrun reducer) (⊢->cesk-rules)])
                   (match-λ
                    [(mkCESK M E Σ (? κ? κ))
-                    (mrun κ Σ E (reducer M))])))
+                    (mrun κ Σ (reducer `(,M ,E)))])))
 (define ⊢->>cesk (compose1 car (repeated ⊢->cesk)))
 
 (define/match (evalcesk m)
@@ -121,8 +109,8 @@
       b]
      [(set (mkCESK `(λ ,X ,M) E Σ 'mt))
       'function]
-     [x (error 'evalcesk "invalid final state: ~a" x)])]
-  [_ (error 'evalcesk "invalid input: ~a" m)])
+     [x (error 'evalcesk "invalid final state: ~s" x)])]
+  [_ (error 'evalcesk "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in "cs.rkt" LET SEQ))

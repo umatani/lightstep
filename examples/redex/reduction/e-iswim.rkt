@@ -80,8 +80,8 @@
     [(set (? b? b)) b]
     [(set `(λ ,X ,M)) 'function]
     [(set `(err ,(? b? b))) `(err ,b)]
-    [x (error 'evalₑ "invalid answer: ~a" x)])]
-  [_ (error 'evalₑ "invalid input: ~a" m)])
+    [x (error 'evalₑ "invalid answer: ~s" x)])]
+  [_ (error 'evalₑ "invalid input: ~s" m)])
 
 (module+ test
   (check-exn #rx"invalid input" (λ () (evalₑ '(+ 1 x))))

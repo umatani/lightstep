@@ -18,19 +18,15 @@
   [V ∷= (? b?) `((λ ,X ,M) ,E)])
 
 (define-reduction (⊢->secd)
-  #:monad (StateT #f (StateT #f (StateT #f (NondetT ID))))
+  #:monad (StateT #f (StateT #f (NondetT ID)))
   #:do [(define get-S (bind get (compose1 return car)))
-        (define get-E (bind get (compose1 return cadr)))
-        (define get-D (bind get (compose1 return cddr)))
+        (define get-D (bind get (compose1 return cdr)))
         (define (put-S S)
-          (do `(,_ ,E . ,D) ← get
-              (put `(,S ,E . ,D))))
-        (define (put-E E)
-          (do `(,S ,_ . ,D) ← get
-              (put `(,S ,E . ,D))))
+          (do `(,_ . ,D) ← get
+              (put `(,S . ,D))))
         (define (put-D D)
-          (do `(,S ,E . ,_) ← get
-              (put `(,S ,E . ,D))))
+          (do `(,S . ,_) ← get
+              (put `(,S . ,D))))
 
         (define/match (apply-δ oⁿ S)
           [((or 'add1 'sub1 'iszero) `(,(? b? b) ,V ...))
@@ -39,72 +35,67 @@
            `(,(δ oⁿ `(,b₁ ,b₂)) ,@V)]
           [(_ _) (error 'apply-δ "failed: ~s ~s" oⁿ S)])]
 
-  [`(,(? b? b) ,C ...)
+  [`((,(? b? b) ,C ...) ,E)
    S ← get-S
    (put-S (cons b S))
-   `(,@C)
+   `((,@C) ,E)
    "secd1"]
 
-  [`(,(? X? x) ,C ...)
+  [`((,(? X? x) ,C ...) ,E)
+   (↦ [x V]) ≔ E
    S ← get-S
-   (↦ [x V]) ← get-E
    (put-S (cons V S))
-   `(,@C)
+   `((,@C) ,E)
    "secd2"]
 
-  [`((,(? oⁿ? oⁿ) ,M ...) ,C ...)
-   `(,@M (prim ,oⁿ) ,@C)
+  [`(((,(? oⁿ? oⁿ) ,M ...) ,C ...) ,E)
+   `((,@M (prim ,oⁿ) ,@C) ,E)
    "secdPA"]
 
-  [`((prim ,(? oⁿ? oⁿ)) ,C ...)
+  [`(((prim ,(? oⁿ? oⁿ)) ,C ...) ,E)
    S ← get-S
    (put-S (apply-δ oⁿ S))
-   `(,@C)
+   `((,@C) ,E)
    "secd3"]
 
-  [`((,M₁ ,M₂) ,C ...)
-   `(,M₁ ,M₂ (ap) ,@C)
+  [`(((,M₁ ,M₂) ,C ...) ,E)
+   `((,M₁ ,M₂ (ap) ,@C) ,E)
    "secdLA"]
 
-  [`((λ ,X ,M) ,C ...)
+  [`(((λ ,X ,M) ,C ...) ,E)
    S ← get-S
-   E ← get-E
    (put-S (cons `((λ ,X ,M) ,E) S))
-   `(,@C)
+   `((,@C) ,E)
    "secd4"]
 
-  [`((ap) ,C ...)
+  [`(((ap) ,C ...) ,E)
    `(,V ((λ ,X ,M) ,E′) ,V′ ...) ← get-S
-   E ← get-E
-   D ← get-D
    (put-S '())
-   (put-E (E′ X V))
+   D ← get-D
    (put-D `((,@V′) ,E (,@C) ,D))
-   `(,M)
+   `((,M) ,(E′ X V))
    "secd5"]
 
-  ['()
-   `(,V ,_ ...) ← get-S
+  [`(() ,E)
+   `(,V ,V′ ...) ← get-S
    `(,S′ ,E′ (,C′ ...) ,D) ← get-D
    (put-S (cons V S′))
-   (put-E E′)
    (put-D D)
-   `(,@C′)
+   `((,@C′) ,E′)
    "secd6"])
 
 (define-match-expander mkSECD
-  ;; '(((Cs S) E) D)
   (syntax-parser
     [(_ S E Cs D)
-     #'(cons (cons (cons Cs S) E) D)])
+     #'(cons (cons `(,Cs ,E) S) D)])
   (syntax-parser
     [(_ S E Cs D)
-     #'(cons (cons (cons Cs S) E) D)]))
+     #'(cons (cons `(,Cs ,E) S) D)]))
 
 (define step⊢->secd (let-values ([(mrun reducer) (⊢->secd)])
                       (match-λ
                        [(mkSECD S E Cs D)
-                        (mrun D E S (reducer Cs))])))
+                        (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd (compose1 car (repeated step⊢->secd)))
 
 (define/match (evalsecd m)
@@ -115,8 +106,8 @@
       b]
      [(set (mkSECD `(((λ ,X ,M) ,E′)) E '() 'ϵ))
       'function]
-     [x (error 'evalsecd "invalid final state: ~a" x)])]
-  [_ (error 'evalsecd "invalid input: ~a" m)])
+     [x (error 'evalsecd "invalid final state: ~s" x)])]
+  [_ (error 'evalsecd "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in (submod "cc.rkt" test) Ω))

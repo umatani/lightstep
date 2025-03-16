@@ -216,7 +216,7 @@
   ;; (pmap->list m)
   ;; (pmap->plist m)
   ;; (for ([(k v) (in-pmap m)])
-  ;;   (printf "~a ↦ ~a\n" k v))
+  ;;   (printf "~s ↦ ~s\n" k v))
 
   ;; (for ([(k v) (in-pmap/p m)])
   ;;   (printf "~s ↦ ~s\n" k v))

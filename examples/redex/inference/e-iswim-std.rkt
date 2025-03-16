@@ -37,8 +37,8 @@
     [(set (? b? b)) b]
     [(set `(λ ,X ,M)) 'function]
     [(set `(err ,(? b? b))) `(err ,b)]
-    [x (error 'evalₑˢ "invalid answer: ~a" x)])]
-  [_ (error 'evalₑˢ "invalid input: ~a" m)])
+    [x (error 'evalₑˢ "invalid answer: ~s" x)])]
+  [_ (error 'evalₑˢ "invalid input: ~s" m)])
 
 (module+ test
   (check-exn #rx"invalid input" (λ () (evalₑˢ '(+ 1 x))))

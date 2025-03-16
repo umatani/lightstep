@@ -19,79 +19,62 @@
   [E ∷= (? map? X→VE)])
 
 (define-reduction (⊢->cek)
-  #:monad (StateT #f (StateT #f (NondetT ID)))
-  #:do [(define get-E (bind get (compose1 return car)))
-        (define get-κ (bind get (compose1 return cdr)))
-        (define (put-E E)
-          (do (cons _ κ) ← get
-              (put (cons E κ))))
-        (define (put-κ κ)
-          (do (cons E _) ← get
-              (put (cons E κ))))]
-  [`(,M₁ ,M₂)
-   E ← get-E
-   κ ← get-κ
-   (put-κ `(ar (,M₂ ,E) ,κ))
-   M₁
+  #:monad (StateT #f (NondetT ID))
+
+  [`((,M₁ ,M₂) ,E)
+   κ ← get
+   (put `(ar (,M₂ ,E) ,κ))
+   `(,M₁ ,E)
    "cek1"]
 
-  [`(,(? oⁿ? oⁿ) ,M ,M′ ...)
-   E ← get-E
-   κ ← get-κ
-   (put-κ `(op (,oⁿ) ,(map (λ (m) `(,m ,E)) M′) ,κ))
-   M
+  [`((,(? oⁿ? oⁿ) ,M ,M′ ...) ,E)
+   κ ← get
+   (put `(op (,oⁿ) ,(map (λ (m) `(,m ,E)) M′) ,κ))
+   `(,M ,E)
    "cek2"]
 
-  [V
+  [`(,V ,E)
    #:when (not (X? V))
-   E ← get-E
-   `(fn ((λ ,X₁ ,M) ,E′) ,κ) ← get-κ
-   (put-E (E′ X₁ `(,V ,E)))
-   (put-κ κ)
-   M
+   `(fn ((λ ,X₁ ,M) ,E′) ,κ) ← get
+   (put κ)
+   `(,M ,(E′ X₁ `(,V ,E)))
    "cek3"]
 
-  [V
+  [`(,V ,E)
    #:when (not (X? V))
-   E ← get-E
-   `(ar (,M ,E′) ,κ) ← get-κ
-   (put-E E′)
-   (put-κ `(fn (,V ,E) ,κ))
-   M
+   `(ar (,M ,E′) ,κ) ← get
+   (put `(fn (,V ,E) ,κ))
+   `(,M ,E′)
    "cek4"]
 
-  [(? b? bₙ)
-   `(op ((,(? b? b) ,_) ... ,oⁿ) () ,κ) ← get-κ
-   (put-E (↦))
-   (put-κ κ)
-   (δ oⁿ (reverse (cons bₙ b)))
+  [`(,(? b? bₙ) ,E)
+   `(op ((,(? b? b) ,_) ... ,oⁿ) () ,κ) ← get
+   (put κ)
+   `(,(δ oⁿ (reverse (cons bₙ b))) ,(↦))
    "cek5"]
 
-  [V
+  [`(,V ,E)
    #:when (not (X? V))
-   E ← get-E
-   `(op (,c ... ,oⁿ) ((,M ,Eₘ) ,cₗ ...) ,κ) ← get-κ
-   (put-E Eₘ)
-   (put-κ `(op ((,V ,E) ,@c ,oⁿ) (,@cₗ) ,κ))
-   M
+   `(op (,c ... ,oⁿ) ((,M ,Eₘ) ,cₗ ...) ,κ) ← get
+   (put `(op ((,V ,E) ,@c ,oⁿ) (,@cₗ) ,κ))
+   `(,M ,Eₘ)
    "cek6"]
 
-  [(? X? x)
-   (↦ [x `(,V ,E′)]) ← get-E
-   (put-E E′)
-   V
+  [`(,(? X? x) ,E)
+   (↦ [x `(,V ,E′)]) ≔ E
+   `(,V ,E′)
    "cek7"])
 
 (define-match-expander mkCEK
   (syntax-parser
-    [(_ M E κ) #'(cons (cons M E) κ)])
+    [(_ M E κ) #'(cons `(,M ,E) κ)])
   (syntax-parser
-    [(_ M E κ) #'(cons (cons M E) κ)]))
+    [(_ M E κ) #'(cons `(,M ,E) κ)]))
 
 (define step⊢->cek (let-values ([(mrun reducer) (⊢->cek)])
                      (match-λ
                       [(mkCEK M E (? κ? κ))
-                       (mrun κ E (reducer M))])))
+                       (mrun κ (reducer `(,M ,E)))])))
 (define ⊢->>cek (compose1 car (repeated step⊢->cek)))
 
 (define/match (evalcek m)
@@ -102,8 +85,8 @@
       b]
      [(set (mkCEK `(λ ,X ,M) E 'mt))
       'function]
-     [x (error 'evalcek "invalid final state: ~a" x)])]
-  [_ (error 'evalcek "invalid input: ~a" m)])
+     [x (error 'evalcek "invalid final state: ~s" x)])]
+  [_ (error 'evalcek "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in (submod "cc.rkt" test) Ω))

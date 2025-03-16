@@ -287,7 +287,7 @@
 
 (define-reduction (r81 p)
   #:do [(define y (* p 111))
-        ;(printf "printf in #:do: ~a ~a\n" p y)
+        ;(printf "printf in #:do: ~s ~s\n" p y)
         ]
   [x (+ x y)])
 (check-equal? (call-with-values
@@ -298,7 +298,7 @@
 
 (define-reduction (r82 p)
   #:import [gege^]
-  #:do [;(printf "printf in #:do: ~a\n" (hoge))
+  #:do [;(printf "printf in #:do: ~s\n" (hoge))
         (define y (* p 111))]
   [x (list (gege) (+ x y))])
 (define-values (mrun82 reducer82) (invoke-unit

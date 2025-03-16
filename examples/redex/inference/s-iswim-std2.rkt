@@ -63,8 +63,8 @@
    (match (⊢->>s2 M)
      [(set (or (? b? b) `(letrec ,(? Σ?) ,(? b? b)))) b]
      [(set (or `(λ ,X ,M) `(letrec ,(? Σ?) (λ ,X ,M)))) 'function]
-     [x (error 'evalₛ₂ "invalid answer: ~a" x)])]
-  [_ (error 'evalₛ₂ "invalid input: ~a" m)])
+     [x (error 'evalₛ₂ "invalid answer: ~s" x)])]
+  [_ (error 'evalₛ₂ "invalid input: ~s" m)])
 
 (module+ test
   (check-equal? (evalₛ₂ '((λ y (+ 1 ((λ x (* (add1 x) y)) (set y 3)))) 2))

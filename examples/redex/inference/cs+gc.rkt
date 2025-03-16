@@ -46,8 +46,8 @@
       b]
      [(set (mkCS `(λ ,X ,M) Σ))
       'function]
-     [x (error 'evalcs+gc "invalid final state: ~a" x)])]
-  [_ (error 'evalcs+gc "invalid input: ~a" m)])
+     [x (error 'evalcs+gc "invalid final state: ~s" x)])]
+  [_ (error 'evalcs+gc "invalid input: ~s" m)])
 
 
 (module+ test

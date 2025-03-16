@@ -35,37 +35,32 @@
 (define ⊢->>gc (compose1 car (repeated step⊢->gc)))
 
 (define-reduction (⊢->gc-in-cesk)
-  #:monad (StateT #f (StateT #f (StateT #f (NondetT ID))))
-  #:do [(define get-E (bind get (compose1 return car)))
-        (define get-Σ (bind get (compose1 return cadr)))
-        (define get-κ (bind get (compose1 return cddr)))
-        (define (put-E E)
-          (do `(,_ ,Σ . ,κ) ← get
-              (put `(,E ,Σ . ,κ))))
+  #:monad (StateT #f (StateT #f (NondetT ID)))
+  #:do [(define get-Σ (bind get (compose1 return car)))
+        (define get-κ (bind get (compose1 return cdr)))
         (define (put-Σ Σ)
-          (do `(,E ,_ . ,κ) ← get
-              (put `(,E ,Σ . ,κ))))
+          (do `(,_ . ,κ) ← get
+              (put `(,Σ . ,κ))))
         (define (put-κ κ)
-          (do `(,E ,Σ . ,_) ← get
-              (put `(,E ,Σ . ,κ))))]
-  [M
-   E ← get-E
+          (do `(,Σ . ,_) ← get
+              (put `(,Σ . ,κ))))]
+  [`(,M ,E)
    Σ ← get-Σ
    κ ← get-κ
    (set `(,∅ ,Live ,_)) ≔ (⊢->>gc `(,(∪ (LL E) (LL κ)) ,∅ ,Σ))
    (put-Σ (restrict Σ Live))
-   M
+   `(,M ,E)
    "ceskgcI"])
 
 (define step⊢->gc-in-cesk (let-values ([(mrun reducer) (⊢->gc-in-cesk)])
                             (match-λ
                              [(mkCESK M E Σ (? κ? κ))
-                              (mrun κ Σ E (reducer M))])))
+                              (mrun κ Σ (reducer `(,M ,E)))])))
 
 (define step⊢->cesk (let-values ([(mrun reducer) (⊢->cesk)])
                       (match-λ
                        [(mkCESK M E Σ (? κ? κ))
-                        (mrun κ Σ E (reducer M))])))
+                        (mrun κ Σ (reducer `(,M ,E)))])))
 
 (define (step⊢->cesk+gc ς)
   (apply ∪ (set-map step⊢->gc-in-cesk #; set ;; to compare with no-gc
@@ -81,8 +76,8 @@
       b]
      [(set (mkCESK `(λ ,X ,M) E Σ 'mt))
       'function]
-     [x (error 'evalcesk+gc "invalid final state: ~a" x)])]
-  [_ (error 'evalcesk+gc "invalid input: ~a" m)])
+     [x (error 'evalcesk+gc "invalid final state: ~s" x)])]
+  [_ (error 'evalcesk+gc "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in "cs.rkt" LET SEQ))

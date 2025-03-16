@@ -68,8 +68,8 @@
     [(set (? b? b)) b]
     [(set `(λ ,X ,M)) 'function]
     [(set `(throw ,b)) `(err ,b)]
-    [x (error 'evalₕˢ "invalid answer: ~a" x)])]
-  [_ (error 'evalₕˢ "invalid input: ~a" m)])
+    [x (error 'evalₕˢ "invalid answer: ~s" x)])]
+  [_ (error 'evalₕˢ "invalid input: ~s" m)])
 
 (module+ test
   (check-exn #rx"invalid input" (λ () (evalₕˢ '(+ 1 x))))

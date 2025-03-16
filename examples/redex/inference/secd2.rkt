@@ -19,29 +19,29 @@
 (define-inference (⊢->secd₂-rules) #:super [(⊢->secd-rules)]
 
   [(error "no such case")
-   ------------------------------------------ "secdPA"
-   `(((,(? oⁿ? oⁿ) ,M ...) ,C ...) → ,(void))         ]
+   --------------------------------------------------------- "secdPA"
+   `((((,(? oⁿ? oⁿ) ,M ...) ,C ...) ,E) → (,(void) ,(void)))         ]
 
   [(error "no such case")
-   ------------------------------------------ "secdLA"
-   `(((,M₁ ,M₂)            ,C ...) → ,(void))         ]
+   --------------------------------------------------------- "secdLA"
+   `((((,M₁ ,M₂)            ,C ...) ,E) → (,(void) ,(void)))         ]
 
-  [S ← get-S    E ← get-E
+  [S ← get-S
    (put-S (cons `((λ ,X (,@C′)) ,E) S))
-   ------------------------------------ "secd4"
-   `(((,X (,C′ ...)) ,C ...) → (,@C))          ]
+   -------------------------------------------- "secd4"
+   `((((,X (,C′ ...)) ,C ...) ,E) → ((,@C) ,E))        ]
 
   [`(,V ((λ ,X (,C′ ...)) ,E′) ,V′ ...) ← get-S
-   E ← get-E      D ← get-D
-   (put-S '())    (put-E (E′ X V))
+   (put-S '())
+   D ← get-D
    (put-D `((,@V′) ,E (,@C) ,D))
    -------------------------------------------- "secd5"
-   `(((ap) ,C ...) → (,@C′))                           ])
+   `((((ap) ,C ...) ,E) → ((,@C′) ,(E′ X V)))          ])
 
 (define ⊢->secd₂ (let-values ([(mrun reducer) (⊢->secd₂-rules)])
                    (match-λ
                     [(mkSECD S E Cs D)
-                     (mrun D E S (reducer Cs))])))
+                     (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd₂ (compose1 car (repeated ⊢->secd₂)))
 
 (define/match (compile m)
@@ -68,8 +68,8 @@
       b]
      [(set (mkSECD `(((λ ,X (,C ...)) ,E′)) E '() 'ϵ))
       'function]
-     [x (error 'evalsecd₂ "invalid final state: ~a" x)])]
-  [_ (error 'evalsecd₂ "invalid input: ~a" m)])
+     [x (error 'evalsecd₂ "invalid final state: ~s" x)])]
+  [_ (error 'evalsecd₂ "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in (submod "cc.rkt" test) Ω))

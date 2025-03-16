@@ -71,8 +71,8 @@
       b]
      [(set (mkSCC `(λ ,X ,M) (□)))
       'function]
-     [x (error 'evalscc "invalid final state: ~a" x)])]
-  [_ (error 'evalscc "invalid input: ~a" m)])
+     [x (error 'evalscc "invalid final state: ~s" x)])]
+  [_ (error 'evalscc "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in (submod "cc.rkt" test) Ω))

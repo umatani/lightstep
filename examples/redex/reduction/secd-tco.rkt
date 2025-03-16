@@ -13,27 +13,24 @@
 (define-language SECD/TCO #:super SECD)
 
 (define-reduction (⊢->secd/tco) #:super [(⊢->secd)]
-  [`((ap) ,C₁ ,C ...)
+  [`(((ap) ,C₁ ,C ...) ,E)
    `(,V ((λ ,X ,M) ,E′) ,V′ ...) ← get-S
-   E ← get-E
-   D ← get-D
    (put-S '())
-   (put-E (E′ X V))
+   D ← get-D
    (put-D `((,@V′) ,E (,C₁ ,@C) ,D))
-   `(,M)
+   `((,M) ,(E′ X V))
    "secd5"]
 
-  [`((ap))
+  [`(((ap)) ,E)
    `(,V ((λ ,X ,M) ,E′)) ← get-S
    (put-S '())
-   (put-E (E′ X V))
-   `(,M)
+   `((,M) ,(E′ X V))
    "secd5-tc"])
 
 (define step⊢->secd/tco (let-values ([(mrun reducer) (⊢->secd/tco)])
                           (match-λ
                            [(mkSECD S E Cs D)
-                            (mrun D E S (reducer Cs))])))
+                            (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd/tco (compose1 car (repeated step⊢->secd/tco)))
 
 (define/match (evalsecd/tco m)
@@ -44,8 +41,8 @@
       b]
      [(set (mkSECD `(((λ ,X ,M) ,E′)) E '() 'ϵ))
       'function]
-     [x (error 'evalsecd/tco "invalid final state: ~a" x)])]
-  [_ (error 'evalsecd/tco "invalid input: ~a" m)])
+     [x (error 'evalsecd/tco "invalid final state: ~s" x)])]
+  [_ (error 'evalsecd/tco "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in (submod "cc.rkt" test) Ω))

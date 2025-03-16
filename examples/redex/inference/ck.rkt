@@ -70,8 +70,8 @@
       b]
      [(set (mkCK `(λ ,X ,M) 'mt))
       'function]
-     [x (error 'evalck "invalid final state: ~a" x)])]
-  [_ (error 'evalck "invalid input: ~a" m)])
+     [x (error 'evalck "invalid final state: ~s" x)])]
+  [_ (error 'evalck "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in (submod "cc.rkt" test) Ω))

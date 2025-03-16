@@ -183,8 +183,8 @@
    (match (-->>s M)
     [(set (or (? b? b) `(letrec ,(? Σ?) ,(? b? b)))) b]
     [(set (or `(λ ,X ,M) `(letrec ,(? Σ?) (λ ,X ,M)))) 'function]
-    [x (error 'evalₛ "invalid answer: ~a" x)])]
-  [_ (error 'evalₛ "invalid input: ~a" m)])
+    [x (error 'evalₛ "invalid answer: ~s" x)])]
+  [_ (error 'evalₛ "invalid input: ~s" m)])
 
 (module+ test
   (check-equal? (evalₛ `((λ x (+ 3 (letrec ,(↦ ['y 1])

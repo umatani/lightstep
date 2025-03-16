@@ -123,8 +123,8 @@
       b]
      [(set (mkCS `(λ ,X ,M) Σ))
       'function]
-     [x (error 'evalcs "invalid final state: ~a" x)])]
-  [_ (error 'evalcs "invalid input: ~a" m)])
+     [x (error 'evalcs "invalid final state: ~s" x)])]
+  [_ (error 'evalcs "invalid input: ~s" m)])
 
 (module+ test
   (check-equal? (evalcs `((λ x ,(SEQ '(set x (* x x)) '(add1 x))) 8)) 65)

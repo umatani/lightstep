@@ -12,17 +12,16 @@
 (define-language SECD/TCO/SS #:super SECD)
 
 (define-reduction (⊢->secd/tco/ss) #:super [(⊢->secd/tco)]
-  [`((λ ,X ,M) ,C ...)
+  [`(((λ ,X ,M) ,C ...) ,E)
    S ← get-S
-   E ← get-E
    (put-S (cons `((λ ,X ,M) ,(restrict E (FV `(λ ,X ,M)))) S))
-   `(,@C)
+   `((,@C) ,E)
    "secd4"])
 
 (define step⊢->secd/tco/ss (let-values ([(mrun reducer) (⊢->secd/tco/ss)])
                              (match-λ
                               [(mkSECD S E Cs D)
-                               (mrun D E S (reducer Cs))])))
+                               (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd/tco/ss (compose1 car (repeated step⊢->secd/tco/ss)))
 
 (define/match (evalsecd/tco/ss m)
@@ -33,8 +32,8 @@
       b]
      [(set (mkSECD `(((λ ,X ,M) ,E′)) E '() 'ϵ))
       'function]
-     [x (error 'evalsecd/tco/ss "invalid final state: ~a" x)])]
-  [_ (error 'evalsecd/tco/ss "invalid input: ~a" m)])
+     [x (error 'evalsecd/tco/ss "invalid final state: ~s" x)])]
+  [_ (error 'evalsecd/tco/ss "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in (submod "cc.rkt" test) Ω))

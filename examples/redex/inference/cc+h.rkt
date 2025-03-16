@@ -80,8 +80,8 @@
       'function]
      [(set (mkCC `(throw ,(? b? b)) (□)))
       `(err ,b)]
-     [x (error 'evalcc+h "invalid final state: ~a" x)])]
-  [_ (error 'evalcc+h "invalid input: ~a" m)])
+     [x (error 'evalcc+h "invalid final state: ~s" x)])]
+  [_ (error 'evalcc+h "invalid input: ~s" m)])
 
 (module+ test
   (check-exn #rx"invalid input" (λ () (evalcc+h '(+ 1 x))))

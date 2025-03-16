@@ -144,8 +144,8 @@
       'function]
      [(set (mkCHC `(throw ,(? b? b)) '() (□)))
       `(err ,b)]
-     [x (error 'evalchc "invalid final state: ~a" x)])]
-  [_ (error 'evalchc "invalid input: ~a" m)])
+     [x (error 'evalchc "invalid final state: ~s" x)])]
+  [_ (error 'evalchc "invalid input: ~s" m)])
 
 
 (module+ test

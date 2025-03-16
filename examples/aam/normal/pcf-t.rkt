@@ -11,6 +11,7 @@
 (define-language PCFT #:super PCF
   [Γ ∷= (? map? X→T)])
 
+;; Γ ⊢ M : T
 (define-inference (⊢rules)
   #:do [(define (ext Γ xs ts)
           (foldr (λ (x t Γ) (Γ x t)) Γ xs ts))]
@@ -51,8 +52,10 @@
    -------------------------------------------- "λ"
    `(,Γ ⊢ (λ ([,X : ,T] ...) ,M) : (,@T → ,Tₙ))    ])
 
+;; [Γ M] → 𝒫(T)
 (define ⊢ (call-with-values (λ () (⊢rules)) compose1))
 
+;; M T → Boolean
 (define (⊢? M T)
   (match (⊢ `(,(↦) ,M))
     [(set T′) (equal? T T′)]
@@ -81,4 +84,3 @@
 
   (check-exn #rx"cannot be typed"
              (λ () (⊢? '(λ ([x : num] [x : num]) x) 'num))))
-

@@ -26,7 +26,7 @@
    [(m x) 
     (if (∈ x m)
       (hash-ref (repl->hash m) x)
-      (error 'map "has no value for key: ~a" x))]
+      (error 'map "has no value for key: ~s" x))]
    [(m x v)
     (repl (hash-set (repl->hash m) x v))])
   #:methods gen:custom-write
@@ -113,7 +113,7 @@
                #:combine cod-⊔)))
 
 ;; (α ↦ β) α (β → β) [β | (→ β)] → (α ↦ β)
-(define (map-update m k f [o (λ () (error 'map "has no value for key: ~a" k))])
+(define (map-update m k f [o (λ () (error 'map "has no value for key: ~s" k))])
   (hash->map (hash-update (repl->hash m) k f o)))
 
 ;; (α ↦ β) α → (α ↦ β)

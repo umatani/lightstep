@@ -12,15 +12,15 @@
 (define-language SECD/TCO/SS #:super SECD)
 
 (define-inference (⊢->secd/tco/ss-rules) #:super [(⊢->secd/tco-rules)]
-  [S ← get-S    E ← get-E
+  [S ← get-S
    (put-S (cons `((λ ,X ,M) ,(restrict E (FV `(λ ,X ,M)))) S))
    ----------------------------------------------------------- "secd4"
-   `(((λ ,X ,M) ,C ...) → (,@C))                                     ])
+   `((((λ ,X ,M) ,C ...) ,E) → ((,@C) ,E))                            ])
 
 (define ⊢->secd/tco/ss (let-values ([(mrun reducer) (⊢->secd/tco/ss-rules)])
                          (match-λ
                           [(mkSECD S E Cs D)
-                           (mrun D E S (reducer Cs))])))
+                           (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd/tco/ss (compose1 car (repeated ⊢->secd/tco/ss)))
 
 (define/match (evalsecd/tco/ss m)
@@ -31,8 +31,8 @@
       b]
      [(set (mkSECD `(((λ ,X ,M) ,E′)) E '() 'ϵ))
       'function]
-     [x (error 'evalsecd/tco/ss "invalid final state: ~a" x)])]
-  [_ (error 'evalsecd/tco/ss "invalid input: ~a" m)])
+     [x (error 'evalsecd/tco/ss "invalid final state: ~s" x)])]
+  [_ (error 'evalsecd/tco/ss "invalid input: ~s" m)])
 
 (module+ test
   (require (only-in (submod "cc.rkt" test) Ω))

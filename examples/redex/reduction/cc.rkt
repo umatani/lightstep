@@ -135,8 +135,8 @@
       b]
      [(set `((λ ,X ,(? M? N)) ,(□)))
       'function]
-     [x (error 'evalcc "invalid final state: ~a" x)])]
-  [_ (error 'evalcc "invalid input: ~a" m)])
+     [x (error 'evalcc "invalid final state: ~s" x)])]
+  [_ (error 'evalcc "invalid input: ~s" m)])
 
 (define/match (evalcc′ m)
   [M
@@ -146,8 +146,8 @@
       b]
      [(set (mkCC `(λ ,X ,M) (□)))
       'function]
-     [x (error 'evalcc′ "invalid final state: ~a" x)])]
-  [_ (error 'evalcc′ "invalid input: ~a" m)])
+     [x (error 'evalcc′ "invalid final state: ~s" x)])]
+  [_ (error 'evalcc′ "invalid input: ~s" m)])
 
 
 (module+ test

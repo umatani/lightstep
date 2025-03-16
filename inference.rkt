@@ -15,7 +15,7 @@
   ;; for debug
   (define (print-σ σ)
     (for ([kv (in-list σ)])
-      (printf "~a ↦ ~a\n"
+      (printf "~s ↦ ~s\n"
               (pretty-format (syntax->datum (car kv)))
               (pretty-format (syntax->datum (cdr kv))))))
   
@@ -52,8 +52,8 @@
 
   (define (match-form/list pats forms σ)
     (define pair #`(#,pats #,forms))
-    ;(printf "match-form/list: ~a\n" (pretty-format (syntax->datum pair)))
-    (define (err) `(ERR ,(format "no match: ~a" (syntax->datum pair))))
+    ;(printf "match-form/list: ~s\n" (pretty-format (syntax->datum pair)))
+    (define (err) `(ERR ,(format "no match: ~s" (syntax->datum pair))))
 
     (syntax-parse pair
       [(() ()) σ]
@@ -71,8 +71,8 @@
 
   (define (match-form/quasi qp form σ)
     (define pair #`(#,qp #,form))
-    ;(printf "match-form/quasi: ~a\n" (pretty-format (syntax->datum pair)))
-    (define (err) `(ERR ,(format "no match: ~a" (syntax->datum pair))))
+    ;(printf "match-form/quasi: ~s\n" (pretty-format (syntax->datum pair)))
+    (define (err) `(ERR ,(format "no match: ~s" (syntax->datum pair))))
 
     (syntax-parse pair
       #:literals (unquote unquote-splicing)
@@ -116,8 +116,8 @@
 
   (define (match-form pat form σ)
     (define pair #`(#,pat #,form))
-    ;(printf "match-form: ~a\n" (pretty-format (syntax->datum pair)))
-    (define (err) `(ERR ,(format "no match: ~a" (syntax->datum pair))))
+    ;(printf "match-form: ~s\n" (pretty-format (syntax->datum pair)))
+    (define (err) `(ERR ,(format "no match: ~s" (syntax->datum pair))))
 
     (syntax-parse pair
       #:literals (quote quasiquote list cons)
@@ -154,7 +154,7 @@
        (match (name&mode #'x)
          [`(,mode ,name)
           (if (assoc name σ free-identifier=?)
-            `(ERR ,(format "duplicate id in form pattern: ~a" (syntax-e name)))
+            `(ERR ,(format "duplicate id in form pattern: ~s" (syntax-e name)))
             (cons (cons name `(,mode ,#'f)) σ))])]
 
       [(b:boolean b′)
