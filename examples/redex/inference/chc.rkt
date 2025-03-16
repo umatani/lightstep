@@ -4,10 +4,10 @@
          lightstep/inference
          (only-in racket/match define-match-expander)
          (only-in "cc.rkt" □)
-         (only-in "e-iswim.rkt" δ [δ-rule orig-δ-rule])
+         (only-in "e-iswim.rkt" δ [δ-rules orig-δ-rules])
          (only-in "h-iswim.rkt"
                   [H-ISWIM orig-H-ISWIM] FV subst FCxt
-                  [δerr-rule orig-δerr-rule]))
+                  [δerr-rules orig-δerr-rules]))
 
 (module+ test (require rackunit))
 
@@ -18,13 +18,13 @@
   [H ∷= (? list? λFCxts)])
 
 ;; to match the monad
-(define-inference (δ-rule) #:super [(orig-δ-rule δ)]
+(define-inference (δ-rules) #:super [(orig-δ-rules δ)]
   #:monad (StateT #f (StateT #f (NondetT ID))))
 
-(define-inference (δerr-rule) #:super [(orig-δerr-rule δ)]
+(define-inference (δerr-rules) #:super [(orig-δerr-rules δ)]
   #:monad (StateT #f (StateT #f (NondetT ID))))
 
-(define-inference (⊢->chc)
+(define-inference (⊢->chc-rules)
   #:monad (StateT #f (StateT #f (NondetT ID)))
   #:do [(define get-H (bind get (compose1 return car)))
         (define get-C (bind get (compose1 return cdr)))
@@ -35,11 +35,11 @@
           (do (cons h _) ← get
               (put (cons h c))))
 
-        (define rδ    (reducer-of (δ-rule)))
-        (define rδerr (reducer-of (δerr-rule)))]
-  #:forms ([`(,i:i →chc  ,o:o) #:where o ← (⊢->chc i)]
-           [`(,i   →δ    ,o  ) #:where o ← (rδ     i)]
-           [`(,i   →δerr ,o  ) #:where o ← (rδerr  i)])
+        (define rδ    (reducer-of (δ-rules)))
+        (define rδerr (reducer-of (δerr-rules)))]
+  #:forms ([`(,i:i →chc  ,o:o) #:where o ← (⊢->chc-rules i)]
+           [`(,i   →δ    ,o  ) #:where o ← (rδ           i)]
+           [`(,i   →δerr ,o  ) #:where o ← (rδerr        i)])
 
   [#:when (not (V? M₁))
    (FCxt (□)) ← get-C
@@ -128,11 +128,11 @@
   (syntax-parser
     [(_ M H FCxt) #'(cons (cons M H) FCxt)]))
 
-(define step⊢->chc (let-values ([(mrun reducer) (⊢->chc)])
-                    (match-λ
-                     [(mkCHC M H FCxt)
-                      (mrun FCxt H (reducer M))])))
-(define ⊢->>chc (compose1 car (repeated step⊢->chc)))
+(define ⊢->chc (let-values ([(mrun reducer) (⊢->chc-rules)])
+                 (match-λ
+                  [(mkCHC M H FCxt)
+                   (mrun FCxt H (reducer M))])))
+(define ⊢->>chc (compose1 car (repeated ⊢->chc)))
 
 (define/match (evalchc m)
   [M

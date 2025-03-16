@@ -36,8 +36,8 @@
 
 (define-match-expander E
   (syntax-parser
-    [(E □)
-     #'(cxt E [□ (and □ (or `((λ (,(? X?)) ,_) ,(? V?))
+    [(E p)
+     #'(cxt E [□ (and p (or `((λ (,(? X?)) ,_) ,(? V?))
                             `(+ ,(? N?) ,(? N?))
                             `(<= ,(? N?) ,(? N?))
                             `(if ,(? V?) ,_ ,_)
@@ -76,8 +76,8 @@
            M′
            "amb"])
         (define →PCF₅ (reducer-of (PCF₅)))]
-  [(E m)
-   M′ ← (→PCF₅ m)
+  [(E M)
+   M′ ← (→PCF₅ M)
    (E M′)
    "EC"])
 

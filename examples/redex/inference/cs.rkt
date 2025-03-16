@@ -4,7 +4,7 @@
          lightstep/inference
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM [FV orig-FV] [subst orig-subst] δ))
-(provide S-ISWIM AV FV subst E ⊢->cs mkCS LET SEQ)
+(provide S-ISWIM AV FV subst E ⊢->cs-rules mkCS LET SEQ)
 
 (module+ test (require rackunit))
 
@@ -73,7 +73,7 @@
                  `(set ,X ,□) ; NEW
                  ))]))
 
-(define-inference (⊢->cs)
+(define-inference (⊢->cs-rules)
   #:monad (StateT #f (NondetT ID))
 
   [#:when (not (∈ X (AV M)))
@@ -105,11 +105,11 @@
   (syntax-parser
     [(_ M Σ) #'(cons M Σ)]))
 
-(define step⊢->cs (let-values ([(mrun reducer) (⊢->cs)])
-                    (match-λ
-                     [(mkCS M Σ)
-                      (mrun Σ (reducer M))])))
-(define ⊢->>cs (compose1 car (repeated step⊢->cs)))
+(define ⊢->cs (let-values ([(mrun reducer) (⊢->cs-rules)])
+                (match-λ
+                 [(mkCS M Σ)
+                  (mrun Σ (reducer M))])))
+(define ⊢->>cs (compose1 car (repeated ⊢->cs)))
 
 (define/match (evalcs m)
   [M

@@ -1,6 +1,6 @@
 #lang racket/base
-(require lightstep/base lightstep/syntax
-         (only-in "l0.rkt" L₀ r₀ r₁ to-five))
+(require lightstep/base lightstep/syntax lightstep/inference
+         (only-in "l0.rkt" L₀ r₀-rule r₁-rule [to-five L₀:to-five]))
 
 (module+ test (require rackunit))
 
@@ -14,14 +14,17 @@
   (check-true (M? 5))
   (check-true (M? "five")))
 
-(define-reduction (r₀′) #:super [(r₀)])
-(define step-r₀′ (call-with-values (λ () (r₀′)) compose1))
+(define-inference (r₀′-rule) #:super [(r₀-rule)])
+(define r₀′ (call-with-values (λ () (r₀′-rule)) compose1))
 
 (module+ test
-  (check-equal? (step-r₀′ "seven") (set 5)))
+  (check-equal? (r₀′ "seven") (set 5)))
 
-(define-reduction (r₁′) #:super [(r₁)])
-(define step-r₁′ (call-with-values (λ () (r₁′)) compose1))
+;; Redex cannot do as follows
+
+(define/match (to-five m) #:super L₀:to-five)
+(define-reduction (r₁′-rule) #:super [(r₁-rule)])
+(define r₁′ (call-with-values (λ () (r₁′-rule)) compose1))
 
 (module+ test
-  (check-exn #rx"no matching clause" (λ () (step-r₁′ "seven"))))
+  (check-equal? (r₁′ "seven") (set 5)))

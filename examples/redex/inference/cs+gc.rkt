@@ -1,7 +1,8 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax lightstep/inference
          (only-in "iswim.rkt" δ)
-         (only-in "cs.rkt" [S-ISWIM orig-S-ISWIM] AV FV subst E ⊢->cs mkCS))
+         (only-in "cs.rkt" [S-ISWIM orig-S-ISWIM] AV FV subst E
+                  ⊢->cs-rules mkCS))
 
 (module+ test (require rackunit))
 
@@ -24,7 +25,7 @@
       Σ
       (loop Σ′ Xs′))))
 
-(define-inference (⊢->cs+gc) #:super [(⊢->cs)]
+(define-inference (⊢->cs+gc-rules) #:super [(⊢->cs-rules)]
   [Σ ← get
    Σ′ ≔ (gc Σ (FV M))
    #:when (not (equal? Σ Σ′))
@@ -32,10 +33,10 @@
    -------------------------- "csgc"
    `(,M → ,M)                       ])
 
-(define step⊢->cs+gc (let-values ([(mrun reducer) (⊢->cs+gc)])
-                       (match-λ
-                        [(mkCS M Σ) (mrun Σ (reducer M))])))
-(define ⊢->>cs+gc (compose1 car (repeated step⊢->cs+gc)))
+(define ⊢->cs+gc (let-values ([(mrun reducer) (⊢->cs+gc-rules)])
+                   (match-λ
+                    [(mkCS M Σ) (mrun Σ (reducer M))])))
+(define ⊢->>cs+gc (compose1 car (repeated ⊢->cs+gc)))
 
 (define/match (evalcs+gc m)
   [M

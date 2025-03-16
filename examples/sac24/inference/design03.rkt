@@ -2,8 +2,8 @@
 (require lightstep/base lightstep/syntax lightstep/inference
          (for-syntax syntax/parse syntax/stx)
          (only-in "design02.rkt" subst)
-         (only-in "design02.rkt" PCF₀ -->PCF₀))
-(provide PCF₂ -->PCF₃ -->₂ E)
+         (only-in "design02.rkt" PCF₀ -->PCF₀-rules))
+(provide PCF₂ -->PCF₃-rule -->₂-rule E)
 
 (module+ test (require rackunit))
 
@@ -13,7 +13,7 @@
 (define-language PCF₂ #:super PCF₀
   [V ∷= #t #f N  `(λ (,X) ,M)])
 
-(define-inference (-->PCF₂) #:super [(-->PCF₀)]
+(define-inference (-->PCF₂-rules) #:super [(-->PCF₀-rules)]
   ;; override
   [M′ ≔ (subst M X V)
    ------------------------- "β"
@@ -56,8 +56,8 @@
    ----------------------- "EC-fix"
    `((fix ,M) → (fix ,M′))])
 
-(define step-->PCF₂ (call-with-values (λ () (-->PCF₂)) compose1))
-(define -->>PCF₂ (compose1 car (repeated step-->PCF₂)))
+(define -->PCF₂ (call-with-values (λ () (-->PCF₂-rules)) compose1))
+(define -->>PCF₂ (compose1 car (repeated -->PCF₂)))
 
 (module+ test
   ;(printf "----- PCF₂ ------------\n")
@@ -67,10 +67,10 @@
                 (set 15))
   (check-equal? (-->>PCF₂ '(<= 1 2)) (set #t))
   (check-equal? (-->>PCF₂ '(<= 3 2)) (set #f))
-  (check-equal? (step-->PCF₂ '(if #f 3 2)) (set 2))
-  (check-equal? (step-->PCF₂ '(if #t 3 2)) (set 3))
-  (check-equal? (step-->PCF₂ '(if 8 3 2)) (set 3))
-  (check-equal? (step-->PCF₂ '(if (<= 10 8) 3 2)) (set '(if #f 3 2)))
+  (check-equal? (-->PCF₂ '(if #f 3 2)) (set 2))
+  (check-equal? (-->PCF₂ '(if #t 3 2)) (set 3))
+  (check-equal? (-->PCF₂ '(if 8 3 2)) (set 3))
+  (check-equal? (-->PCF₂ '(if (<= 10 8) 3 2)) (set '(if #f 3 2)))
   (check-equal? (-->>PCF₂ '(if #f 3 2)) (set 2))
   (check-equal? (-->>PCF₂ '(if #t 3 2)) (set 3))
   (check-equal? (-->>PCF₂ '(if 8 3 2)) (set 3))
@@ -106,20 +106,20 @@
 ;; この定義は載せる
 (define-match-expander E
   (syntax-parser
-    [(E □)
-     #'(cxt E [□ (and □ (or `((λ (,(? X?)) ,_) ,(? V?))
+    [(E p)
+     #'(cxt E [□ (and p (or `((λ (,(? X?)) ,_) ,(? V?))
                             `(+ ,(? N?) ,(? N?))
                             `(<= ,(? N?) ,(? N?))
                             `(if ,(? V?) ,_ ,_)
                             `(fix (λ (,(? X?)) ,_))))]
-        `(+ ,V ,□)
-        `(+ ,□ ,M)
-        `(<= ,V ,□)
-        `(<= ,□ ,M)
-        `(if ,□ ,M₁ ,M₂)
-        `(fix ,□)
-        `(,V ,□)
-        `(,□ ,M₁))]))
+            `(+ ,V ,□)
+            `(+ ,□ ,M)
+            `(<= ,V ,□)
+            `(<= ,□ ,M)
+            `(if ,□ ,M₁ ,M₂)
+            `(fix ,□)
+            `(,V ,□)
+            `(,□ ,M₁))]))
 
 (module+ test
   ;(printf "----- EC ------------\n")
@@ -129,8 +129,8 @@
    '(if (<= (+ 1 2) (+ 1 2)) (+ 3 4) 5)))
 
 
-(define-inference (-->PCF₃)
-  #:do [(define-inference (-->PCF₀′) #:super [(-->PCF₀)]
+(define-inference (-->PCF₃-rule)
+  #:do [(define-inference (-->PCF₀′-rules) #:super [(-->PCF₀-rules)]
           ;; override
           [------------------------------------ "β"
            `(((λ (,X) ,M) ,V) → ,(subst M X V))]
@@ -139,15 +139,15 @@
           [#:when (not (false? V₁))
            ------------------------- "if-true"
            `((if ,V₁ ,M₂ ,M₃) → ,M₂)])
-        (define →PCF₀′ (reducer-of (-->PCF₀′)))]
+        (define →PCF₀′ (reducer-of (-->PCF₀′-rules)))]
   #:forms (.... [`(,i →₀ ,o) #:where o ← (→PCF₀′ i)])
 
-  [`(,m →₀ ,M′)
+  [`(,M →₀ ,M′)
    ----------------- "EC"
-   `(,(E m) → ,(E M′))])
+   `(,(E M) → ,(E M′))])
 
-(define step-->PCF₃ (call-with-values (λ () (-->PCF₃)) compose1))
-(define -->>PCF₃ (compose1 car (repeated step-->PCF₃)))
+(define -->PCF₃ (call-with-values (λ () (-->PCF₃-rule)) compose1))
+(define -->>PCF₃ (compose1 car (repeated -->PCF₃)))
 
 (module+ test
   ;(printf "----- PCF₃ ------------\n")
@@ -157,10 +157,10 @@
                 (set 15))
   (check-equal? (-->>PCF₃ '(<= 1 2)) (set #t))
   (check-equal? (-->>PCF₃ '(<= 3 2)) (set #f))
-  (check-equal? (step-->PCF₃ '(if #f 3 2)) (set 2))
-  (check-equal? (step-->PCF₃ '(if #t 3 2)) (set 3))
-  (check-equal? (step-->PCF₃ '(if 8 3 2)) (set 3))
-  (check-equal? (step-->PCF₃ '(if (<= 10 8) 3 2)) (set '(if #f 3 2)))
+  (check-equal? (-->PCF₃ '(if #f 3 2)) (set 2))
+  (check-equal? (-->PCF₃ '(if #t 3 2)) (set 3))
+  (check-equal? (-->PCF₃ '(if 8 3 2)) (set 3))
+  (check-equal? (-->PCF₃ '(if (<= 10 8) 3 2)) (set '(if #f 3 2)))
   (check-equal? (-->>PCF₃ '(if #f 3 2)) (set 2))
   (check-equal? (-->>PCF₃ '(if #t 3 2)) (set 3))
   (check-equal? (-->>PCF₃ '(if 8 3 2)) (set 3))
@@ -214,11 +214,11 @@
 
 (define (f x) `(+ ,x 1))
 
-(define-inference (-->₂)
+(define-inference (-->₂-rule)
   [------------------ "f"
    `((f ,x) → ,(f x))])
+(define -->₂ (call-with-values (λ () (-->₂-rule)) compose1))
 
 (module+ test
   ;(printf "----- -->₂ ------------\n")
-  (define step-->₂ (call-with-values (λ () (-->₂)) compose1))
-  (check-equal? (step-->₂ '(f a)) (set '(+ a 1))))
+  (check-equal? (-->₂ '(f a)) (set '(+ a 1))))

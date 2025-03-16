@@ -4,8 +4,8 @@
          lightstep/inference
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" [FV orig-FV] [subst orig-subst]
-                  [v orig-v] [δ orig-δ]))
-(provide ST-ISWIM FV subst ℬ Δ ⊢ v δ)
+                  [v-rules orig-v-rules] [δ orig-δ]))
+(provide ST-ISWIM FV subst ℬ Δ ⊢-rules v-rules δ)
 
 (module+ test (require rackunit))
 
@@ -69,8 +69,8 @@
   [('* '(num num)) 'num]
   [('↑ '(num num)) 'num])
 
-(define-inference (⊢)
-  #:forms ([`(,Γ:i ⊢ ,M:i : ,T:o) #:where T ← (⊢ `(,Γ ,M))])
+(define-inference (⊢-rules)
+  #:forms ([`(,Γ:i ⊢ ,M:i : ,T:o) #:where T ← (⊢-rules `(,Γ ,M))])
 
   [--------------------------
    `(,Γ ⊢ ,(? b? b) : ,(ℬ b))]
@@ -91,10 +91,10 @@
    -----------------------------------------
    `(,Γ ⊢ (,(? oⁿ? oⁿ) ,M ...) : ,(Δ oⁿ B)) ])
 
-(define step-⊢ (call-with-values (λ () (⊢)) compose1))
+(define ⊢ (call-with-values (λ () (⊢-rules)) compose1))
 
 (define (type-of M)
-  (match (step-⊢ `(,(↦) ,M))
+  (match (⊢ `(,(↦) ,M))
     [(set T) T]
     [_ (error "type error")]))
 
@@ -118,8 +118,8 @@
 ;; re-interpret M
 (define-match-expander ECxt
   (syntax-parser
-    [(ECxt □)
-     #'(cxt ECxt [□ (and □ (or `(,(? V?) ,(? V?))
+    [(ECxt p)
+     #'(cxt ECxt [□ (and p (or `(,(? V?) ,(? V?))
                                `(,(? oⁿ?) ,(? V?) (... ...))))]
             `(,V ,□)
             `(,□ ,M)
@@ -132,20 +132,20 @@
    #:when (not (zero? n))
    '(λ [x : num] (λ [y : num] y))])
 
-(define-inference (v) #:super [(orig-v)]
+(define-inference (v-rules) #:super [(orig-v-rules)]
   [-----------------------------------------
    `(((λ [,X : ,T] ,M) ,V) → ,(subst M X V))])
 
-(define-inference (⊢->v)
-  #:do [(define →v (reducer-of (v)))]
+(define-inference (⊢->v-rules)
+  #:do [(define →v (reducer-of (v-rules)))]
   #:forms (.... [`(,i →v ,o) #:where o ← (→v i)])
 
-  [`(,m →v ,M′)
+  [`(,M →v ,M′)
    -------------------------
-   `(,(ECxt m) → ,(ECxt M′))])
+   `(,(ECxt M) → ,(ECxt M′))])
 
-(define step⊢->v (call-with-values (λ () (⊢->v)) compose1))
-(define ⊢->>v (compose1 car (repeated step⊢->v)))
+(define ⊢->v (call-with-values (λ () (⊢->v-rules)) compose1))
+(define ⊢->>v (compose1 car (repeated ⊢->v)))
 
 (define/match (evalᵥˢ m)
   [M

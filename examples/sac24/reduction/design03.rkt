@@ -115,20 +115,20 @@
 ;; この定義は載せる
 (define-match-expander E
   (syntax-parser
-    [(E □)
-     #'(cxt E [□ (and □ (or `((λ (,(? X?)) ,_) ,(? V?))
+    [(E p)
+     #'(cxt E [□ (and p (or `((λ (,(? X?)) ,_) ,(? V?))
                             `(+ ,(? N?) ,(? N?))
                             `(<= ,(? N?) ,(? N?))
                             `(if ,(? V?) ,_ ,_)
                             `(fix (λ (,(? X?)) ,_))))]
-        `(+ ,V ,□)
-        `(+ ,□ ,M)
-        `(<= ,V ,□)
-        `(<= ,□ ,M)
-        `(if ,□ ,M₁ ,M₂)
-        `(fix ,□)
-        `(,V ,□)
-        `(,□ ,M₁))]))
+            `(+ ,V ,□)
+            `(+ ,□ ,M)
+            `(<= ,V ,□)
+            `(<= ,□ ,M)
+            `(if ,□ ,M₁ ,M₂)
+            `(fix ,□)
+            `(,V ,□)
+            `(,□ ,M₁))]))
 
 (module+ test
   ;(printf "----- EC ------------\n")
@@ -149,8 +149,8 @@
            #:when (not (false? V₁))
            M₂ "if-true"])
         (define →PCF₀′ (reducer-of (-->PCF₀′)))]
-  [(E m)
-   M′ ← (→PCF₀′ m)
+  [(E M)
+   M′ ← (→PCF₀′ M)
    (E M′)
    "EC"])
 

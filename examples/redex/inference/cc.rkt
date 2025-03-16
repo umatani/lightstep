@@ -4,7 +4,7 @@
          lightstep/inference
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ))
-(provide ECxt □ ⊢->cc′ mkCC)
+(provide ECxt □ ⊢->cc′-rules mkCC)
 
 (module+ test (require rackunit))
 
@@ -26,7 +26,7 @@
                              (app (λ (x) (λ () x)) □))])
   (syntax-parser [(_:id) #'#()]))
 
-(define-inference (⊢->cc)
+(define-inference (⊢->cc-rules)
   [#:when (not (V? M₁))
    ------------------------------------------------------ "cc1"
    `(((,M₁ ,M₂) ,(ECxt (□))) → (,M₁ ,(ECxt `(,(□) ,M₂))))      ]
@@ -57,7 +57,7 @@
      → ((,oⁿ ,@V′ ,V ,@M) ,(ECxt (□))))                   ])
 
 
-(define-inference (⊢->cc′)
+(define-inference (⊢->cc′-rules)
   #:monad (StateT #f (NondetT ID))
 
   [#:when (not (V? M₁))
@@ -99,8 +99,8 @@
    ----------------------------------------------- "cc6"
    `(,V → (,oⁿ ,@V′ ,V ,@M))                            ])
 
-(define step⊢->cc (call-with-values (λ () (⊢->cc)) compose1))
-(define ⊢->>cc (compose1 car (repeated step⊢->cc)))
+(define ⊢->cc (call-with-values (λ () (⊢->cc-rules)) compose1))
+(define ⊢->>cc (compose1 car (repeated ⊢->cc)))
 
 (define-match-expander mkCC
   (syntax-parser
@@ -108,11 +108,11 @@
   (syntax-parser
     [(_ M ECxt) #'(cons M ECxt)]))
 
-(define step⊢->cc′ (let-values ([(mrun reducer) (⊢->cc′)])
-                     (match-λ
-                      [(mkCC M ECxt)
-                       (mrun ECxt (reducer M))])))
-(define ⊢->>cc′ (compose1 car (repeated step⊢->cc′)))
+(define ⊢->cc′ (let-values ([(mrun reducer) (⊢->cc′-rules)])
+                 (match-λ
+                  [(mkCC M ECxt)
+                   (mrun ECxt (reducer M))])))
+(define ⊢->>cc′ (compose1 car (repeated ⊢->cc′)))
 
 (define/match (evalcc m)
   [M

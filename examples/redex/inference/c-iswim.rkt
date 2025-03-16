@@ -2,10 +2,10 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/match define-match-expander)
-         (only-in "iswim.rkt" ISWIM βv-rule)
-         (only-in "e-iswim.rkt" δ δ-rule)
+         (only-in "iswim.rkt" ISWIM βv-rules)
+         (only-in "e-iswim.rkt" δ δ-rules)
          (only-in "h-iswim.rkt" [FV orig-FV] [subst orig-subst]
-                  throw-rule return-rule δerr-rule))
+                  throw-rules return-rules δerr-rules))
 (provide C-ISWIM FV subst FCxt)
 
 (module+ test (require rackunit))
@@ -60,29 +60,29 @@
                      `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...))
                      )])))
 
-(define-inference (cntrl-rule)
+(define-inference (cntrl-rules)
   [X′ ≔ ((symbol-not-in (FV (FCxt 5))) 'Y)
    ------------------------------------------------------------
    `((catch ,(FCxt `(throw ,(? b? b))) with (λ ,X₁ (λ ,X₂ ,M)))
      → (((λ ,X₁ (λ ,X₂ ,M)) ,b) (λ ,X′ ,(FCxt X′))))           ])
 
-(define-inference (c′) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)
-                                          (return-rule)
-                                          (cntrl-rule)])
+(define-inference (c′-rules) #:super [(βv-rules) (δ-rules δ) (δerr-rules δ)
+                                                 (return-rules)
+                                                 (cntrl-rules)])
 
-(define-inference (c) #:super [(c′) (throw-rule)])
+(define-inference (c-rules) #:super [(c′-rules) (throw-rules)])
 
 ;; inside catch
-(define-inference (-->c′) #:super [(c′)]
+(define-inference (-->c′-rules) #:super [(c′-rules)]
   [`(,m → ,M′)
    -------------------------
    `(,(Cxt′ m) → ,(Cxt′ M′))])
 
 ;; toplevel, i.e., outside catch context
-(define-inference (-->c) #:super [(c)]
-  #:do [(define rc′ (reducer-of (-->c′)))]
-  #:forms ([`(,i:i →c  ,o:o) #:where o ← (-->c i)]
-           [`(,i   →c′ ,o  ) #:where o ← (rc′  i)])
+(define-inference (-->c-rules) #:super [(c-rules)]
+  #:do [(define rc′ (reducer-of (-->c′-rules)))]
+  #:forms ([`(,i:i →c  ,o:o) #:where o ← (-->c-rules i)]
+           [`(,i   →c′ ,o  ) #:where o ← (rc′        i)])
 
   [`(,m →c ,M′)
    ------------------------
@@ -93,8 +93,8 @@
    `(,(FCxt `(catch ,M₁ with (λ ,X₁ (λ ,X₂ ,M₂))))
      →c ,(FCxt `(catch ,M₁′ with (λ ,X₁ (λ ,X₂ ,M₂)))))])
 
-(define step-->c (call-with-values (λ () (-->c)) compose1))
-(define -->>c (compose1 car (repeated step-->c)))
+(define -->c (call-with-values (λ () (-->c-rules)) compose1))
+(define -->>c (compose1 car (repeated -->c)))
 
 (define/match (evalc m)
   [M
@@ -114,7 +114,7 @@
   (check-equal? (evalc '(add1 (λ x x))) '(err 0))
   (check-equal? (evalc '(/ 3 0)) '(err 0))
 
-  (check-equal? (step-->c '(+ (- 4 (throw 1)) (throw 2)))
+  (check-equal? (-->c '(+ (- 4 (throw 1)) (throw 2)))
                 (set '(+ (throw 1) (throw 2)) '(throw 1)))
   (check-equal? (-->>c '(+ (- 4 (throw 1)) (throw 2)))
                 (set '(throw 1)))

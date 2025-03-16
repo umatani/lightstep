@@ -1,6 +1,6 @@
 #lang racket
 (require lightstep/base lightstep/syntax lightstep/inference
-         (only-in "design05.rkt" PCF₅ subst E -->PCF₅))
+         (only-in "design05.rkt" PCF₅ subst E -->PCF₅-rule))
 
 (module+ test (require rackunit))
 
@@ -13,11 +13,11 @@
 ;; selectの置き換え， ≔<2> を ← に．
 (define select list→set)
 
-(define-inference (-->PCF₆ ≔<1> ≔<2>) #:super [(-->PCF₅ ≔<1> ≔<2>)])
+(define-inference (-->PCF₆-rule ≔<1> ≔<2>) #:super [(-->PCF₅-rule ≔<1> ≔<2>)])
 
 
-(define step-->PCF₆ (call-with-values (λ () (-->PCF₆ ≔ ←)) compose1))
-(define -->>PCF₆ (compose1 car (repeated step-->PCF₆)))
+(define -->PCF₆ (call-with-values (λ () (-->PCF₆-rule ≔ ←)) compose1))
+(define -->>PCF₆ (compose1 car (repeated -->PCF₆)))
 
 (module+ test
   ;(printf "----- PCF₆ ------------\n")
@@ -28,10 +28,10 @@
 
 ;; define-reduction時に ≔<1>, ≔<2>を固定することも可能
 
-(define-inference (-->PCF₆-v2) #:super [(-->PCF₅ ≔ ←)])
+(define-inference (-->PCF₆-v2-rule) #:super [(-->PCF₅-rule ≔ ←)])
 
-(define step-->PCF₆-v2 (call-with-values (λ () (-->PCF₆-v2)) compose1))
-(define -->>PCF₆-v2 (compose1 car (repeated step-->PCF₆-v2)))
+(define -->PCF₆-v2 (call-with-values (λ () (-->PCF₆-v2-rule)) compose1))
+(define -->>PCF₆-v2 (compose1 car (repeated -->PCF₆-v2)))
 
 (module+ test
   ;(printf "----- PCF₆-v2 ------------\n")

@@ -2,13 +2,14 @@
 
 ## List of Examples
 
-* [2 Warmup](l.rkt)
-* [3 PCF](pcf.rkt)
-* [3.4 Evaluation](pcf-bigstep.rkt)
-* [3.5 A brief aside on the caveats of language extensions](l0.rkt)
-* [3.5 A brief aside on the caveats of language extensions](l1.rkt)
-* [3.6 Explicit substitutions](pcf-rho.rkt)
-* [3.7 Eval/Continue/Apply machine](pcf-varsigma.rkt)
-* [3.8 Heap-allocated bindings](pcf-sigma.rkt)
-* [3.9 Abstracting over alloc](pcf-sigma-alloc.rkt)
-* [3.10 Heap-allocated continuations](pcf-sigma-star.rkt)
+* 2 Warmup [[normal](normal/l.rkt)/monadic]
+* 3 PCF [[normal](normal/pcf.rkt)/monadic]
+* 3.1 Typing judgement [[normal](normal/pcf-t.rkt)/monadic]
+* 3.4 Evaluation [[normal](normal/pcf-bigstep.rkt)/monadic]
+* 3.5 A brief aside on the caveats of language extensions [[normal](normal/l0.rkt)/monadic]
+* 3.5 A brief aside on the caveats of language extensions [[normal](normal/l1.rkt)/monadic]
+* 3.6 Explicit substitutions [[normal](normal/pcf-rho.rkt)/monadic]
+* 3.7 Eval/Continue/Apply machine [[normal](normal/pcf-varsigma.rkt)/monadic]
+* 3.8 Heap-allocated bindings [[normal](normal/pcf-sigma.rkt)/monadic]
+* 3.9 Abstracting over alloc [[normal](normal/pcf-sigma-alloc.rkt)/monadic]
+* 3.10 Heap-allocated continuations [[normal](normal/pcf-sigma-star.rkt)/monadic]

@@ -1,7 +1,7 @@
 #lang racket/base
 (require (for-syntax racket/base)
          lightstep/base lightstep/syntax lightstep/inference)
-(provide LAM FV subst α)
+(provide LAM FV subst α-rules)
 
 (module+ test (require rackunit))
 
@@ -67,77 +67,77 @@
                      `(,(? M? □) ,M)
                      `(,M ,(? M? □)))])))
 
-(define-inference (-->gen r)
-  #:forms (.... [`(,i →ᵣ ,o) #:where o ← (r i)])
+(define-inference (-->gen-rules reducer)
+  #:forms (.... [`(,i →ᵣ ,o) #:where o ← (reducer i)])
 
   [`(,m →ᵣ ,M′)
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
-(define-inference (α)
+(define-inference (α-rules)
   [X₂ ≔ ((symbol-not-in (FV M)) X₁)
    ---------------------------------------- "α"
    `((λ ,X₁ ,M) → (λ ,X₂ ,(subst M X₁ X₂)))    ])
 
-(define step-α (call-with-values (λ () (α)) compose1))
+(define α (call-with-values (λ () (α-rules)) compose1))
 
-(define-inference (-->α) #:super [(-->gen -->α)]
-  #:do [(define rα (reducer-of (α)))]
+(define-inference (-->α-rules) #:super [(-->gen-rules -->α-rules)]
+  #:do [(define rα (reducer-of (α-rules)))]
   #:forms (.... [`(,i →α ,o) #:where o ← (rα i)])
 
   [`(,M →α ,M′)
    ------------ "α"
    `(,M → ,M′)     ])
 
-(define step-->α (call-with-values (λ () (-->α)) compose1))
+(define -->α (call-with-values (λ () (-->α-rules)) compose1))
 
-(define-inference (β)
+(define-inference (β-rules)
   [-------------------------------------- "β"
    `(((λ ,X ,M₁) ,M₂) → ,(subst M₁ X M₂))    ])
 
-(define step-β (call-with-values (λ () (β)) compose1))
+(define β (call-with-values (λ () (β-rules)) compose1))
 
-(define-inference (-->β) #:super [(-->gen -->β)]
-  #:do [(define rβ (reducer-of (β)))]
+(define-inference (-->β-rules) #:super [(-->gen-rules -->β-rules)]
+  #:do [(define rβ (reducer-of (β-rules)))]
   #:forms (.... [`(,i →β ,o) #:where o ← (rβ i)])
   
   [`(,M →β ,M′)
    ------------ "β"
    `(,M → ,M′)     ])
 
-(define step-->β (call-with-values (λ () (-->β)) compose1))
+(define -->β (call-with-values (λ () (-->β-rules)) compose1))
 
-(define-inference (η)
+(define-inference (η-rules)
   [#:when (eq? X X′)
    #:when (not (∈ X (FV M)))
    ------------------------- "η"
    `((λ ,X (,M ,X′)) → ,M)      ])
 
-(define step-η (call-with-values (λ () (η)) compose1))
+(define η (call-with-values (λ () (η-rules)) compose1))
 
-(define-inference (-->η) #:super [(-->gen -->η)]
-  #:do [(define rη (reducer-of (η)))]
+(define-inference (-->η-rules) #:super [(-->gen-rules -->η-rules)]
+  #:do [(define rη (reducer-of (η-rules)))]
   #:forms (.... [`(,i →η ,o) #:where o ← (rη i)])
   [`(,M →η ,M′)
    ------------ "η"
    `(,M → ,M′)     ])
 
-(define step-->η (call-with-values (λ () (-->η)) compose1))
+(define -->η (call-with-values (λ () (-->η-rules)) compose1))
 
-(define-inference (n) #:super [#;(α) (β) (η)])
+(define-inference (n-rules) #:super [#;(α-rules) (β-rules) (η-rules)])
 
-(define step-n (call-with-values (λ () (n)) compose1))
+(define n (call-with-values (λ () (n-rules)) compose1))
 
-(define-inference (-->n) #:super [(-->gen -->n)]
-  #:do [(define rn (reducer-of (n)))]
+(define-inference (-->n-rules) #:super [(-->gen-rules -->n-rules)]
+  #:do [(define rn (reducer-of (n-rules)))]
   #:forms (.... [`(,i →n ,o) #:where o ← (rn i)])
   [`(,M →n ,M′)
    ------------ "n"
    `(,M → ,M′)     ])
 
-(define step-->n (call-with-values (λ () (-->n)) compose1))
+(define -->n (call-with-values (λ () (-->n-rules)) compose1))
 
-(define -->>n (compose1 car (repeated step-->n)))
+(define -->>n (compose1 car (repeated -->n)))
 
 (module+ test
   (check-equal? (-->>n '(λ x ((λ z z) x))) (set '(λ x x) '(λ z z)))
@@ -239,12 +239,12 @@
 
 (define Ω '((λ x (x x)) (λ x (x x))))
 
-(define-inference (-->n̅)
-  #:do [(define rβ (reducer-of (β)))
-        (define rη (reducer-of (η)))]
-  #:forms ([`(,i:i →n̅ ,o:o) #:where o ← (-->n̅ i)]
-           [`(,i   →β ,o  ) #:where o ← (rβ   i)]
-           [`(,i   →η ,o  ) #:where o ← (rη   i)])
+(define-inference (-->n̅-rules)
+  #:do [(define rβ (reducer-of (β-rules)))
+        (define rη (reducer-of (η-rules)))]
+  #:forms ([`(,i:i →n̅ ,o:o) #:where o ← (-->n̅-rules i)]
+           [`(,i   →β ,o  ) #:where o ← (rβ         i)]
+           [`(,i   →η ,o  ) #:where o ← (rη         i)])
 
   [`(,M →β ,M′)
    ------------
@@ -254,25 +254,25 @@
    ------------
    `(,M →n̅ ,M′)]
 
-  [#:when (∅? (step-η `(λ ,X ,M)))
+  [#:when (∅? (η `(λ ,X ,M)))
    `(,M →n̅ ,M′)
    -------------------------------
    `((λ ,X ,M) →n̅ (λ ,X ,M′))     ]
 
-  [#:when (∅? (step-β `(,M₁ ,M₂)))
+  [#:when (∅? (β `(,M₁ ,M₂)))
    `(,M₁ →n̅ ,M₁′)
    -------------------------------
    `((,M₁ ,M₂) →n̅ (,M₁′ ,M₂))     ]
 
-  [#:when (∅? (step-β `(,M₁ ,M₂)))
-   #:when (∅? (step-->n̅ M₁))
+  [#:when (∅? (β `(,M₁ ,M₂)))
+   #:when (∅? (-->n̅ M₁))
    `(,M₂ →n̅ ,M₂′)
    -------------------------------
    `((,M₁ ,M₂) →n̅ (,M₁ ,M₂′))     ])
 
-(define step-->n̅ (call-with-values (λ () (-->n̅)) compose1))
+(define -->n̅ (call-with-values (λ () (-->n̅-rules)) compose1))
 
-(define -->>n̅ (compose1 car (repeated step-->n̅)))
+(define -->>n̅ (compose1 car (repeated -->n̅)))
 
 (module+ test
   (check-equal? (-->>n̅ `((λ y (λ z z)) ,Ω)) (set '(λ z z))))

@@ -2,9 +2,9 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/match define-match-expander)
-         (only-in "iswim.rkt" βv-rule)
-         (only-in "e-iswim.rkt" δ δ-rule)
-         (only-in "h-iswim.rkt" return-rule δerr-rule)
+         (only-in "iswim.rkt" βv-rules)
+         (only-in "e-iswim.rkt" δ δ-rules)
+         (only-in "h-iswim.rkt" return-rules δerr-rules)
          (only-in "c-iswim.rkt" [C-ISWIM orig-C-ISWIM] FV subst FCxt))
 
 (module+ test (require rackunit))
@@ -24,13 +24,13 @@
                  `(catch ,□ with (λ ,X₁ (λ ,X₂ ,M))) ;; NEW
                  ))]))
 
-(define-inference (c̃) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)
-                                         (return-rule)])
+(define-inference (c̃-rules) #:super [(βv-rules) (δ-rules δ) (δerr-rules δ)
+                                                (return-rules)])
 
-(define-inference (⊢->c)
-  #:do [(define rc̃ (reducer-of (c̃)))]
-  #:forms ([`(,i:i →c ,o:o) #:where o ← (⊢->c i)]
-           [`(,i   →c̃ ,o  ) #:where o ← (rc̃   i)])
+(define-inference (⊢->c-rules)
+  #:do [(define rc̃ (reducer-of (c̃-rules)))]
+  #:forms ([`(,i:i →c ,o:o) #:where o ← (⊢->c-rules i)]
+           [`(,i   →c̃ ,o  ) #:where o ← (rc̃         i)])
 
   [`((,V₁ ,V₂) →c̃ ,M)
    ----------------------------------
@@ -52,8 +52,8 @@
    ---------------------------------------------------
    `(,(and x (FCxt `(throw ,(? b? b)))) →c (throw ,b))])
 
-(define step⊢->c (call-with-values (λ () (⊢->c)) compose1))
-(define ⊢->>c (compose1 car (repeated step⊢->c)))
+(define ⊢->c (call-with-values (λ () (⊢->c-rules)) compose1))
+(define ⊢->>c (compose1 car (repeated ⊢->c)))
 
 (define/match (evalcˢ m)
   [M
@@ -73,7 +73,7 @@
   (check-equal? (evalcˢ '(add1 (λ x x))) '(err 0))
   (check-equal? (evalcˢ '(/ 3 0)) '(err 0))
 
-  (check-equal? (step⊢->c '(+ (- 4 (throw 1)) (throw 2)))
+  (check-equal? (⊢->c '(+ (- 4 (throw 1)) (throw 2)))
                 (set '(throw 1)))
   (check-equal? (⊢->>c '(+ (- 4 (throw 1)) (throw 2)))
                 (set '(throw 1)))

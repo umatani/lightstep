@@ -17,7 +17,7 @@
                   ID ReaderT WriterT StateT FailT NondetT)
          (only-in "nondet.rkt" NondetM nondet-match))
 (provide ReduceM define-reduction repeated reducer-of mrun-of red^
-         (for-syntax options gen-rname))
+         (for-syntax options gen-rname escape-elipsis))
 
 (define ReduceM NondetM)
 

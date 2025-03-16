@@ -1,8 +1,8 @@
 #lang racket
 (require lightstep/base lightstep/syntax lightstep/inference
          (only-in "design01.rkt" [subst LAM:subst])
-         (only-in "design02.rkt" -->PCF₀)
-         (only-in "design03.rkt" PCF₂ E -->₂ -->PCF₃))
+         (only-in "design02.rkt" -->PCF₀-rules)
+         (only-in "design03.rkt" PCF₂ E -->₂-rule -->PCF₃-rule))
 (provide subst)
 
 (module+ test (require rackunit))
@@ -22,15 +22,15 @@
 ;; ちなみに，下の簡潔な例で，Redexとは異なり，quasiquote, unquote
 ;; を明示的に書くRacketのパターンの美しさが際立つ．
 ;; xは常にメタ変数を意味することや，gは両方の世界にありそれぞれどちらに属するかが一目瞭然．
-(define-inference (-->₃) #:super [(-->₂)]
+(define-inference (-->₃-rule) #:super [(-->₂-rule)]
   [------------------ "g"
    `((g ,x) → ,(g x))])
+(define -->₃ (call-with-values (λ () (-->₃-rule)) compose1))
 
 (module+ test
   ;(printf "----- -->₃ ------------\n")
-  (define step-->₃ (call-with-values (λ () (-->₃)) compose1))
-  (check-equal? (step-->₃ '(g a)) (set '(<= 0 a))) ;; as usual
-  (check-equal? (step-->₃ '(f a)) (set '(+ a a))))
+  (check-equal? (-->₃ '(g a)) (set '(<= 0 a))) ;; as usual
+  (check-equal? (-->₃ '(f a)) (set '(+ a a))))
 
 ;; 言語定義のインポート
 (define-language PCF₄ #:super PCF₂)
@@ -48,9 +48,9 @@
   [(`(fix ,M′) X M)
    `(fix ,(subst M′ X M))])
 
-(define-inference (-->PCF₄) #:super [(-->PCF₃)])
-(define step-->PCF₄ (call-with-values (λ () (-->PCF₄)) compose1))
-(define -->>PCF₄ (compose1 car (repeated step-->PCF₄)))
+(define-inference (-->PCF₄-rule) #:super [(-->PCF₃-rule)])
+(define -->PCF₄ (call-with-values (λ () (-->PCF₄-rule)) compose1))
+(define -->>PCF₄ (compose1 car (repeated -->PCF₄)))
 
 (module+ test
   ;(printf "----- PCF₄ ------------\n")

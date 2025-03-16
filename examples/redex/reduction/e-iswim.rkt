@@ -17,8 +17,8 @@
 ;; re-interpret oⁿ?
 (define-match-expander ECxt
   (syntax-parser
-    [(ECxt □)
-     #'(cxt ECxt [□ (and □ (or `(,(? V?) ,(? V?))
+    [(ECxt p)
+     #'(cxt ECxt [□ (and p (or `(,(? V?) ,(? V?))
                                `(,(? oⁿ?) ,(? V?) (... ...))))]
             `(,V ,□)
             `(,□ ,M)

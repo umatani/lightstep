@@ -5,7 +5,7 @@
          (only-in racket/list append-map)
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" FV δ)
-         (only-in "secd.rkt" SECD  ⊢->secd mkSECD))
+         (only-in "secd.rkt" SECD  ⊢->secd-rules mkSECD))
 
 (module+ test (require rackunit))
 
@@ -16,7 +16,7 @@
   [C ∷= '(ap) `(prim ,(? oⁿ?)) (? b? b) X `(,X (,C ...))]
   [V ∷= (? b?) `((λ ,X (,C ...)) ,E)])
 
-(define-inference (⊢->secd₂) #:super [(⊢->secd)]
+(define-inference (⊢->secd₂-rules) #:super [(⊢->secd-rules)]
 
   [(error "no such case")
    ------------------------------------------ "secdPA"
@@ -38,11 +38,11 @@
    -------------------------------------------- "secd5"
    `(((ap) ,C ...) → (,@C′))                           ])
 
-(define step⊢->secd₂ (let-values ([(mrun reducer) (⊢->secd₂)])
-                       (match-λ
-                        [(mkSECD S E Cs D)
-                         (mrun D E S (reducer Cs))])))
-(define ⊢->>secd₂ (compose1 car (repeated step⊢->secd₂)))
+(define ⊢->secd₂ (let-values ([(mrun reducer) (⊢->secd₂-rules)])
+                   (match-λ
+                    [(mkSECD S E Cs D)
+                     (mrun D E S (reducer Cs))])))
+(define ⊢->>secd₂ (compose1 car (repeated ⊢->secd₂)))
 
 (define/match (compile m)
   [X

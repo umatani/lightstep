@@ -19,7 +19,7 @@
              `(letrec ,x ,□)
              □)]))
 
-(define-inference (⊢->s2)
+(define-inference (⊢->s2-rules)
   #:do [(define (substs-Σ Σ xs ms)
           (for/map ([(x v) (in-map Σ)])
             (values (substs x xs ms) (substs v xs ms))))]
@@ -54,8 +54,8 @@
    --------------------------------------------------------------- "s2assignR"
    `((letrec ,Σ ,(E `(set ,X ,V))) → (letrec ,(Σ X V) ,(E (Σ X))))            ])
 
-(define step⊢->s2 (call-with-values (λ () (⊢->s2)) compose1))
-(define ⊢->>s2 (compose1 car (repeated step⊢->s2)))
+(define ⊢->s2 (call-with-values (λ () (⊢->s2-rules)) compose1))
+(define ⊢->>s2 (compose1 car (repeated ⊢->s2)))
 
 (define/match (evalₛ₂ m)
   [M

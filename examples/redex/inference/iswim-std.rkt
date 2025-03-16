@@ -2,7 +2,7 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/match define-match-expander)
-         (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ v))
+         (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ v-rules))
 
 (module+ test (require rackunit))
 
@@ -17,22 +17,22 @@
 
 (define-match-expander E
   (syntax-parser
-    [(E □)
-     #'(cxt E [□ (and □ (or `(,(? V?) ,(? V?))
+    [(E p)
+     #'(cxt E [□ (and p (or `(,(? V?) ,(? V?))
                             `(,(? oⁿ?) ,(? V?) (... ...))))]
             `(,V ,□)
             `(,□ ,M)
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
-(define-inference (⊢->v)
-  #:do [(define rv (reducer-of (v)))]
+(define-inference (⊢->v-rules)
+  #:do [(define rv (reducer-of (v-rules)))]
   #:forms (.... [`(,i →v ,o) #:where o ← (rv i)])
-  [`(,m →v ,M′)
+  [`(,M →v ,M′)
    -------------------------
-   `(,(E m) → ,(E M′))])
+   `(,(E M) → ,(E M′))])
 
-(define step⊢->v (call-with-values (λ () (⊢->v)) compose1))
-(define ⊢->>v (compose1 car (repeated step⊢->v)))
+(define ⊢->v (call-with-values (λ () (⊢->v-rules)) compose1))
+(define ⊢->>v (compose1 car (repeated ⊢->v)))
 
 (define/match (evalᵥˢ m)
   [M

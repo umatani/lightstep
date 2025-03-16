@@ -17,8 +17,8 @@
 
 (define-match-expander E
   (syntax-parser
-    [(E □)
-     #'(cxt E [□ (and □ (or `(,(? V?) ,(? V?))
+    [(E p)
+     #'(cxt E [□ (and p (or `(,(? V?) ,(? V?))
                             `(,(? oⁿ?) ,(? V?) (... ...))))]
             `(,V ,□)
             `(,□ ,M)
@@ -26,8 +26,8 @@
 
 (define-reduction (⊢->v)
   #:do [(define →v (reducer-of (v)))]
-  [(E m)
-   M′ ← (→v m)
+  [(E M)
+   M′ ← (→v M)
    (E M′)])
 
 (define step⊢->v (call-with-values (λ () (⊢->v)) compose1))

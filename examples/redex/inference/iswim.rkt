@@ -3,7 +3,7 @@
          lightstep/base lightstep/syntax lightstep/inference
          (only-in lightstep/monad mapM)
          (prefix-in lam: (only-in "lam.rkt" LAM FV subst)))
-(provide ISWIM FV subst βv-rule δ δ-rule v Cxt)
+(provide ISWIM FV subst βv-rules δ δ-rules v-rules Cxt)
 
 (module+ test (require rackunit))
 
@@ -52,7 +52,7 @@
 ;;=============================================================================
 ;; 4.2  Calculating with ISWIM
 
-(define-inference (βv-rule)
+(define-inference (βv-rules)
   [----------------------------------
    `(((λ ,X ,M) ,V) → ,(subst M X V))])
 
@@ -80,13 +80,13 @@
   (let ([X ((symbol-not-in (FV M) (FV N)) 'if0)])
     `((((iszero ,L) (λ ,X ,M)) (λ ,X ,N)) 0)))
 
-(define-inference (δ-rule δ)
+(define-inference (δ-rules δ)
   [------------------------------------------
    `((,(? oⁿ? oⁿ) ,(? b? b) ...) → ,(δ oⁿ b))])
 
-(define-inference (v) #:super [(βv-rule) (δ-rule δ)])
+(define-inference (v-rules) #:super [(βv-rules) (δ-rules δ)])
 
-(define step-v (call-with-values (λ () (v)) compose1))
+(define v (call-with-values (λ () (v-rules)) compose1))
 
 ;; ECxt of iswim-std.rkt is same, but deterministic
 (define-nondet-match-expander Cxt
@@ -99,13 +99,13 @@
                      `(,V ,(? M? □))
                      `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...)))])))
 
-(define-inference (-->v) #:super [(v)]
+(define-inference (-->v-rules) #:super [(v-rules)]
   [`(,m → ,M′)
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
-(define step-->v (call-with-values (λ () (-->v)) compose1))
-(define -->>v (compose1 car (repeated step-->v)))
+(define -->v (call-with-values (λ () (-->v-rules)) compose1))
+(define -->>v (compose1 car (repeated -->v)))
 
 (module+ test
   (check-equal? (-->>v '((λ w (- (w 1) 5))
@@ -152,7 +152,7 @@
 ;;=============================================================================
 ;; 4.6  Consistency
 
-(define-inference (↪v)
+(define-inference (↪v-rules)
   #:forms ([`(,i:i ↪ ,o:o) #:where o ← (↪v i)])
 
   [----------
@@ -177,7 +177,7 @@
    ------------------------------------
    `((,(? oⁿ? oⁿ) ,M ...) ↪ (,oⁿ ,@M′))])
 
-(define step-↪v (call-with-values (λ () (↪v)) compose1))
+(define ↪v (call-with-values (λ () (↪v-rules)) compose1))
 
 (module+ test
   ;; (for ([m′ (step-↪v '((λ x (x x)) (λ y ((λ x x) (λ x x)))))])

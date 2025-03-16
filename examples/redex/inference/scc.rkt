@@ -13,7 +13,7 @@
 ;;=============================================================================
 ;; 6.2 The CC Machine
 
-(define-inference (⊢->scc)
+(define-inference (⊢->scc-rules)
   #:monad (StateT #f (NondetT ID))
 
   [(ECxt (□)) ← get
@@ -52,11 +52,11 @@
   (syntax-parser
     [(_ M ECxt) #'(cons M ECxt)]))
 
-(define step⊢->scc (let-values ([(mrun reducer) (⊢->scc)])
-                     (match-λ
-                      [(mkSCC M ECxt)
-                       (mrun ECxt (reducer M))])))
-(define ⊢->>scc (compose1 car (repeated step⊢->scc)))
+(define ⊢->scc (let-values ([(mrun reducer) (⊢->scc-rules)])
+                 (match-λ
+                  [(mkSCC M ECxt)
+                   (mrun ECxt (reducer M))])))
+(define ⊢->>scc (compose1 car (repeated ⊢->scc)))
 
 (define/match (evalscc m)
   [M

@@ -16,9 +16,8 @@
 
 (define-reduction (⊢->e)
   #:do [(define →ẽ (reducer-of (ẽ)))]
-  [(ECxt m)
-   #:when (M? m)
-   M′ ← (→ẽ m)
+  [(ECxt M)
+   M′ ← (→ẽ M)
    (ECxt M′)]
   [(and x (ECxt e))
    #:when (not (equal? x e))

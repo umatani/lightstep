@@ -4,7 +4,7 @@
          lightstep/inference
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM FV δ))
-(provide CEK ⊢->cek mkCEK)
+(provide CEK ⊢->cek-rules mkCEK)
 
 (module+ test (require rackunit))
 
@@ -19,7 +19,7 @@
      `(op ,(? list? VEsOⁿ) ,(? list? MEs) ,(? κ? κ))]
   [E ∷= (? map? X→VE)])
 
-(define-inference (⊢->cek)
+(define-inference (⊢->cek-rules)
   #:monad (StateT #f (StateT #f (NondetT ID)))
   #:do [(define get-E (bind get (compose1 return car)))
         (define get-κ (bind get (compose1 return cdr)))
@@ -82,11 +82,11 @@
   (syntax-parser
     [(_ M E κ) #'(cons (cons M E) κ)]))
 
-(define step⊢->cek (let-values ([(mrun reducer) (⊢->cek)])
-                     (match-λ
-                      [(mkCEK M E (? κ? κ))
-                       (mrun κ E (reducer M))])))
-(define ⊢->>cek (compose1 car (repeated step⊢->cek)))
+(define ⊢->cek (let-values ([(mrun reducer) (⊢->cek-rules)])
+                 (match-λ
+                  [(mkCEK M E (? κ? κ))
+                   (mrun κ E (reducer M))])))
+(define ⊢->>cek (compose1 car (repeated ⊢->cek)))
 
 (define/match (evalcek m)
   [M

@@ -2,7 +2,7 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/match define-match-expander)
-         (only-in "s-iswim.rkt" [S-ISWIM orig-S-ISWIM] FV s step-s))
+         (only-in "s-iswim.rkt" [S-ISWIM orig-S-ISWIM] FV s-rules s))
 
 (module+ test (require rackunit))
 
@@ -19,28 +19,28 @@
 
 (define-match-expander E
   (syntax-parser
-    [(E □)
-     #'(... (cxt E [□ (and □ (? (λ (m) (not (∅? (step-s m))))))]
+    [(E p)
+     #'(... (cxt E [□ (and p (? (λ (m) (not (∅? (s m))))))]
                  `(,V ,□)
                  `(,□ ,M)
                  `(,(? oⁿ?) ,V ... ,□ ,M ...)
                  `(set ,X ,□) ; NEW
                  ))]))
 
-(define-inference (⊢->s)
-  #:do [(define rs (reducer-of (s)))]
+(define-inference (⊢->s-rules)
+  #:do [(define rs (reducer-of (s-rules)))]
   #:forms (.... [`(,i →s ,o) #:where o ← (rs i)])
 
-  [`(,m →s ,M′)
+  [`(,M →s ,M′)
    -------------------
-   `(,(E m) → ,(E M′))]
+   `(,(E M) → ,(E M′))]
 
-  [`(,m →s ,M′)
+  [`(,M →s ,M′)
    -------------------------------------------
-   `((letrec ,Σ ,(E m)) → (letrec ,Σ ,(E M′)))])
+   `((letrec ,Σ ,(E M)) → (letrec ,Σ ,(E M′)))])
 
-(define step⊢->s (call-with-values (λ () (⊢->s)) compose1))
-(define ⊢->>s (compose1 car (repeated step⊢->s)))
+(define ⊢->s (call-with-values (λ () (⊢->s-rules)) compose1))
+(define ⊢->>s (compose1 car (repeated ⊢->s)))
 
 (define/match (evalₛˢ m)
   [M

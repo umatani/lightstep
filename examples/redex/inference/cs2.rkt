@@ -4,7 +4,7 @@
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" δ)
          (only-in "s-iswim.rkt" [S-ISWIM orig-S-ISWIM] FV AV substs subst)
-         (only-in "cs.rkt" [⊢->cs orig-⊢->cs] mkCS))
+         (only-in "cs.rkt" [⊢->cs-rules orig-⊢->cs-rules] mkCS))
 
 (module+ test (require rackunit))
 
@@ -24,7 +24,7 @@
                  `(set ,X ,□) ; NEW
                  ))]))
 
-(define-inference (⊢->cs) #:super [(orig-⊢->cs)]
+(define-inference (⊢->cs-rules) #:super [(orig-⊢->cs-rules)]
   #:do [(define (substs-Σ Σ xs ms)
           (for/map ([(x v) (in-map Σ)])
             (values (substs x xs ms) (substs v xs ms))))]
@@ -37,11 +37,11 @@
    `(,(E `(letrec ,Σ′ ,M)) → ,(E (substs M X′ Y)))          ])
 
 
-(define step⊢->cs (let-values ([(mrun reducer) (⊢->cs)])
-                    (match-λ
-                     [(mkCS M Σ)
-                      (mrun Σ (reducer M))])))
-(define ⊢->>cs (compose1 car (repeated step⊢->cs)))
+(define ⊢->cs (let-values ([(mrun reducer) (⊢->cs-rules)])
+                (match-λ
+                 [(mkCS M Σ)
+                  (mrun Σ (reducer M))])))
+(define ⊢->>cs (compose1 car (repeated ⊢->cs)))
 
 (define/match (evalcs m)
   [M

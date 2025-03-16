@@ -73,8 +73,8 @@
   #:do [;; as before
         (define-match-expander E
           (syntax-parser
-            [(E □)
-             #'(cxt E [□ (and □ (or `((λ (,(? X?)) ,_) ,(? V?))
+            [(E p)
+             #'(cxt E [□ (and p (or `((λ (,(? X?)) ,_) ,(? V?))
                                     `(,(? prim?) ,(? V?) (... ...))
                                     `(if ,(? V?) ,_ ,_)
                                     `(fix (λ (,(? X?)) ,_))))]
@@ -99,8 +99,8 @@
            `((λ (,X) ,M) (λ (,X′) ((fix (λ (,X) ,M)) ,X′)))
            "fix"])
         (define →PCF₇ (reducer-of (PCF₇)))]
-  [(E m)
-   M′ ← (→PCF₇ m)
+  [(E M)
+   M′ ← (→PCF₇ M)
    (E M′)
    "EC"])
 

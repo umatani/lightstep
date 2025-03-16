@@ -1,11 +1,9 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
-         lightstep/base lightstep/syntax
-         (only-in lightstep/monad mapM)
+         lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/list split-at)
          (only-in racket/sequence sequence-map)
-         (only-in racket/match match-define define-match-expander)
-         (only-in "common.rkt" mmap mmap-lookup mmap-ext reachable?))
+         (only-in racket/match define-match-expander))
 (provide PCF δ)
 
 (module+ test (require rackunit))
@@ -16,9 +14,9 @@
 (define-language PCF
   [M   ∷= N O X L
           `(μ [,X : ,T] ,L)
-          `(,M₁ ,M₂ ...)
+          `(,M₀ ,M₁ ...)
           `(if0 ,M₁ ,M₂ ,M₃)]
-  [X   ∷= (? symbol? (not 'μ ': 'if0 'λ 'num '→))]
+  [X   ∷= (? symbol? (not 'μ ': 'if0 'λ 'num '→ 'add1 'sub1 '+ '*))]
   [L   ∷= `(λ ([,X : ,T] ...) ,M)]
   [V   ∷= N O L]
   [N   ∷= (? number?)]
@@ -35,6 +33,7 @@
 
 (module+ test
   (provide fact-5)
+
   (define fact-5
     '((μ [fact : (num → num)]
          (λ ([n : num])
@@ -42,108 +41,20 @@
                 1
                 (* n (fact (sub1 n))))))
       5))
+
   (check-true (M? fact-5)))
-
-;;-----------------------------------------------------------------------------
-;; 3.1 Typing judgement
-
-(define/match (Γ bs)
-  [`([,X ,T] ...)
-   (apply mmap (map list X T))])
-
-(define (Γ? Γ)
-  (and (map? Γ)
-       (for/and ([x  (dom Γ)]) (X? x))
-       (for/and ([ts (rng Γ)]) (for/and ([t (∈ ts)]) (T? t)))))
-
-
-(define-reduction (⊢)
-  [`(,Γ ,X)
-   T ← (for/monad+ ([T (∈ (mmap-lookup Γ X))])
-         (return T))
-   T
-   "var"]
-
-  [`(,Γ ,N)
-   'num
-   "num"]
-
-  [`(,Γ ,(? Op₁?))
-   '(num → num)
-   "op1"]
-
-  [`(,Γ ,(? Op₂?))
-   '(num num → num)
-   "op2"]
-
-  [`(,Γ (if0 ,M₁ ,M₂ ,M₃))
-   'num ← (⊢ `(,Γ ,M₁))
-   T₂ ← (⊢ `(,Γ ,M₂))
-   T₃ ← (⊢ `(,Γ ,M₃))
-   #:when (equal? T₂ T₃)
-   T₂
-   "if0"]
-
-  [`(,Γ (μ [,X : ,T] ,L))
-   T ← (⊢ `(,(mmap-ext Γ `[,X ,T]) ,L))
-   T
-   "μ"]
-
-  [`(,Γ (,M₀ ,M₁ ...))
-   `(,T₁  ... → ,T) ← (⊢ `(,Γ ,M₀))
-   `(,T₁′ ...)      ← (mapM (λ (m) (⊢ `(,Γ ,m))) M₁)
-   #:when (andmap equal? T₁ T₁′)
-   T
-   "app"]
-
-  [`(,Γ (λ ([,X : ,T] ...) ,M))
-   #:when (unique X)
-   Tₙ ← (⊢ `(,(apply mmap-ext Γ (map list X T)) ,M))
-   `(,@T → ,Tₙ)
-   "λ"])
-
-(define run-⊢ (letrec-values ([(mrun reducer) (⊢)])
-                (compose1 mrun reducer)))
-
-(define (⊢? ΓM T)
-  (match (run-⊢ ΓM)
-    [(set T′) (equal? T T′)]
-    [∅ (error '⊢? "~s cannot be typed" (cadr ΓM))]
-    [_ (error '⊢? "derived multiple types for ~s" (cadr ΓM))]))
-
-(module+ test
-  (check-true   (⊢? `(,(Γ '()) (λ ([x : num]) x)) '(num → num)))
-  (check-equal? (run-⊢ `(,(Γ '()) 3)) (set 'num))
-  (check-equal? (run-⊢ `(,(Γ '()) (λ ([x : num]) x))) (set '(num → num)))
-  (check-equal? (run-⊢ `(,(Γ '()) (λ ([x : num]) (add1 x)))) (set '(num → num)))
-  (check-equal? (run-⊢ `(,(Γ '())
-                         (λ ([x : num] [y : num])
-                           (+ x y)))) (set '(num num → num)))
-  (check-equal? (run-⊢ `(,(Γ '())
-                         (λ ([f : (num → num)] [x : num])
-                           (f x)))) (set '((num → num) num → num)))
-
-  (check-equal? (run-⊢ `(,(Γ '())
-                         (λ ([f : (num num → num)] [x : (num → num)] [y : num])
-                           (f x y)))) ∅)
-
-  (check-equal? (run-⊢ `(,(Γ '())
-                         (λ ([f : (→ num)])
-                           (f)))) (set '((→ num) → num)))
-  (check-equal? (run-⊢ `(,(Γ '()) ,fact-5)) (set 'num))
-
-  (check-equal? (run-⊢ `(,(Γ '()) (λ ([x : num] [x : num]) x)))
-                (set)))
 
 ;;-----------------------------------------------------------------------------
 ;; 3.2 The calculus of PCF
 
-(define/match (δ M)
+;; M → N
+(define/match (δ m)
   [`(+ ,N₀ ,N₁) (+ N₀ N₁)]
   [`(* ,N₀ ,N₁) (* N₀ N₁)]
   [`(sub1 ,N) (sub1 N)]
   [`(add1 ,N) (add1 N)])
 
+;; M → 𝒫(X)
 (define/match (FV M)
   [N ∅]
   [O ∅]
@@ -157,155 +68,152 @@
   [`(if0 ,M₁ ,M₂ ,M₃)
    (∪ (FV M₁) (FV M₂) (FV M₃))])
 
-(define ((subst-vars . bs) M)
-  (match* (bs M)
-    [(`([,X₁ ,M₁]) X₂)
-     #:when (equal? X₁ X₂)
+;; List([X X]) M → M
+(define (subst-vars bs m)
+  (match* (bs m)
+    [(`([,X₁ ,X₂]) X)
+     #:when (eq? X₁ X)
+     X₂]
+    [(`([,X₁ ,X₂]) `(,any ...))
+     (map (λ (m) (subst-vars `([,X₁ ,X₂]) m)) any)]
+    [(`([,X₁ ,X₂]) any)
+     any]
+    [(`([,X₁ ,X₂] ,b ...) M)
+     (subst-vars `([,X₁ ,X₂]) (subst-vars b M))]
+    [('() any) any]))
+
+;; X M M → M 
+(define (subst₁ x₁ m₁ m)
+  (match* (x₁ m₁ m)
+    ; 1. X₁ bound, so don't continue in λ body
+    [(X₁ _ `(λ ,(and bs `([,X : ,T] ...)) ,M))
+     #:when (member X₁ X)
+     `(λ ,bs ,M)]
+    ; or μ
+    [(X₁ _ `(μ [,X : ,T] ,M))
+     #:when (eq? X₁ X)
+     `(μ [,X : ,T] ,M)]
+    ; 2. general purpose capture avoiding case
+    [(X₁ M₁ `(λ ([,X : ,T] ...) ,M))
+     #:do [(define X′ (map (symbol-not-in (set X₁) (FV M₁)) X))]
+     `(λ ,(map (λ (x t) `[,x : ,t]) X′ T)
+        ,(subst₁ X₁ M₁ (subst-vars (map list X X′) M)))]
+    ; and μ
+    [(X₁ M₁ `(μ [,X : ,T] ,M))
+     #:do [(define X′ ((symbol-not-in (set X₁) (FV M₁)) X))]
+     `(μ [,X′ : ,T] ,(subst₁ X₁ M₁ (subst-vars `([,X ,X′]) M)))]
+    ; 3. replace X₁ with M₁
+    [(X₁ M₁ X)
+     #:when (eq? X₁ X)
      M₁]
-    [(`([,X₁ ,M₁]) `(,M₂ ...))
-     (map (subst-vars `[,X₁ ,M₁]) M₂)]
-    [(`([,X₁ ,M₁]) M₂)
-     M₂]
-    [(`([,X₁ ,M₁] [,X₂ ,M₂] ...) M₃)
-     ((subst-vars `[,X₁ ,M₁]) ((apply subst-vars (map list X₂ M₂)) M₃))]
+    ; 4. X₁ and X are different, so don't replace
+    [(_ _ X)
+     X]
+    ; the last cases cover all other expressions  
+    [(X₁ M₁ `(,any ...))
+     (map (λ (x) (subst₁ X₁ M₁ x)) any)]
+    [(_ _ any)
+     any]))
+
+;; List([X M]) M → M
+(define (subst bs m)
+  (match* (bs m)
+    [(`([,X₁ ,M₁] ,b ...) M)
+     (subst₁ X₁ M₁ (subst b M))]
     [('() M) M]))
 
-(define ((subst₁ X₁ M₁) M₂)
-  (match* (X₁ M₁ M₂)
-    ; 1. X₁ bound, so don't continue in λ body
-    [(X? _ `(λ ([,X₂ : ,T₂] ...) ,M₂))
-     #:when (member X₁ X₂)
-     `(λ ,(map (λ (X T) `[,X : ,T]) X₂ T₂) ,M₂)]
-    ; or μ
-    [(X _ `(μ [,X₂ : ,T] ,M₂))
-     #:when (equal? X₁ X₂)
-     `(μ [,X₂ : ,T] ,M₂)]
-    ; 2. general purpose capture avoiding case
-    [(X _ `(λ ([,X₂ : ,T₂] ...) ,M₂))
-     #:do [(define X₂′ (map (symbol-not-in (set X₁) (FV M₁)) X₂))]
-     `(λ ,(map (λ (X T) `[,X : ,T]) X₂′ T₂)
-        ,((subst₁ X₁ M₁)
-          ((apply subst-vars (map list X₂ X₂′)) M₂)))]
-    ; and μ
-    [(X _ `(μ [,X₂ : ,T] ,M₂))
-     #:do [(define X₂′ ((symbol-not-in (set X₁) (FV M₁)) X₂))]
-     `(μ [,X₂′ : ,T] ,((subst₁ X₁ M₁)
-                       ((subst-vars `[,X₂ ,X₂′]) M₂)))]
-    ; 3. replace X₁ with M₁
-    [(X _ X₂)
-     #:when (equal? X₁ X₂)
-     M₁]
-    ; 4. X₁ and X₂ are different, so don't replace
-    [(X _ X₂)
-     X₂]
-    ; the last cases cover all other expressions  
-    [(X _ `(,m₂ ...))
-     (map (subst₁ X₁ M₁) m₂)]
-    [(X _ m₂)
-     m₂]))
+(module+ test
+  (check-equal? (subst '([x 5] [y 7])
+                       '(+ x y))
+                '(+ 5 7))
+  (check-equal? (subst '([x 5] [y 7])
+                       '(if0 0 x y))
+                '(if0 0 5 7))
 
-(define ((subst . bs) M)
-  (match* (bs M)
-    [(`([,X₁ ,M₁] ,b₂ ...) _)
-     ((subst₁ X₁ M₁) ((apply subst b₂) M))]
-    [('() _) M]))
+  (check-equal? (subst '([x 5] [y 7])
+                       '(μ [a : (num → num)] (λ ([b : num]) (+ x y))))
+                '(μ [a : (num → num)] (λ ([b : num]) (+ 5 7))))
+  (check-equal? (subst '([x 5] [y 7])
+                       '(μ [x : (num → num)] (λ ([y : num]) (+ x y))))
+                '(μ [x : (num → num)] (λ ([y : num]) (+ x y)))))
+
+
+(define-inference (r-rule)
+  [---------------------------------------- "μ"
+   `((μ [,X : ,T] ,M)
+     → ,(subst `([,X (μ [,X : ,T] ,M)]) M))    ]
+
+  [--------------------------------------- "β"
+   `(((λ ([,X : ,T] ...) ,M₀) ,M ...)
+     → ,(subst (map list X M) M₀))            ]
+
+  [N₁ ≔ (δ `(,O ,@N₀))
+   --------------------- "δ"
+   `((,O ,N₀ ...) → ,N₁)    ]
+
+  [------------------------ "if-t"
+   `((if0 0 ,M₁ ,M₂) → ,M₁)       ]
+
+  [#:when (not (zero? N))
+   ------------------------- "if-f"
+   `((if0 ,N ,M₁ ,M₂) → ,M₂)       ])
+
+(define r (call-with-values (λ () (r-rule)) compose1))
 
 (module+ test
-  (check-equal? ((subst '[x 5] '[y 7]) '(+ x y)) '(+ 5 7))
-  (check-equal? ((subst '[x 5] '[y 7]) '(if0 0 x y)) '(if0 0 5 7))
+  (check-equal? (r '(add1 5)) (set 6))
+  (check-equal? (r '((λ ([x : num]) x) (add1 5))) (set '(add1 5)))
+  (check-equal? (r '(sub1 ((λ ([x : num]) x) (add1 5)))) ∅)
 
-  (check-equal? ((subst '[x 5] '[y 7])
-                 '(μ [a : (num → num)] (λ ([b : num]) (+ x y))))
-                 '(μ [a : (num → num)] (λ ([b : num]) (+ 5 7))))
-  (check-equal? ((subst '[x 5] '[y 7])
-                 '(μ [x : (num → num)] (λ ([y : num]) (+ x y))))
-                 '(μ [x : (num → num)] (λ ([y : num]) (+ x y)))))
-
-
-(define-reduction (r)
-  [`(μ [,X : ,T] ,L)
-   ((subst `[,X (μ [,X : ,T] ,L)]) L)
-   "μ"]
-
-  [`((λ ([,X : ,T] ...) ,M₀) ,M ...)
-   ((apply subst (map list X M)) M₀)
-   "β"]
-
-  [`(,O ,N₀ ...)
-   N₁ ≔ (δ `(,O ,@N₀))
-   N₁
-   "δ"]
-
-  [`(if0 0 ,M₁ ,M₂)
-   M₁
-   "if-t"]
-
-  [`(if0 ,N ,M₁ ,M₂)
-   #:when (not (zero? N))
-   M₂
-   "if-f"])
-
-(define step-r (call-with-values (λ () (r)) compose1))
-
-(module+ test
-  (check-equal? (step-r '(add1 5)) (set 6))
-  (check-equal? (step-r '((λ ([x : num]) x) (add1 5))) (set '(add1 5)))
-  (check-equal? (step-r '(sub1 ((λ ([x : num]) x) (add1 5)))) ∅)
-
-  (check-equal? (car ((repeated step-r) '(add1 5)))
+  (check-equal? (car ((repeated r) '(add1 5)))
                 (set 6))
-  (check-equal? (car ((repeated step-r) '((λ ([x : num]) x) (add1 5))))
+  (check-equal? (car ((repeated r) '((λ ([x : num]) x) (add1 5))))
                 (set 6))
-  (check-equal? (car ((repeated step-r) '(sub1 ((λ ([x : num]) x) (add1 5)))))
+  (check-equal? (car ((repeated r) '(sub1 ((λ ([x : num]) x) (add1 5)))))
                 (set '(sub1 ((λ ([x : num]) x) (add1 5))))))
 
 ;; TODO: extend cxt pattern to support non-deterministic compatible-closure
-(define-reduction (-->ᵣ) #:super [(r)]
+(define-inference (-->ᵣ-rules) #:super [(r-rule)]
   #:do [(define (split-app-cxt Ms)
           (define ((make-cxt i) M)
             (define-values (l r) (split-at Ms i))
             `(,@l ,M ,@(cdr r)))
-          (sequence-map (match-λ [(cons i M) (values (make-cxt i) M)])
-                        (map cons (build-list (length Ms) (λ (x) x)) Ms)))]
+          (sequence-map (match-λ [(list M i) (values (make-cxt i) M)])
+                        (in-values-sequence (in-indexed Ms))))]
 
-  [`(λ ([,X : ,T] ...) ,M)
-   M′ ← (-->ᵣ M)
-   `(λ ,(map (λ (X T) `[,X : ,T]) X T) ,M′)
-   "λ-cxt"]
+  [`(,M → ,M′)
+   -------------------------------------------------- "λ-cxt"
+   `((λ ,(and bs `([,X : ,T] ...)) ,M) → (λ ,bs ,M′))        ]
 
-  [`(μ [,X : ,T] ,L)
-   L′ ← (-->ᵣ L)
-   `(μ [,X : ,T] ,L′)
-   "μ-cxt"]
+  [`(,L → ,L′)
+   --------------------------------------- "μ-cxt"
+   `((μ [,X : ,T] ,L) → (μ [,X : ,T] ,L′))        ]
 
-  [`(,M ...)
-   M′ ← (for/monad+ ([(cxt M₁) (split-app-cxt M)])
-          (do M₁′ ← (-->ᵣ M₁)
+  [M′ ← (for/monad+ ([(cxt M₁) (split-app-cxt M)])
+          (do M₁′ ← (-->ᵣ-rules M₁)
               (return (cxt M₁′))))
-   M′
-   "app-cxt"]
+   ----------------------------------------------- "app-cxt"
+   `((,M ...) → ,M′)                                        ]
 
-  [`(if0 ,M₁ ,M₂ ,M₃)
-   M′ ← (for/monad+ ([(cxt M) (split-app-cxt `(,M₁ ,M₂ ,M₃))])
-          (do M′ ← (-->ᵣ M)
+  [M′ ← (for/monad+ ([(cxt M) (split-app-cxt `(,M₁ ,M₂ ,M₃))])
+          (do M′ ← (-->ᵣ-rules M)
               (return `(if0 ,@(cxt M′)))))
-   M′
-   "if-cxt"])
+   ----------------------------------------------------------- "if-cxt"
+   `((if0 ,M₁ ,M₂ ,M₃) → ,M′)                                          ])
 
-(define step-->ᵣ (letrec-values ([(mrun reducer) (-->ᵣ)])
-                   (compose1 mrun reducer)))
+(define -->ᵣ (call-with-values (λ () (-->ᵣ-rules)) compose1))
 
 (module+ test
-  (check-equal? (car ((repeated step-->ᵣ) '((λ ([x : num]) x) (add1 5))))
+  (check-equal? (car ((repeated -->ᵣ) '((λ ([x : num]) x) (add1 5))))
                 (set 6))
-  (check-equal? (car ((repeated step-->ᵣ) '(sub1 ((λ ([x : num]) x) (add1 5)))))
+  (check-equal? (car ((repeated -->ᵣ) '(sub1 ((λ ([x : num]) x) (add1 5)))))
                 (set 5))
 
-  (check-equal? (step-->ᵣ '((λ ([x : num]) x) (add1 5)))
+  (check-equal? (-->ᵣ '((λ ([x : num]) x) (add1 5)))
                 (set '((λ ([x : num]) x) 6)
                      '(add1 5)))
   (check-equal?
-   (step-->ᵣ '(μ [x : num]
+   (-->ᵣ '(μ [x : num]
                  (λ () (if0 (- x (sub1 2))
                             (+ (add1 5) x)
                             (* x (+ 4 5))))))
@@ -343,20 +251,21 @@
 
 (define-match-expander Eₙ
   (syntax-parser
-    [(Eₙ □:id)
-     #'(... (cxt Eₙ [□ (and □ (? redex?))]
+    [(Eₙ p)
+     #'(... (cxt Eₙ [□ (and p (? redex?))]
                  `(,□ ,M ...)
                  `(,O ,V ... ,□ ,M ...)
                  `(if0 ,□ ,M₁ ,M₂)))]))
 
-(define-reduction (-->ₙ)
-  #:do [(define →r (reducer-of (r)))]
-  [(Eₙ m)
-   M′ ← (→r m)
-   (Eₙ M′)
-   "Eₙ"])
+(define-inference (-->ₙ-rule)
+  #:do [(define rr (reducer-of (r-rule)))]
+  #:forms (.... [`(,i →r ,o) #:where o ← (rr i)])
 
-(define step-->ₙ (call-with-values (λ () (-->ₙ)) compose1))
+  [`(,M →r ,M′)
+   --------------------- "Eₙ"
+   `(,(Eₙ M) → ,(Eₙ M′))     ])
+
+(define -->ₙ (call-with-values (λ () (-->ₙ-rule)) compose1))
 
 (module+ test
   ;; (match '(add1 5)
@@ -371,13 +280,13 @@
   ;;   [(Eₙ M)
   ;;    (Eₙ M)])
 
-  (check-equal? (step-->ₙ '((λ ([x : num]) x) (add1 5))) (set '(add1 5)))
-  (check-equal? (car ((repeated step-->ₙ) '((λ ([x : num]) x) (add1 5))))
+  (check-equal? (-->ₙ '((λ ([x : num]) x) (add1 5))) (set '(add1 5)))
+  (check-equal? (car ((repeated -->ₙ) '((λ ([x : num]) x) (add1 5))))
                 (set 6))
-  (check-equal? (car ((repeated step-->ₙ) fact-5)) (set 120)))
+  (check-equal? (car ((repeated -->ₙ) fact-5)) (set 120)))
 
 (module+ test
-  (check-true (reachable? step-->ₙ fact-5 120))
+  ;; (check-true (reachable? -->ₙ fact-5 120))
 
   ;; TODO: Too slow
   ;; (define fact-2
@@ -392,35 +301,36 @@
 
 (define-match-expander Eᵥ
   (syntax-parser
-    [(Eᵥ □:id)
-     #'(... (cxt Eᵥ [□ (and □ (? redex?))]
+    [(Eᵥ p)
+     #'(... (cxt Eᵥ [□ (and p (? redex?))]
                  `(,V ... ,□ ,M ...)
                  `(if0 ,□ ,M₁ ,M₂)))]))
 
-(define-reduction (-->ᵥ)
-  #:do [(define-reduction (v) #:super [(r)]
-          [`((λ ([,X : ,T] ...) ,M₀) ,V ...)
-           ((apply subst (map list X V)) M₀)
-           "β"])
-        (define →v (reducer-of (v)))]
-  [(Eᵥ m)
-   M′ ← (→v m)
-   (Eᵥ M′)
-   "Eᵥ"])
+(define-inference (-->ᵥ-rule)
+  #:do [(define-inference (v-rule) #:super [(r-rule)]
+          [---------------------------------- "β"
+           `(((λ ([,X : ,T] ...) ,M₀) ,V ...)
+             → ,(subst (map list X V) M₀))       ])
+        (define rv (reducer-of (v-rule)))]
+  #:forms (.... [`(,i →v ,o) #:where o ← (rv i)])
 
-(define step-->ᵥ (call-with-values (λ () (-->ᵥ)) compose1))
+  [`(,M →v ,M′)
+   --------------------- "Eᵥ"
+   `(,(Eᵥ M) → ,(Eᵥ M′))     ])
+
+(define -->ᵥ (call-with-values (λ () (-->ᵥ-rule)) compose1))
 
 (module+ test
-  (check-equal? (step-->ᵥ '((λ ([x : num]) x) (add1 5)))
+  (check-equal? (-->ᵥ '((λ ([x : num]) x) (add1 5)))
                 (set '((λ ([x : num]) x) 6)))
-  (check-equal? (car ((repeated step-->ᵥ) '((λ ([x : num]) x) (add1 5))))
+  (check-equal? (car ((repeated -->ᵥ) '((λ ([x : num]) x) (add1 5))))
                 (set 6))
-  (check-equal? (car ((repeated step-->ᵥ) fact-5)) (set 120))
+  (check-equal? (car ((repeated -->ᵥ) fact-5)) (set 120))
 
   (define Ω
     '((μ [loop : (num → num)]
          (λ ([x : num])
            (loop x)))
       0))
-  (check-equal? (car ((repeated step-->ₙ) `((λ ([x : num]) 0) ,Ω))) (set 0))
-  (check-equal? (car ((repeated step-->ᵥ) `((λ ([x : num]) 0) ,Ω))) ∅))
+  (check-equal? (car ((repeated -->ₙ) `((λ ([x : num]) 0) ,Ω))) (set 0))
+  (check-equal? (car ((repeated -->ᵥ) `((λ ([x : num]) 0) ,Ω))) ∅))

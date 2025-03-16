@@ -4,7 +4,7 @@
          (only-in racket/random random-ref)
          (only-in "design03.rkt" PCF₂)
          (only-in "design04.rkt" [subst orig:subst]))
-(provide PCF₅ subst E -->PCF₅)
+(provide PCF₅ subst E -->PCF₅-rule)
 
 (module+ test (require rackunit))
 
@@ -36,8 +36,8 @@
 
 (define-match-expander E
   (syntax-parser
-    [(E □)
-     #'(cxt E [□ (and □ (or `((λ (,(? X?)) ,_) ,(? V?))
+    [(E p)
+     #'(cxt E [□ (and p (or `((λ (,(? X?)) ,_) ,(? V?))
                             `(+ ,(? N?) ,(? N?))
                             `(<= ,(? N?) ,(? N?))
                             `(if ,(? V?) ,_ ,_)
@@ -56,8 +56,8 @@
 (define (select es)
   (random-ref es))
 
-(define-inference (-->PCF₅ ≔<1> ≔<2>)
-  #:do [(define-inference (PCF₅)
+(define-inference (-->PCF₅-rule ≔<1> ≔<2>)
+  #:do [(define-inference (PCF₅-rules)
           [------------------------------------ "β"
            `(((λ (,X) ,M) ,V) → ,(subst M X V))]
 
@@ -85,16 +85,16 @@
            --------------------- "amb"
            `((amb ,M ...) → ,M′)])
 
-        (define →PCF₅ (reducer-of (PCF₅)))]
+        (define →PCF₅ (reducer-of (PCF₅-rules)))]
   #:forms (.... [`(,i →₅ ,o) #:where o ← (→PCF₅ i)])
 
-  [`(,m →₅ ,M′)
+  [`(,M →₅ ,M′)
    ------------------- "EC"
-   `(,(E m) → ,(E M′))])
+   `(,(E M) → ,(E M′))])
 
 ;; One benefit of parameterization over non-lexical extension is ...
-(define step-->PCF₅ (call-with-values (λ () (-->PCF₅ ≔ ≔)) compose1))
-(define -->>PCF₅ (compose1 car (repeated step-->PCF₅)))
+(define -->PCF₅ (call-with-values (λ () (-->PCF₅-rule ≔ ≔)) compose1))
+(define -->>PCF₅ (compose1 car (repeated -->PCF₅)))
 
 (module+ test
   ;(printf "----- PCF₅ ------------\n")

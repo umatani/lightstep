@@ -17,7 +17,7 @@
      `(ar ,M ,(? κ? κ))
      `(op ,(? list? VsOⁿ) ,(? list? Ns) ,(? κ? κ))])
 
-(define-inference (⊢->ck)
+(define-inference (⊢->ck-rules)
   #:monad (StateT #f (NondetT ID))
 
   [(? κ? κ) ← get
@@ -56,11 +56,11 @@
   (syntax-parser
     [(_ M κ) #'(cons M κ)]))
 
-(define step⊢->ck (let-values ([(mrun reducer) (⊢->ck)])
-                    (match-λ
-                     [(mkCK M (? κ? κ))
-                      (mrun κ (reducer M))])))
-(define ⊢->>ck (compose1 car (repeated step⊢->ck)))
+(define ⊢->ck (let-values ([(mrun reducer) (⊢->ck-rules)])
+                (match-λ
+                 [(mkCK M (? κ? κ))
+                  (mrun κ (reducer M))])))
+(define ⊢->>ck (compose1 car (repeated ⊢->ck)))
 
 (define/match (evalck m)
   [M

@@ -1,8 +1,8 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax lightstep/inference
-         (only-in "iswim.rkt" βv-rule subst)
+         (only-in "iswim.rkt" βv-rules subst)
          (only-in "e-iswim.rkt"
-                  [E-ISWIM orig-E-ISWIM] ECxt FV δ δ-rule δerr-rule))
+                  [E-ISWIM orig-E-ISWIM] ECxt FV δ δ-rules δerr-rules))
 
 (module+ test (require rackunit))
 
@@ -12,24 +12,23 @@
 (define-language E-ISWIM #:super orig-E-ISWIM
   [Mre ∷= `(,V ,V) `(,(? oⁿ?) ,V ...) `(err ,(? b?))])
 
-(define-inference (ẽ) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)])
+(define-inference (ẽ-rules) #:super [(βv-rules) (δ-rules δ) (δerr-rules δ)])
 
-(define-inference (⊢->e)
-  #:do [(define rẽ (reducer-of (ẽ)))]
+(define-inference (⊢->e-rules)
+  #:do [(define rẽ (reducer-of (ẽ-rules)))]
   #:forms (.... [`(,i →ẽ ,o) #:where o ← (rẽ i)])
 
-  [#:when (M? m)
-   `(,m →ẽ ,M′)
+  [`(,M →ẽ ,M′)
    -------------------------
-   `(,(ECxt m) → ,(ECxt M′))]
+   `(,(ECxt M) → ,(ECxt M′))]
 
   [#:when (not (equal? x e))
    `(err ,(? b? b)) ≔ e
    -------------------------------
    `(,(and x (ECxt e)) → (err ,b))])
 
-(define step⊢->e (call-with-values (λ () (⊢->e)) compose1))
-(define ⊢->>e (compose1 car (repeated step⊢->e)))
+(define ⊢->e (call-with-values (λ () (⊢->e-rules)) compose1))
+(define ⊢->>e (compose1 car (repeated ⊢->e)))
 
 (define/match (evalₑˢ m)
   [M
@@ -49,7 +48,7 @@
   (check-equal? (evalₑˢ '(add1 (λ x x))) '(err 0))
   (check-equal? (evalₑˢ '(/ 3 0)) '(err 0))
 
-  (check-equal? (step⊢->e '(+ (- 4 (err 1)) (err 2)))
+  (check-equal? (⊢->e '(+ (- 4 (err 1)) (err 2)))
                 (set '(err 1)))
   (check-equal? (⊢->>e '(+ (- 4 (err 1)) (err 2)))
                 (set '(err 1))))

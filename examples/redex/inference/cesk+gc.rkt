@@ -3,7 +3,7 @@
          lightstep/inference
          (only-in "iswim.rkt" δ)
          (only-in "s-iswim.rkt" FV)
-         (only-in "cesk.rkt" [CESK orig-CESK] ⊢->cesk mkCESK))
+         (only-in "cesk.rkt" [CESK orig-CESK] ⊢->cesk-rules mkCESK))
 
 (module+ test (require rackunit))
 
@@ -24,7 +24,7 @@
    (apply ∪ (LL κ) (map LL `(,@c ,@c′)))]
   [`(set ,(? σ? σ) ,(? κ? κ)) (set-add (LL κ) σ)])
 
-(define-inference (⊢->gc)
+(define-inference (⊢->gc-rules)
   [(set σ₀ σ ...) ≔ Grey
    Grey′ ≔ (set-subtract (∪ Grey (LL (Σ σ₀)))
                          (set-add Brack σ₀))
@@ -32,10 +32,10 @@
    ------------------------------------------
    `((,Grey ,Brack ,Σ) → (,Grey′ ,Brack′ ,Σ))])
 
-(define step⊢->gc (call-with-values (λ () (⊢->gc)) compose1))
-(define ⊢->>gc (compose1 car (repeated step⊢->gc)))
+(define ⊢->gc (call-with-values (λ () (⊢->gc-rules)) compose1))
+(define ⊢->>gc (compose1 car (repeated ⊢->gc)))
 
-(define-inference (⊢->gc-in-cesk)
+(define-inference (⊢->gc-in-cesk-rules)
   #:monad (StateT #f (StateT #f (StateT #f (NondetT ID))))
   #:do [(define get-E (bind get (compose1 return car)))
         (define get-Σ (bind get (compose1 return cadr)))
@@ -56,21 +56,21 @@
    ----------------------------------------------------------- "ceskgcI"
    `(,M → ,M)                                                           ])
 
-(define step⊢->gc-in-cesk (let-values ([(mrun reducer) (⊢->gc-in-cesk)])
-                            (match-λ
-                             [(mkCESK M E Σ (? κ? κ))
-                              (mrun κ Σ E (reducer M))])))
+(define ⊢->gc-in-cesk (let-values ([(mrun reducer) (⊢->gc-in-cesk-rules)])
+                        (match-λ
+                         [(mkCESK M E Σ (? κ? κ))
+                          (mrun κ Σ E (reducer M))])))
 
-(define step⊢->cesk (let-values ([(mrun reducer) (⊢->cesk)])
-                      (match-λ
-                       [(mkCESK M E Σ (? κ? κ))
-                        (mrun κ Σ E (reducer M))])))
+(define ⊢->cesk (let-values ([(mrun reducer) (⊢->cesk-rules)])
+                  (match-λ
+                   [(mkCESK M E Σ (? κ? κ))
+                    (mrun κ Σ E (reducer M))])))
 
-(define (step⊢->cesk+gc ς)
-  (apply ∪ (set-map step⊢->gc-in-cesk #; set ;; to compare with no-gc
-                    (step⊢->cesk ς))))
+(define (⊢->cesk+gc ς)
+  (apply ∪ (set-map ⊢->gc-in-cesk #; set ;; to compare with no-gc
+                    (⊢->cesk ς))))
 
-(define ⊢->>cesk+gc (compose1 car (repeated step⊢->cesk+gc)))
+(define ⊢->>cesk+gc (compose1 car (repeated ⊢->cesk+gc)))
 
 (define/match (evalcesk+gc m)
   [M

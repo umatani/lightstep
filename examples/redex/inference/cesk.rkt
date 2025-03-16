@@ -5,7 +5,7 @@
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" δ)
          (only-in "s-iswim.rkt" S-ISWIM FV))
-(provide CESK ⊢->cesk mkCESK)
+(provide CESK ⊢->cesk-rules mkCESK)
 
 (module+ test (require rackunit))
 
@@ -23,7 +23,7 @@
      `(op ,(? list? VEsOⁿ) ,(? list? MEs) ,(? κ?))
      `(set ,(? σ?) ,(? κ?))])
 
-(define-inference (⊢->cesk)
+(define-inference (⊢->cesk-rules)
   #:monad (StateT #f (StateT #f (StateT #f (NondetT ID))))
   #:do [(define get-E (bind get (compose1 return car)))
         (define get-Σ (bind get (compose1 return cadr)))
@@ -107,11 +107,11 @@
   (syntax-parser
     [(_ C E S K) #'(cons (cons (cons C E) S) K)]))
 
-(define step⊢->cesk (let-values ([(mrun reducer) (⊢->cesk)])
-                      (match-λ
-                       [(mkCESK M E Σ (? κ? κ))
-                        (mrun κ Σ E (reducer M))])))
-(define ⊢->>cesk (compose1 car (repeated step⊢->cesk)))
+(define ⊢->cesk (let-values ([(mrun reducer) (⊢->cesk-rules)])
+                  (match-λ
+                   [(mkCESK M E Σ (? κ? κ))
+                    (mrun κ Σ E (reducer M))])))
+(define ⊢->>cesk (compose1 car (repeated ⊢->cesk)))
 
 (define/match (evalcesk m)
   [M

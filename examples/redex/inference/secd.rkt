@@ -4,7 +4,7 @@
          lightstep/inference
          (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM FV δ))
-(provide SECD ⊢->secd mkSECD)
+(provide SECD ⊢->secd-rules mkSECD)
 
 (module+ test (require rackunit))
 
@@ -18,7 +18,7 @@
   [D ∷= 'ϵ `(,S ,E ,(? list? Cs) ,D)]
   [V ∷= (? b?) `((λ ,X ,M) ,E)])
 
-(define-inference (⊢->secd)
+(define-inference (⊢->secd-rules)
   #:monad (StateT #f (StateT #f (StateT #f (NondetT ID))))
   #:do [(define get-S (bind get (compose1 return car)))
         (define get-E (bind get (compose1 return cadr)))
@@ -87,11 +87,11 @@
     [(_ S E Cs D)
      #'(cons (cons (cons Cs S) E) D)]))
 
-(define step⊢->secd (let-values ([(mrun reducer) (⊢->secd)])
-                      (match-λ
-                       [(mkSECD S E Cs D)
-                        (mrun D E S (reducer Cs))])))
-(define ⊢->>secd (compose1 car (repeated step⊢->secd)))
+(define ⊢->secd (let-values ([(mrun reducer) (⊢->secd-rules)])
+                  (match-λ
+                   [(mkSECD S E Cs D)
+                    (mrun D E S (reducer Cs))])))
+(define ⊢->>secd (compose1 car (repeated ⊢->secd)))
 
 (define/match (evalsecd m)
   [M

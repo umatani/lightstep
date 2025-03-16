@@ -216,6 +216,7 @@
 ;;=============================================================================
 ;; others
 
+;; List(α) → Boolean
 (define unique (compose1 not check-duplicates))
 
 (module+ test
@@ -224,6 +225,7 @@
   (check-true  (unique '(1 2)))
   (check-false (unique '(1 2 3 2))))
 
+;; 𝒫(Sym) ... → Sym → Sym
 (define ((symbol-not-in . ss) s)
   (if (∈ s (apply ∪ ss))
     (gensym s)

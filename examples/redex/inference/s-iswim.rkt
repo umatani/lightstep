@@ -3,11 +3,11 @@
          lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/match define-match-expander)
          (only-in racket/sequence sequence-map)
-         (only-in "lam.rkt" [α lam:α])
-         (only-in "iswim.rkt" δ δ-rule)
+         (only-in "lam.rkt" [α-rules lam:α-rules])
+         (only-in "iswim.rkt" δ δ-rules)
          (only-in "cs.rkt" [S-ISWIM orig-S-ISWIM]
                   [AV orig-AV] [FV orig-FV] [subst orig-subst]))
-(provide S-ISWIM FV AV substs subst E s step-s)
+(provide S-ISWIM FV AV substs subst E s-rules s)
 
 (module+ test (require rackunit))
 
@@ -70,7 +70,7 @@
     ((map-remove Σ x) x′ v))
   (sequence-map (λ (x v) (values (make-cxt x) x v)) (in-map Σ)))
 
-(define-inference (α) #:super [(lam:α)]
+(define-inference (α-rules) #:super [(lam:α-rules)]
   [rename ≔ (apply symbol-not-in (FV M) (set-map FV (dom Σ)))
    (list Xᵢ X′ Σ′) ← (for/monad+ ([(cxt Xᵢ Mᵢ) (split-Σ-cxt Σ)])
                        (do X′ ≔ (rename Xᵢ)
@@ -80,23 +80,23 @@
    -------------------------------------------------------------
    `((letrec ,Σ ,M) → (letrec ,Σ″ ,(subst M Xᵢ X′)))            ])
 
-(define step-α (call-with-values (λ () (α)) compose1))
+(define α (call-with-values (λ () (α-rules)) compose1))
 
 (module+ test
-  ;(step-α `(letrec ,(↦ ['x 1] ['y 2]) (+ x y)))
+  ;(α `(letrec ,(↦ ['x 1] ['y 2]) (+ x y)))
   )
 
-(define-inference (-->α) #:super [(α)]
+(define-inference (-->α-rules) #:super [(α-rules)]
   [`(,m → ,M′) 
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
-(define step-->α (call-with-values (λ () (-->α)) compose1))
+(define -->α (call-with-values (λ () (-->α-rules)) compose1))
 
 (module+ test
-  ;; (step-->α `(letrec ,(↦ ['x 1] ['y 2])
-  ;;              (letrec ,(↦ ['z 3])
-  ;;                (+ x y))))
+  ;; (-->α `(letrec ,(↦ ['x 1] ['y 2])
+  ;;          (letrec ,(↦ ['z 3])
+  ;;            (+ x y))))
   )
 
 (define-inference (alloc)
@@ -116,7 +116,7 @@
                  `(set ,X ,□) ; NEW
                  ))]))
 
-(define-inference (lift)
+(define-inference (lift-rules)
   [#:when (not (equal? x `(letrec ,Σ ,M)))
    rename ≔ (symbol-not-in (FV (E `(letrec ,Σ ,M))))
    Yᵢ ≔ (map rename Xᵢ)
@@ -126,18 +126,18 @@
    `(,(and x (E `(letrec ,(and Σ (↦ [Xᵢ Vᵢ] ...)) ,M)))
      → (letrec ,Σ′ ,(E (substs M Xᵢ Yᵢ))))             ])
 
-(define-inference (deref)
+(define-inference (deref-rules)
   [#:when (map-∈ X Σ)
    ----------------------------------------------
    `((letrec ,Σ ,(E X)) → (letrec ,Σ ,(E (Σ X))))])
 
-(define-inference (assign)
+(define-inference (assign-rules)
   [#:when (map-∈ X Σ)
    ---------------------------------------------------------------
    `((letrec ,Σ ,(E `(set ,X ,V)))
      → (letrec ,(Σ X V) ,(E (Σ X))))])
 
-(define-inference (merge)
+(define-inference (merge-rules)
   [rename ≔ (apply symbol-not-in
                    (dom Σ) (FV `(letrec ,Σ′ ,M))
                    (set-map FV (rng Σ)))
@@ -148,27 +148,27 @@
    `((letrec ,Σ (letrec ,(and Σ′ (↦ [Xᵢ Vᵢ] ...)) ,M))
      → (letrec ,Σ″ ,(substs M Xᵢ Yᵢ)))                 ])
 
-(define-inference (βv-rule)
+(define-inference (βv-rule-rules)
   [#:when (not (∈ X (AV M)))
    ----------------------------------
    `(((λ ,X ,M) ,V) → ,(subst M X V))])
 
-(define-inference (s) #:super [(βv-rule) (δ-rule δ)
-                                         (alloc)
-                                         (deref)
-                                         (assign)
-                                         (lift)
-                                         (merge)])
+(define-inference (s-rules) #:super [(βv-rule-rules) (δ-rules δ)
+                                                     (alloc)
+                                                     (deref-rules)
+                                                     (assign-rules)
+                                                     (lift-rules)
+                                                     (merge-rules)])
 
-(define step-s (call-with-values (λ () (s)) compose1))
+(define s (call-with-values (λ () (s-rules)) compose1))
 
-(define-inference (-->s) #:super [(s)]
+(define-inference (-->s-rules) #:super [(s-rules)]
   [`(,m → ,M′)
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
-(define step-->s (call-with-values (λ () (-->s)) compose1))
-(define -->>s (compose1 car (repeated step-->s)))
+(define -->s (call-with-values (λ () (-->s-rules)) compose1))
+(define -->>s (compose1 car (repeated -->s)))
 
 (module+ test
   (check-equal? (-->>s `((λ x (+ 3 (letrec ,(↦ ['y 1])

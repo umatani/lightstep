@@ -2,10 +2,10 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/match define-match-expander)
-         (only-in "iswim.rkt" ISWIM [FV orig-FV] [subst orig-subst] βv-rule)
-         (only-in "e-iswim.rkt" δ δ-rule))
+         (only-in "iswim.rkt" ISWIM [FV orig-FV] [subst orig-subst] βv-rules)
+         (only-in "e-iswim.rkt" δ δ-rules))
 (provide H-ISWIM FV subst FCxt
-         throw-rule return-rule catch-rule δerr-rule)
+         throw-rules return-rules catch-rules δerr-rules)
 
 (module+ test (require rackunit))
 
@@ -49,20 +49,20 @@
                      `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...))
                      `(catch ,(? M? □) with (λ ,X ,M)))])))
 
-(define-inference (throw-rule)
+(define-inference (throw-rules)
   [#:when (not (equal? x `(throw ,b)))
    --------------------------------------------------
    `(,(and x (FCxt `(throw ,(? b? b)))) → (throw ,b))])
 
-(define-inference (return-rule)
+(define-inference (return-rules)
   [---------------------------------
    `((catch ,V with (λ ,X ,M)) → ,V)])
 
-(define-inference (catch-rule)
+(define-inference (catch-rules)
   [------------------------------------------------------------
    `((catch (throw ,(? b? b)) with (λ ,X ,M)) → ((λ ,X ,M) ,b))])
 
-(define-inference (δerr-rule δ)
+(define-inference (δerr-rules δ)
   [e ← (match (δ oⁿ b)
          [`(err ,(? b? b)) (return `(throw ,b))]
          [V                mzero])
@@ -75,20 +75,20 @@
   [------------------------------
    `((,(? b? b) ,V) → (throw ,b))])
 
-(define-inference (h) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)
-                                         (throw-rule)
-                                         (return-rule)
-                                         (catch-rule)])
+(define-inference (h-rules) #:super [(βv-rules) (δ-rules δ) (δerr-rules δ)
+                                                (throw-rules)
+                                                (return-rules)
+                                                (catch-rules)])
 
-(define step-h (call-with-values (λ () (h)) compose1))
+(define h (call-with-values (λ () (h-rules)) compose1))
 
-(define-inference (-->h) #:super [(h)]
+(define-inference (-->h-rules) #:super [(h-rules)]
   [`(,m → ,M′)
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
-(define step-->h (call-with-values (λ () (-->h)) compose1))
-(define -->>h (compose1 car (repeated step-->h)))
+(define -->h (call-with-values (λ () (-->h-rules)) compose1))
+(define -->>h (compose1 car (repeated -->h)))
 
 (define/match (evalₕ m)
   [M
@@ -108,7 +108,7 @@
   (check-equal? (evalₕ '(add1 (λ x x))) '(err 0))
   (check-equal? (evalₕ '(/ 3 0)) '(err 0))
 
-  (check-equal? (step-->h '(+ (- 4 (throw 1)) (throw 2)))
+  (check-equal? (-->h '(+ (- 4 (throw 1)) (throw 2)))
                 (set '(+ (throw 1) (throw 2)) '(throw 1)))
   (check-equal? (-->>h '(+ (- 4 (throw 1)) (throw 2)))
                 (set '(throw 1)))

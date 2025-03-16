@@ -2,10 +2,10 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/match define-match-expander)
-         (only-in "iswim.rkt" βv-rule)
-         (only-in "e-iswim.rkt" δ δ-rule)
+         (only-in "iswim.rkt" βv-rules)
+         (only-in "e-iswim.rkt" δ δ-rules)
          (only-in "h-iswim.rkt" [H-ISWIM orig-H-ISWIM] FV subst FCxt
-                  δerr-rule return-rule catch-rule))
+                  δerr-rules return-rules catch-rules))
 (provide ECxt)
 
 (module+ test (require rackunit))
@@ -25,12 +25,12 @@
                  `(catch ,□ with (λ ,X ,M)) ;; NEW
                  ))]))
 
-(define-inference (h̃) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)
-                                         (return-rule)
-                                         (catch-rule)])
+(define-inference (h̃-rules) #:super [(βv-rules) (δ-rules δ) (δerr-rules δ)
+                                                (return-rules)
+                                                (catch-rules)])
 
-(define-inference (⊢->h)
-  #:do [(define rh̃ (reducer-of (h̃)))]
+(define-inference (⊢->h-rules)
+  #:do [(define rh̃ (reducer-of (h̃-rules)))]
   #:forms (.... [`(,i →h̃ ,o) #:where o ← (rh̃ i)])
 
   [`((,V₁ ,V₂) →h̃ ,M)
@@ -58,8 +58,8 @@
    --------------------------------------------------
    `(,(and x (FCxt `(throw ,(? b? b)))) → (throw ,b))])
 
-(define step⊢->h (call-with-values (λ () (⊢->h)) compose1))
-(define ⊢->>h (compose1 car (repeated step⊢->h)))
+(define ⊢->h (call-with-values (λ () (⊢->h-rules)) compose1))
+(define ⊢->>h (compose1 car (repeated ⊢->h)))
 
 (define/match (evalₕˢ m)
   [M
@@ -79,7 +79,7 @@
   (check-equal? (evalₕˢ '(add1 (λ x x))) '(err 0))
   (check-equal? (evalₕˢ '(/ 3 0)) '(err 0))
 
-  (check-equal? (step⊢->h '(+ (- 4 (throw 1)) (throw 2)))
+  (check-equal? (⊢->h '(+ (- 4 (throw 1)) (throw 2)))
                 (set '(throw 1)))
   (check-equal? (⊢->>h '(+ (- 4 (throw 1)) (throw 2)))
                 (set '(throw 1)))

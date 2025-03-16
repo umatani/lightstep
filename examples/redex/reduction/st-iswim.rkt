@@ -115,8 +115,8 @@
 ;; re-interpret M
 (define-match-expander ECxt
   (syntax-parser
-    [(ECxt □)
-     #'(cxt ECxt [□ (and □ (or `(,(? V?) ,(? V?))
+    [(ECxt p)
+     #'(cxt ECxt [□ (and p (or `(,(? V?) ,(? V?))
                                `(,(? oⁿ?) ,(? V?) (... ...))))]
             `(,V ,□)
             `(,□ ,M)
@@ -135,8 +135,8 @@
 
 (define-reduction (⊢->v)
   #:do [(define →v (reducer-of (v)))]
-  [(ECxt m)
-   M′ ← (→v m)
+  [(ECxt M)
+   M′ ← (→v M)
    (ECxt M′)])
 
 (define step⊢->v (call-with-values (λ () (⊢->v)) compose1))

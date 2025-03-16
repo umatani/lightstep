@@ -1,87 +1,72 @@
 #lang racket/base
-(require lightstep/base lightstep/syntax
+(require lightstep/base lightstep/syntax lightstep/inference
          (only-in lightstep/monad mapM)
-         (only-in "common.rkt" mmap-ext mmap-lookup)
          (only-in "pcf.rkt" PCF δ))
 (provide PCF⇓)
 
 (module+ test (require rackunit))
 
-;; TODO: monadic version
-
 ;;-----------------------------------------------------------------------------
 ;; 3.4 Evaluation
 
 (define-language PCF⇓ #:super PCF
-  [V ∷=
-     N O
-     `(,L ,(? ρ?))
-     `((μ [,X : ,T] ,L) ,(? ρ?))]
-  [ρ ∷= (? map?)])
+  [V ∷= N O
+        `(,L ,(? ρ?))
+        `((μ [,X : ,T] ,L) ,(? ρ?))]
+  [ρ ∷= (? map? X→V)])
 
-(define-reduction (⇓)
-  [`(,N ,(? ρ?))
-   ; -->
-   N]
+(define-inference (⇓-rules)
+  #:do [(define (ext Γ xs vs)
+          (foldr (λ (x v Γ) (Γ x v)) Γ xs vs))]
+  #:forms ([`(,M:i ,ρ:i ⇓ ,V:o) #:where V ← (⇓-rules `(,M ,ρ))])
 
-  [`(,O ,(? ρ?))
-   ; -->
-   O]
+  [------------------
+   `(,N ,(? ρ?) ⇓ ,N)]
 
-  [`(,L ,(? ρ? ρ))
-   ; -->
-   `(,L ,ρ)]
+  [------------------
+   `(,O ,(? ρ?) ⇓ ,O)]
 
-  [`((μ [,X : ,T] ,L) ,(? ρ? ρ))
-   ; -->
-   `((μ [,X : ,T] ,L) ,ρ)]
+  [-------------------------
+   `(,L ,(? ρ? ρ) ⇓ (,L ,ρ))]
 
-  [`(,X ,(? ρ? ρ))
-   ; where
-   V ← (for/monad+ ([V (∈ (mmap-lookup ρ X))])
-         (return V))
-   ; -->
-   V]
+  [-----------------------------------------------------
+   `((μ [,X : ,T] ,L) ,(? ρ? ρ) ⇓ ((μ [,X : ,T] ,L) ,ρ))]
 
-  [`((if0 ,M₀ ,M₁ ,M₂) ,(? ρ? ρ))
-   ; where
-   N ← (⇓ `(,M₀ ,ρ))
+  [V ≔ (ρ X)
+   --------------------
+   `(,X ,(? ρ? ρ) ⇓ ,V)]
+
+  [`(,M₀ ,ρ ⇓ ,N)
    M ≔ (if (zero? N) M₁ M₂)
-   V ← (⇓ `(,M ,ρ))
-   ; -->
-   V]
+   `(,M ,ρ ⇓ ,V)
+   -----------------------------------
+   `((if0 ,M₀ ,M₁ ,M₂) ,(? ρ? ρ) ⇓ ,V)]
 
-  [`((,M₀ ,M₁ ...) ,(? ρ? ρ))
-   ; where
-   O ← (⇓ `(,M₀ ,ρ))
-   `(,N₁ ...) ← (mapM (λ (m) (⇓ `(,m ,ρ))) M₁)
+  [`(,M₀ ,ρ ⇓ ,O)
+   `(,N₁ ...) ← (mapM (λ (m) (⇓-rules `(,m ,ρ))) M₁)
    N ≔ (δ `(,O ,@N₁))
-   ; -->
-   N]
+   -------------------------------------------------
+   `((,M₀ ,M₁ ...) ,(? ρ? ρ) ⇓ ,N)]
 
-  [`((,M₀ ,M₁ ...) ,(? ρ? ρ))
-   ; where
-   `((λ ([,X₁ : ,T] ...) ,M) ,(? ρ? ρ₁)) ← (⇓ `(,M₀ ,ρ))
-   `(,V₁ ...) ← (mapM (λ (m) (⇓ `(,m ,ρ))) M₁)
-   V ← (⇓ `(,M ,(apply mmap-ext ρ₁ (map list X₁ V₁))))
-   ; -->
-   V]
+  [`(,M₀ ,ρ ⇓ ((λ ([,X₁ : ,T] ...) ,M) ,ρ₁))
+   `(,V₁ ...) ← (mapM (λ (m) (⇓-rules `(,m ,ρ))) M₁)
+   `(,M ,(ext ρ₁ X₁ V₁) ⇓ ,V)
+   -------------------------------------------------
+   `((,M₀ ,M₁ ...) ,(? ρ? ρ) ⇓ ,V)]
 
-  [`((,M₀ ,M₁ ...) ,(? ρ? ρ))
-   ; where
-   (and f `((μ [,X : ,T₁] (λ ([,X₁ : ,T₂] ...) ,M))
-            ,(? ρ? ρ₁))) ← (⇓ `(,M₀ ,ρ))
-   `(,V₁ ...) ← (mapM (λ (m) (⇓ `(,m ,ρ))) M₁)
-   V ← (⇓ `(,M ,(apply mmap-ext ρ₁ `[,X ,f] (map list X₁ V₁))))
-   ; -->
-   V])
+  [`(,M₀ ,ρ ⇓ ,(and f `((μ [,Xₐ : ,Tₐ] (λ ([,X₁ : ,T] ...) ,M)) ,ρ₁)))
+   `(,V₁ ...) ← (mapM (λ (m) (⇓-rules `(,m ,ρ))) M₁)
+   `(,M ,(ext ρ₁ (cons Xₐ X₁) (cons f V₁)) ⇓ ,V)
+   -------------------------------------------------------------------
+   `((,M₀ ,M₁ ...) ,(? ρ? ρ) ⇓ ,V)                                    ])
 
-(define (run-⇓ M ρ) (letrec-values ([(mrun reducer) (⇓)])
+(define (⇓ M ρ) (letrec-values ([(mrun reducer) (⇓-rules)])
                       (mrun (reducer `(,M ,ρ)))))
 
-(define (⇓? M ρ v) (∈ v (run-⇓ M ρ)))
+(define (⇓? M ρ v) (∈ v (⇓ M ρ)))
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))
-  (check-equal? (run-⇓ fact-5 (↦)) (set 120))
+
+  (check-equal? (⇓ fact-5 (↦)) (set 120))
   (check-true (⇓? fact-5 (↦) 120)))

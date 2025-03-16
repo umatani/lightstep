@@ -2,8 +2,8 @@
 (require lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/unit)
          (only-in "iswim.rkt" FV δ)
-         (only-in "secd.rkt" SECD ⊢->secd mkSECD))
-(provide ⊢->secd/tco)
+         (only-in "secd.rkt" SECD ⊢->secd-rules mkSECD))
+(provide ⊢->secd/tco-rules)
 
 (module+ test (require rackunit))
 
@@ -12,7 +12,7 @@
 
 (define-language SECD/TCO #:super SECD)
 
-(define-inference (⊢->secd/tco) #:super [(⊢->secd)]
+(define-inference (⊢->secd/tco-rules) #:super [(⊢->secd-rules)]
   [`(,V ((λ ,X ,M) ,E′) ,V′ ...) ← get-S
    E ← get-E      D ← get-D
    (put-S '())    (put-E (E′ X V))
@@ -26,11 +26,11 @@
    ----------------------------- "secd5-tc"
    `(((ap)) → (,M))                        ])
 
-(define step⊢->secd/tco (let-values ([(mrun reducer) (⊢->secd/tco)])
-                          (match-λ
-                           [(mkSECD S E Cs D)
-                            (mrun D E S (reducer Cs))])))
-(define ⊢->>secd/tco (compose1 car (repeated step⊢->secd/tco)))
+(define ⊢->secd/tco (let-values ([(mrun reducer) (⊢->secd/tco-rules)])
+                      (match-λ
+                       [(mkSECD S E Cs D)
+                        (mrun D E S (reducer Cs))])))
+(define ⊢->>secd/tco (compose1 car (repeated ⊢->secd/tco)))
 
 (define/match (evalsecd/tco m)
   [M

@@ -2,8 +2,8 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/match define-match-expander)
-         (only-in "iswim.rkt" ISWIM [FV orig-FV] subst [δ orig-δ] βv-rule Cxt))
-(provide E-ISWIM ECxt FV δ δ-rule δerr-rule)
+         (only-in "iswim.rkt" ISWIM [FV orig-FV] subst [δ orig-δ] βv-rules Cxt))
+(provide E-ISWIM ECxt FV δ δ-rules δerr-rules)
 
 (module+ test (require rackunit))
 
@@ -17,8 +17,8 @@
 ;; re-interpret oⁿ?
 (define-match-expander ECxt
   (syntax-parser
-    [(ECxt □)
-     #'(cxt ECxt [□ (and □ (or `(,(? V?) ,(? V?))
+    [(ECxt p)
+     #'(cxt ECxt [□ (and p (or `(,(? V?) ,(? V?))
                                `(,(? oⁿ?) ,(? V?) (... ...))))]
             `(,V ,□)
             `(,□ ,M)
@@ -33,14 +33,14 @@
   [('/ `(,(? number? m) ,(? number? n)))
    (/ m n)])
 
-(define-inference (δ-rule δ)
+(define-inference (δ-rules δ)
   [v ← (match (δ oⁿ b)
          [`(err ,(? b?)) mzero]
          [V              (return V)])
    -----------------------------------
    `((,(? oⁿ? oⁿ) ,(? b? b) ...) → ,v)])
 
-(define-inference (δerr-rule δ)
+(define-inference (δerr-rules δ)
   [e ← (match (δ oⁿ b)
          [`(err ,(? b? b)) (return `(err ,b))]
          [V                mzero])
@@ -53,25 +53,25 @@
   [----------------------------
    `((,(? b? b) ,V) → (err ,b))])
 
-(define-inference (error-rule)
+(define-inference (error-rules)
   [#:when (not (equal? x e))
    `(err ,(? b? b)) ≔ e
    -------------------------
    `(,(and x (ECxt e)) → (err ,b))])
 
-(define-inference (w) #:super [(δ-rule δ) (βv-rule)])
-(define-inference (f) #:super [(error-rule) (δerr-rule δ)])
-(define-inference (e) #:super [(w) (f)])
+(define-inference (w-rules) #:super [(δ-rules δ) (βv-rules)])
+(define-inference (f-rules) #:super [(error-rules) (δerr-rules δ)])
+(define-inference (e-rules) #:super [(w-rules) (f-rules)])
 
-(define step-e (call-with-values (λ () (e)) compose1))
+(define e (call-with-values (λ () (e-rules)) compose1))
 
-(define-inference (-->e) #:super [(e)]
+(define-inference (-->e-rules) #:super [(e-rules)]
   [`(,m → ,M′)
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
-(define step-->e (call-with-values (λ () (-->e)) compose1))
-(define -->>e (compose1 car (repeated step-->e)))
+(define -->e (call-with-values (λ () (-->e-rules)) compose1))
+(define -->>e (compose1 car (repeated -->e)))
 
 (define/match (evalₑ m)
   [M
@@ -91,7 +91,7 @@
   (check-equal? (evalₑ '(add1 (λ x x))) '(err 0))
   (check-equal? (evalₑ '(/ 3 0)) '(err 0))
 
-  (check-equal? (step-->e '(+ (- 4 (err 1)) (err 2)))
+  (check-equal? (-->e '(+ (- 4 (err 1)) (err 2)))
                 (set '(+ (err 1) (err 2)) '(err 1)))
   (check-equal? (-->>e '(+ (- 4 (err 1)) (err 2)))
                 (set '(err 1))))

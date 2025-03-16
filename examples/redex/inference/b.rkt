@@ -6,8 +6,8 @@
 ;;=============================================================================
 ;; Syntax
 
-(define-inference (∈B)
-  #:forms ([`(,i:i ∈ B) #:where #t ← (∈B i)])
+(define-inference (∈B-rules)
+  #:forms ([`(,i:i ∈ B) #:where #t ← (∈B-rules i)])
 
   [--------
    '(t ∈ B)]
@@ -19,10 +19,10 @@
    ---------------------
    `((● ,b₀ ,b₁) ∈ B)   ])
 
-(define run-∈B (call-with-values (λ () (∈B)) compose1))
+(define ∈B (call-with-values (λ () (∈B-rules)) compose1))
 
 (define (B? B)
-  (match (run-∈B B)
+  (match (∈B B)
     [(set #t) #t]
     [(set)    #f]
     [_ (error "no such case")]))
@@ -38,19 +38,20 @@
 ;;=============================================================================
 ;; Semantics
 
-(define-inference (r)
+(define-inference (r-rules)
   [------------------ "a"
    `((● f ,B₁) → ,B₁)    ]
 
   [---------------- "b"
    `((● t ,B₁) → t)    ])
 
-(define-inference (≍r-v0) #:super [(r)]
+(define-inference (≍r-v0-rules) #:super [(r-rules)]
   [------------ "c"
    `(,B₁ → ,B₁)    ])
 
-(define-inference (≍r r)
-  #:forms (.... [`(,i →′ ,o) #:where o ← (r i)])
+(define-inference (≍r-rules r)
+  #:do [(define rr (reducer-of (r-rules)))]
+  #:forms (.... [`(,i →′ ,o) #:where o ← (rr i)])
 
   [`(,B₁ →′ ,B₂)
    ------------- "ab"
@@ -59,13 +60,14 @@
   [------------ "c"
    `(,B₁ → ,B₁)    ])
 
-(define ->>r (compose1 car (repeated (call-with-values (λ () (r)) compose1))))
+(define ->>r (compose1 car (repeated (call-with-values
+                                      (λ () (r-rules)) compose1))))
 
 (module+ test
   (check-equal? (->>r '(● f (● f (● t f)))) (set 't))
   (check-equal? (->>r '(● f (● f (● f f)))) (set 'f)))
 
-(define-inference (-->r) #:super [(r)]
+(define-inference (-->r-rules) #:super [(r-rules)]
   [`(,B₁ → ,B₁′)
    -----------------------------
    `((● ,B₁ ,B₂) → (● ,B₁′ ,B₂))]
@@ -74,18 +76,18 @@
    -----------------------------
    `((● ,B₁ ,B₂) → (● ,B₁ ,B₂′))])
 
-(define step-->r (call-with-values (λ () (-->r)) compose1))
-(define -->>r (compose1 car (repeated step-->r)))
+(define -->r (call-with-values (λ () (-->r-rules)) compose1))
+(define -->>r (compose1 car (repeated -->r)))
 
 (module+ test
-  (check-equal? (step-->r '(● (● f t) f)) (set '(● t f)))
-  (check-equal? (step-->r '(● t f)) (set 't))
+  (check-equal? (-->r '(● (● f t) f)) (set '(● t f)))
+  (check-equal? (-->r '(● t f)) (set 't))
   (check-equal? (-->>r '(● (● f t) f)) (set 't))
   (check-equal? (-->>r '(● f (● (● t f) f))) (set 't)))
 
 
-(define-inference (∈R)
-  #:forms ([`(,i:i ∈ R) #:where #t ← (∈R i)])
+(define-inference (∈R-rules)
+  #:forms ([`(,i:i ∈ R) #:where #t ← (∈R-rules i)])
 
   [--------
    '(t ∈ R)]
@@ -93,10 +95,10 @@
   [--------
    '(f ∈ R)])
 
-(define run-∈R (call-with-values (λ () (∈R)) compose1))
+(define ∈R (call-with-values (λ () (∈R-rules)) compose1))
 
 (define (R? B)
-  (match (run-∈R B)
+  (match (∈R B)
     [(set #t) #t]
     [(set)    #f]
     [_ (error "no such case")]))

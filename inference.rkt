@@ -1,16 +1,11 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse
                      (only-in racket/list append-map)
-                     (only-in racket/match match match-define)
+                     (only-in racket/match match match-define match-λ)
                      (only-in racket/syntax format-id syntax-local-eval)
                      (only-in syntax/stx stx-map)
-                     (only-in syntax/id-table
-                              make-immutable-free-id-table
-                              free-id-table-set free-id-table-map
-                              free-id-table-keys free-id-table-values
-                              in-free-id-table)
                      racket/pretty)
-         (only-in "reduction.rkt" define-reduction reducer-of
+         (only-in "reduction.rkt" define-reduction reducer-of escape-elipsis
                   [options roptions] gen-rname))
 (provide define-inference)
 
@@ -19,10 +14,10 @@
 (begin-for-syntax
   ;; for debug
   (define (print-σ σ)
-    (for ([(k v) (in-free-id-table σ)])
+    (for ([kv (in-list σ)])
       (printf "~a ↦ ~a\n"
-              (pretty-format (syntax->datum k))
-              (pretty-format (syntax->datum v)))))
+              (pretty-format (syntax->datum (car kv)))
+              (pretty-format (syntax->datum (cdr kv))))))
   
   (define-syntax-class hbar
     (pattern x:id
@@ -158,9 +153,9 @@
       [(x:id f)
        (match (name&mode #'x)
          [`(,mode ,name)
-          (if (member name (free-id-table-keys σ) free-identifier=?)
+          (if (assoc name σ free-identifier=?)
             `(ERR ,(format "duplicate id in form pattern: ~a" (syntax-e name)))
-            (free-id-table-set σ name `(,mode ,#'f)))])]
+            (cons (cons name `(,mode ,#'f)) σ))])]
 
       [(b:boolean b′)
        (if (equal? (syntax->datum #'b) (syntax->datum #'b′)) σ (err))]
@@ -177,19 +172,16 @@
 
   (define (xform-rule form-xformer main-pat premises concl rnam)
     (define σ
-      (match (match-form main-pat concl (make-immutable-free-id-table))
+      (match (match-form main-pat concl '())
         [`(ERR ,msg) (raise-syntax-error 'xform-rule msg)]
         [σ σ]))
-    (define-values (σᵢ σₒ) (for/fold ([σᵢ (make-immutable-free-id-table)]
-                                      [σₒ (make-immutable-free-id-table)])
-                                     ([(id mode&form) (in-free-id-table σ)])
+    (define-values (σᵢ σₒ) (for/fold ([σᵢ '()]
+                                      [σₒ '()])
+                                     ([x (in-list σ)])
+                             (match-define (cons id mode&form) x)
                              (match mode&form
-                               [`(#:in ,f) (values
-                                            (free-id-table-set σᵢ id f)
-                                            σₒ)]
-                               [`(#:out ,f) (values
-                                             σᵢ
-                                             (free-id-table-set σₒ id f))]
+                               [`(#:in  ,f) (values (cons (cons id f) σᵢ) σₒ)]
+                               [`(#:out ,f) (values σᵢ (cons (cons id f) σₒ))]
                                [`(,_ ,_) (values σᵢ σₒ)])))
 
     ;; (printf "[σᵢ]\n")
@@ -198,13 +190,13 @@
     ;; (print-σ σₒ)
 
     (define in-pat
-      (syntax-parse (free-id-table-values σᵢ)
+      (syntax-parse (map cdr σᵢ)
         [() (raise-syntax-error #f "no input specified in #:forms" main-pat)]
         [(form) #'form]
         [(form ...) #'(list form ...)]))
 
     (define out-expr
-      (syntax-parse (free-id-table-values σₒ)
+      (syntax-parse (map cdr σₒ)
         [() #'#t]
         [(form) #'form]
         [(form ...) #'(list form ...)]))
@@ -228,11 +220,13 @@
 
      #:do [(define (form-xformer form)
              (define (try-form pat rhs)
-               (match (match-form pat form (make-immutable-free-id-table))
+               (match (match-form pat form '())
                  [`(ERR ,_) #f]
                  [σ (with-syntax ([([p f] ...)
-                                   (free-id-table-map
-                                    σ (λ (id f) (list id (cadr f))))])
+                                   (map (match-λ
+                                         [(cons id f)
+                                          (list id (escape-elipsis (cadr f)))])
+                                        σ)])
                       (syntax-local-eval #`(with-syntax ([p #'f] ...)
                                              #'#,rhs)))]))
              (let loop ([pats (cons #'main-pat

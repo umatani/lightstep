@@ -68,13 +68,13 @@
 
   (define (subst n x m) (subst-m n x m)))
 
-(define-inference (-->PCF₇)
+(define-inference (-->PCF₇-rule)
   #:import (delta^ syntax^)
   #:do [;; as before
         (define-match-expander E
           (syntax-parser
-            [(E □)
-             #'(cxt E [□ (and □ (or `((λ (,(? X?)) ,_) ,(? V?))
+            [(E p)
+             #'(cxt E [□ (and p (or `((λ (,(? X?)) ,_) ,(? V?))
                                     `(,(? prim?) ,(? V?) (... ...))
                                     `(if ,(? V?) ,_ ,_)
                                     `(fix (λ (,(? X?)) ,_))))]
@@ -86,7 +86,7 @@
                     `(fix ,□)
                     `(,V ,□)
                     `(,□ ,M₁))]))
-        (define-inference (PCF₇)
+        (define-inference (PCF₇-rules)
           [------------------------------------- "prim"
            `((,(? prim? op) ,V ...) → ,(δ op V))]
 
@@ -101,27 +101,27 @@
            `((if ,V₁ ,M₂ ,M₃) → ,M₂)]
 
           [X′ ≔ (gensym X)
-           ---------------------------------------- "fix"
-           `((fix (λ (,X) ,M))
-             → ((λ (,X) ,M)
-                (λ (,X′) ((fix (λ (,X) ,M)) ,X′))))])
+              ---------------------------------------- "fix"
+              `((fix (λ (,X) ,M))
+                → ((λ (,X) ,M)
+                   (λ (,X′) ((fix (λ (,X) ,M)) ,X′))))])
 
-        (define →PCF₇ (reducer-of (PCF₇)))]
+        (define →PCF₇ (reducer-of (PCF₇-rules)))]
   #:forms (.... [`(,i →₇ ,o) #:where o ← (→PCF₇ i)])
 
-  [`(,m →₇ ,M′)
+  [`(,M →₇ ,M′)
    ------------------- "EC"
-   `(,(E m) → ,(E M′))])
+   `(,(E M) → ,(E M′))])
 
-(define step-->PCF₇
+(define -->PCF₇
   (call-with-values
    (λ () (invoke-unit
           (compound-unit (import) (export)
                          (link (([s : syntax^]) syntax1@)
                                (([d : delta^]) delta1@)
-                               (() (-->PCF₇) s d)))))
+                               (() (-->PCF₇-rule) s d)))))
    compose1))
-(define -->>PCF₇ (compose1 car (repeated step-->PCF₇)))
+(define -->>PCF₇ (compose1 car (repeated -->PCF₇)))
 
 (module+ test
   ;(printf "----- PCF₇ ------------\n")
@@ -225,21 +225,21 @@
 
   (define (subst n x m) (subst-m n x m)))
 
-(define-inference (-->PCF₈) #:super [(-->PCF₇)])
+(define-inference (-->PCF₈-rule) #:super [(-->PCF₇-rule)])
 
-(define step-->PCF₈
+(define -->PCF₈
   (call-with-values
    (λ () (invoke-unit
           (compound-unit (import) (export)
                          (link (([s : syntax^]) syntax2@)
-                               (([r : red^]) (-->PCF₈) s d)
+                               (([r : red^]) (-->PCF₈-rule) s d)
                                (([d : delta^]) delta2@ r)))))
    compose1))
-(define -->>PCF₈ (compose1 car (repeated step-->PCF₈)))
+(define -->>PCF₈ (compose1 car (repeated -->PCF₈)))
 
 (module+ test
   ;;(printf "----- PCF₈ ------------\n")
-  (check-equal? (step-->PCF₈ '(eval '(+ 1 2))) (set 3))
+  (check-equal? (-->PCF₈ '(eval '(+ 1 2))) (set 3))
   (check-equal?
    (-->>PCF₈ '(+ (eval '(+ 1 2)) (eval '(+ (+ 3 (+ 4 5)) (+ 1 2)))))
    (set 18)))

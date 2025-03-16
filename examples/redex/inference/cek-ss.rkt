@@ -1,7 +1,7 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax lightstep/inference
          (only-in "iswim.rkt" FV δ)
-         (only-in "cek.rkt" CEK ⊢->cek mkCEK))
+         (only-in "cek.rkt" CEK ⊢->cek-rules mkCEK))
 
 (module+ test (require rackunit))
 
@@ -10,7 +10,7 @@
 
 (define-language CEK/SS #:super CEK)
 
-(define-inference (⊢->cek/ss) #:super [(⊢->cek)]
+(define-inference (⊢->cek/ss-rules) #:super [(⊢->cek-rules)]
   [E ← get-E    κ ← get-κ
    (put-κ `(ar (,M₂ ,(restrict E (FV M₂))) ,κ))
    -------------------------------------------- "cek1"
@@ -37,11 +37,11 @@
    ----------------------------------------------------------- "cek6"
    `(,V → ,M)                                                        ])
 
-(define step⊢->cek/ss (let-values ([(mrun reducer) (⊢->cek/ss)])
-                        (match-λ
-                         [(mkCEK M E (? κ? κ))
-                          (mrun κ E (reducer M))])))
-(define ⊢->>cek/ss (compose1 car (repeated step⊢->cek/ss)))
+(define ⊢->cek/ss (let-values ([(mrun reducer) (⊢->cek/ss-rules)])
+                    (match-λ
+                     [(mkCEK M E (? κ? κ))
+                      (mrun κ E (reducer M))])))
+(define ⊢->>cek/ss (compose1 car (repeated ⊢->cek/ss)))
 
 (define/match (evalcek/ss m)
   [M

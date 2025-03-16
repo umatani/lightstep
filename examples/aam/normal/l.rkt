@@ -1,13 +1,13 @@
 #lang racket/base
-(require lightstep/base lightstep/syntax
-         (only-in "common.rkt" match?))
+(require (for-syntax racket/base syntax/parse)
+         lightstep/base lightstep/syntax)
 
 (module+ test (require rackunit))
 
 ;;=============================================================================
 ;; 2 Warmup
 
-(module+ test (require rackunit))
+(define-syntax match? (syntax-parser [(_ p x) #'(match x [p #t] [_ #f])]))
 
 (define-language L
   [M ∷= N F `(,M ...)]
