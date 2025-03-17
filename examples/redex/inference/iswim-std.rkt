@@ -24,6 +24,7 @@
             `(,□ ,M)
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
+;; M --> M
 (define-inference (⊢->v-rules)
   #:do [(define rv (reducer-of (v-rules)))]
   #:forms (.... [`(,i →v ,o) #:where o ← (rv i)])
@@ -31,9 +32,11 @@
    -------------------------
    `(,(E M) → ,(E M′))])
 
+;; M → 𝒫(M)
 (define ⊢->v (call-with-values (λ () (⊢->v-rules)) compose1))
 (define ⊢->>v (compose1 car (repeated ⊢->v)))
 
+;; M → V
 (define/match (evalᵥˢ m)
   [M
    #:when (∅? (FV M))

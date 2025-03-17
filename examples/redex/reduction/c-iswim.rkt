@@ -19,10 +19,12 @@
       `(catch ,M₁ with (λ ,X₁ (λ ,X₂ ,M₂)))]
   [o² ∷= .... '/])
 
+;; M → 𝒫(X)
 (define/match (FV m) #:super orig-FV
   [`(catch ,M₁ with (λ ,X₁ (λ ,X₂ ,M₂)))
    (∪ (FV M₁) (FV `(λ ,X₁ (λ ,X₂ ,M₂))))])
 
+;; M X M → M
 (define/match (subst m₁ x₂ m₂) #:super orig-subst
   [(`(catch ,M with (λ ,X (λ ,X′ ,M′))) X₂ M₂)
    `(catch ,(subst M X₂ M₂) with ,(subst (λ ,X (λ ,X′ ,M′)) X₂ M₂))])
@@ -60,23 +62,28 @@
                      `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...))
                      )])))
 
+;; M --> M
 (define-reduction (cntrl-rule)
   [`(catch ,(FCxt `(throw ,(? b? b))) with (λ ,X₁ (λ ,X₂ ,M)))
    X′ ≔ ((symbol-not-in (FV (FCxt 5))) 'Y)
    `(((λ ,X₁ (λ ,X₂ ,M)) ,b) (λ ,X′ ,(FCxt X′)))])
 
+;; M --> M
 (define-reduction (c′) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)
                                           (return-rule)
                                           (cntrl-rule)])
 
+;; M --> M
 (define-reduction (c) #:super [(c′) (throw-rule)])
 
+;; M --> M
 ;; inside catch
 (define-reduction (-->c′) #:super [(c′)]
   [(Cxt′ m)
    M′ ← (-->c′ m)
    (Cxt′ M′)])
 
+;; M --> M
 ;; toplevel, i.e., outside catch context
 (define-reduction (-->c) #:super [(c)]
   #:do [(define →-->c′ (reducer-of (-->c′)))]
@@ -87,9 +94,11 @@
    M₁′ ← (→-->c′ M₁)
    (FCxt `(catch ,M₁′ with (λ ,X₁ (λ ,X₂ ,M₂))))])
 
+;; M → 𝒫(M)
 (define step-->c (call-with-values (λ () (-->c)) compose1))
 (define -->>c (compose1 car (repeated step-->c)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalc m)
   [M
    #:when (∅? (FV M))

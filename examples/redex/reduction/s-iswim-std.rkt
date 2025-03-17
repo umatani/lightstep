@@ -27,6 +27,7 @@
                  `(set ,X ,□) ; NEW
                  ))]))
 
+;; M --> M
 (define-reduction (⊢->s)
   #:do [(define →s (reducer-of (s)))]
   [(E M)
@@ -36,9 +37,11 @@
    M′ ← (→s M)
    `(letrec ,Σ ,(E M′))])
 
+;; M → 𝒫(M)
 (define step⊢->s (call-with-values (λ () (⊢->s)) compose1))
 (define ⊢->>s (compose1 car (repeated step⊢->s)))
 
+;; M → V
 (define/match (evalₛˢ m)
   [M
    #:when (∅? (FV M))

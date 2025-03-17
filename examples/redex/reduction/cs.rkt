@@ -15,20 +15,24 @@
   [Σ ∷= (? map? XVs)]
   [V ∷= (? b?) `(λ ,X ,M)])
 
+;; List(X) M → M
 (define/match (make-λ xs m)
   [('() M) M]
   [(`(,X ,X′ ...) M)
    `(λ ,X ,(make-λ X′ M))])
 
+;; M List(M) → M
 (define/match (make-app f vs)
   [(M '()) M]
   [(M `(,M₁ ... ,M′))
    `(,(make-app M M₁) ,M′)])
 
+;; ([X M] ...) M → M
 (define/match (LET bs n)
   [(`([,X ,M] ...) M′)
    (make-app (make-λ X M′) M)])
 
+;; M ... → M
 (define (SEQ . ms)
   (match ms
     [`(,M ..1)
@@ -42,7 +46,7 @@
   ;;(SEQ '(set x 1) '(set y 2) '(set z 3))
   )
 
-
+;; M → 𝒫(X)
 (define/match (AV m)
   [X                  ∅]
   [`(λ ,X ,M)         (set-remove (FV M) X)]
@@ -51,9 +55,11 @@
   [(? b?)             ∅]
   [`(,(? oⁿ?) ,M ...) (apply ∪ (map AV M))])
 
+;; M → 𝒫(X)
 (define/match (FV m) #:super orig-FV
   [`(set ,X ,M)       (set-add (FV M) X)])
 
+;; M X M → M
 (define/match (subst m₁ x₂ m₂) #:super orig-subst
   [(`(set ,X ,M) X₂ X₂′)
    #:when (eq? X X₂)
@@ -72,6 +78,7 @@
                  `(set ,X ,□) ; NEW
                  ))]))
 
+;; (M Σ) --> (M Σ)
 (define-reduction (⊢->cs)
   #:monad (StateT #f (NondetT ID))
 
@@ -109,12 +116,14 @@
   (syntax-parser
     [(_ M Σ) #'(cons M Σ)]))
 
+;; (M Σ) → 𝒫((M Σ))
 (define step⊢->cs (let-values ([(mrun reducer) (⊢->cs)])
                     (match-λ
                      [(mkCS M Σ)
                       (mrun Σ (reducer M))])))
 (define ⊢->>cs (compose1 car (repeated step⊢->cs)))
 
+;; M → V
 (define/match (evalcs m)
   [M
    #:when (∅? (FV M))

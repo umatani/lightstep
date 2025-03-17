@@ -12,6 +12,7 @@
 
 (define-language CESK #:super orig-CESK)
 
+;; (∪ (M E) E Σ κ) → 𝒫(σ)
 (define/match (LL x)
   [`(,M ,E) (LL E)]
   [E (rng E)]
@@ -24,6 +25,7 @@
    (apply ∪ (LL κ) (map LL `(,@c ,@c′)))]
   [`(set ,(? σ? σ) ,(? κ? κ)) (set-add (LL κ) σ)])
 
+;; (𝒫(σ) 𝒫(σ) Σ) --> (𝒫(σ) 𝒫(σ) Σ)
 (define-inference (⊢->gc-rules)
   [(set σ₀ σ ...) ≔ Grey
    Grey′ ≔ (set-subtract (∪ Grey (LL (Σ σ₀)))
@@ -32,9 +34,11 @@
    ------------------------------------------
    `((,Grey ,Brack ,Σ) → (,Grey′ ,Brack′ ,Σ))])
 
+;; (𝒫(σ) 𝒫(σ) Σ) → 𝒫((𝒫(σ) 𝒫(σ) Σ))
 (define ⊢->gc (call-with-values (λ () (⊢->gc-rules)) compose1))
 (define ⊢->>gc (compose1 car (repeated ⊢->gc)))
 
+;; (M E Σ κ) --> (M E Σ κ)
 (define-inference (⊢->gc-in-cesk-rules)
   #:monad (StateT #f (StateT #f (NondetT ID)))
   #:do [(define get-Σ (bind get (compose1 return car)))
@@ -52,22 +56,23 @@
    ----------------------------------------------------------- "ceskgcI"
    `((,M ,E) → (,M ,E))                                                 ])
 
+;; (M E Σ κ) → 𝒫((M E Σ κ))
 (define ⊢->gc-in-cesk (let-values ([(mrun reducer) (⊢->gc-in-cesk-rules)])
                         (match-λ
                          [(mkCESK M E Σ (? κ? κ))
                           (mrun κ Σ (reducer `(,M ,E)))])))
-
 (define ⊢->cesk (let-values ([(mrun reducer) (⊢->cesk-rules)])
                   (match-λ
                    [(mkCESK M E Σ (? κ? κ))
                     (mrun κ Σ (reducer `(,M ,E)))])))
 
+;; (M E Σ κ) → 𝒫((M E Σ κ))
 (define (⊢->cesk+gc ς)
   (apply ∪ (set-map ⊢->gc-in-cesk #; set ;; to compare with no-gc
                     (⊢->cesk ς))))
-
 (define ⊢->>cesk+gc (compose1 car (repeated ⊢->cesk+gc)))
 
+;; M → V
 (define/match (evalcesk+gc m)
   [M
    #:when (∅? (FV M))

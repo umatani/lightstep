@@ -7,6 +7,7 @@
 ;;=============================================================================
 ;; 2 Warmup
 
+;; P Any → Boolean
 (define-syntax match? (syntax-parser [(_ p x) #'(match x [p #t] [_ #f])]))
 
 (define-language L
@@ -34,6 +35,7 @@
                            (app (match-λ [`(,m₁ ,m₂) (equal? m₁ m₂)]) #t))
                       '((2 fred) (2 fred)))))
 
+;; M → M
 (define (swap M)
   (match M
     ['fred 'wilma]

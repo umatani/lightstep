@@ -11,6 +11,7 @@
 
 (define-language S-ISWIM #:super orig-S-ISWIM)
 
+;; Σ 𝒫(X) → Σ
 (define (gc Σ₀ Xs₀)
   (define (aux Σ Xs)
     (for/fold ([Σ Σ] [Xs Xs])
@@ -25,6 +26,7 @@
       Σ
       (loop Σ′ Xs′))))
 
+;; (M Σ) --> (M Σ)
 (define-inference (⊢->cs+gc-rules) #:super [(⊢->cs-rules)]
   [Σ ← get
    Σ′ ≔ (gc Σ (FV M))
@@ -33,11 +35,13 @@
    -------------------------- "csgc"
    `(,M → ,M)                       ])
 
+;; (M Σ) → 𝒫((M Σ))
 (define ⊢->cs+gc (let-values ([(mrun reducer) (⊢->cs+gc-rules)])
                    (match-λ
                     [(mkCS M Σ) (mrun Σ (reducer M))])))
 (define ⊢->>cs+gc (compose1 car (repeated ⊢->cs+gc)))
 
+;; M → V
 (define/match (evalcs+gc m)
   [M
    #:when (∅? (FV M))

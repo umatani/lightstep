@@ -25,6 +25,7 @@
                              (app (λ (x) (λ () x)) □))])
   (syntax-parser [(_:id) #'#()]))
 
+;; (M ECxt) --> (M ECxt)
 (define-reduction (⊢->cc)
   [`((,M₁ ,M₂) ,(ECxt (□)))
    #:when (not (V? M₁))
@@ -61,7 +62,7 @@
    `((,oⁿ ,@V′ ,V ,@M) ,(ECxt (□)))
    "cc6"])
 
-
+;; (M ECxt) --> (M ECxt)
 (define-reduction (⊢->cc′)
   #:monad (StateT #f (NondetT ID))
 
@@ -112,6 +113,7 @@
    `(,oⁿ ,@V′ ,V ,@M)
    "cc6"])
 
+;; (M ECxt) → 𝒫((M ECxt))
 (define step⊢->cc (call-with-values (λ () (⊢->cc)) compose1))
 (define ⊢->>cc (compose1 car (repeated step⊢->cc)))
 
@@ -121,12 +123,14 @@
   (syntax-parser
     [(_ M ECxt) #'(cons M ECxt)]))
 
+;; (M ECxt) → 𝒫((M ECxt))
 (define step⊢->cc′ (let-values ([(mrun reducer) (⊢->cc′)])
                      (match-λ
                       [(mkCC M ECxt)
                        (mrun ECxt (reducer M))])))
 (define ⊢->>cc′ (compose1 car (repeated step⊢->cc′)))
 
+;; M → V
 (define/match (evalcc m)
   [M
    #:when (∅? (FV M))
@@ -138,6 +142,7 @@
      [x (error 'evalcc "invalid final state: ~s" x)])]
   [_ (error 'evalcc "invalid input: ~s" m)])
 
+;; M → V
 (define/match (evalcc′ m)
   [M
    #:when (∅? (FV M))

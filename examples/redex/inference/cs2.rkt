@@ -24,6 +24,7 @@
                  `(set ,X ,□) ; NEW
                  ))]))
 
+;; (M Σ) --> (M Σ)
 (define-inference (⊢->cs-rules) #:super [(orig-⊢->cs-rules)]
   #:do [(define (substs-Σ Σ xs ms)
           (for/map ([(x v) (in-map Σ)])
@@ -36,13 +37,14 @@
    --------------------------------------------------- "csR"
    `(,(E `(letrec ,Σ′ ,M)) → ,(E (substs M X′ Y)))          ])
 
-
+;; (M Σ) → 𝒫((M Σ))
 (define ⊢->cs (let-values ([(mrun reducer) (⊢->cs-rules)])
                 (match-λ
                  [(mkCS M Σ)
                   (mrun Σ (reducer M))])))
 (define ⊢->>cs (compose1 car (repeated ⊢->cs)))
 
+;; M → V
 (define/match (evalcs m)
   [M
    #:when (∅? (FV M))

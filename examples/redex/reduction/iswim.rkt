@@ -30,6 +30,7 @@
   (check-true  (M? '(↑ 1 2)))
   (check-false (M? '(/ 1 2))))
 
+;; M → 𝒫(X)
 (define/match (FV m) #:super lam:FV
   [(? b?) ∅]
   [`(,(? oⁿ?) ,M ...)
@@ -43,6 +44,7 @@
   (check-equal? (FV 123)              ∅)
   (check-equal? (FV '(↑ (f x) (g 1))) (set 'f 'x 'g)))
 
+;; M X M → M
 (define/match (subst m₁ x₂ m₂) #:super lam:subst
   [((? b? b) X₂ M₂) b]
   [(`(,(? oⁿ? oⁿ) ,M ...) X₂ M₂)
@@ -52,10 +54,12 @@
 ;;=============================================================================
 ;; 4.2  Calculating with ISWIM
 
+;; M --> M
 (define-reduction (βv-rule)
   [`((λ ,X ,M) ,V)
    (subst M X V)])
 
+;; oⁿ List(b) → V
 (define/match (δ o bs)
   [('add1 `(,(? number? m)))
    (add1 m)]
@@ -76,16 +80,20 @@
   [('↑ `(,(? number? m) ,(? number? n)))
    (expt m n)])
 
+;; M M M → M
 (define (IF0 L M N)
   (let ([X ((symbol-not-in (FV M) (FV N)) 'if0)])
     `((((iszero ,L) (λ ,X ,M)) (λ ,X ,N)) 0)))
 
+;; M --> V
 (define-reduction (δ-rule δ)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    (δ oⁿ b)])
 
+;; M --> M
 (define-reduction (v) #:super [(βv-rule) (δ-rule δ)])
 
+;; M → 𝒫(M)
 (define step-v (call-with-values (λ () (v)) compose1))
 
 ;; ECxt of iswim-std.rkt is same, but deterministic
@@ -99,11 +107,13 @@
                      `(,V ,(? M? □))
                      `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...)))])))
 
+;; M --> M
 (define-reduction (-->v) #:super [(v)]
   [(Cxt m)
    M′ ← (-->v m)
    (Cxt M′)])
 
+;; M → 𝒫(M)
 (define step-->v (call-with-values (λ () (-->v)) compose1))
 (define -->>v (compose1 car (repeated step-->v)))
 
@@ -134,6 +144,7 @@
 ;;=============================================================================
 ;; 4.5  Evaluation
 
+;; M → V
 (define/match (evalᵥ m)
   [M
    #:when (∅? (FV M))
@@ -152,6 +163,7 @@
 ;;=============================================================================
 ;; 4.6  Consistency
 
+;; M --> M
 (define-reduction (↪v)
   [M M]
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
@@ -171,6 +183,7 @@
    `(,M′ ...) ← (mapM ↪v M)
    `(,oⁿ ,@M′)])
 
+;; M → 𝒫(M)
 (define step-↪v (call-with-values (λ () (↪v)) compose1))
 
 (module+ test

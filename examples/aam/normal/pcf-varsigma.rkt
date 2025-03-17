@@ -1,13 +1,10 @@
 #lang racket/base
-(require lightstep/base lightstep/syntax
-         (only-in "common.rkt" mmap-ext mmap-lookup)
+(require lightstep/base lightstep/syntax lightstep/inference
          (only-in "pcf.rkt" δ)
-         (only-in "pcf-rho.rkt" PCFρ vρ injρ))
-(provide PCFς -->vς injς)
+         (only-in "pcf-rho.rkt" PCFρ vρ-rules injρ))
+(provide PCFς -->vς-rules injς)
 
 (module+ test (require rackunit))
-
-;; TODO: monadic version
 
 ;;-----------------------------------------------------------------------------
 ;; 3.7 Eval/Continue/Apply machine
@@ -27,53 +24,49 @@
      `(,C ,C′ ...)]
   [ς ∷= `(,C ,K) V])
 
-(define-reduction (-->vς)
-  #:do [(define-reduction (rules) #:super [(vρ)])
-        (define →vρ (reducer-of (rules)))]
+;; ς --> ς
+(define-inference (-->vς-rules)
+  #:do [(define-reduction (rules) #:super [(vρ-rules)])
+        (define rvρ (reducer-of (rules)))]
+  #:forms (.... [`(,i →vρ ,o) #:where o ← (rvρ i)])
+
   ; Apply
-  [`(,C ,K)
-   ; where
-   C′ ← (→vρ C)
-   ; -->
-   `(,C′ ,K)
-   "ap"]
+  [`(,C →vρ ,C′)
+   ---------------------- "ap"
+   `((,C ,K) → (,C′ ,K))      ]
 
   ; Eval
-  [`((if0 ,S₀ ,C₁ ,C₂) [,F ...])
-   ; -->
-   `(,S₀ [(if0 □ ,C₁ ,C₂) ,@F])
-   "ev-if"]
+  [-------------------------------- "ev-if"
+   `(((if0 ,S₀ ,C₁ ,C₂) [,F ...])
+     → (,S₀ [(if0 □ ,C₁ ,C₂) ,@F]))        ]
 
-  [`((,V ... ,S ,C ...) [,F ...])
-   ; -->
-   `(,S [(,@V □ ,@C) ,@F])
-   "ev-app"]
+  [------------------------------- "ev-app"
+   `(((,V ... ,S ,C ...) [,F ...])
+     → (,S [(,@V □ ,@C) ,@F]))             ]
 
   ; Continue
-  [`(,V [])
-   ; -->
-   V
-   "halt"]
+  [--------------- "halt"
+   `((,V []) → ,V)       ]
 
-  [`(,V [(if0 □ ,C₁ ,C₂) ,F ...])
-   ; -->
-   `((if0 ,V ,C₁ ,C₂) [,@F])
-   "co-if"]
+  [------------------------------- "co-if"
+   `((,V [(if0 □ ,C₁ ,C₂) ,F ...])
+     → ((if0 ,V ,C₁ ,C₂) [,@F]))          ]
 
-  [`(,V [(,V₀ ... □ ,C₀ ...) ,F ...])
-   ; -->
-   `((,@V₀ ,V ,@C₀) [,@F])
-   "co-app"])
+  [----------------------------------- "co-app"
+   `((,V [(,V₀ ... □ ,C₀ ...) ,F ...])
+     → ((,@V₀ ,V ,@C₀) [,@F]))                 ])
 
-(define step-->vς (call-with-values (λ () (-->vς)) compose1))
+;; ς → 𝒫(ς)
+(define -->vς (call-with-values (λ () (-->vς-rules)) compose1))
 
+;; M → ς
 (define (injς M)
   `(,(injρ M) []))
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))
-  (check-equal? (car ((repeated step-->vς) (injς fact-5)))
+  (check-equal? (car ((repeated -->vς) (injς fact-5)))
                 (set 120))
-  (check-equal? (car ((repeated step-->vς)
+  (check-equal? (car ((repeated -->vς)
                       (injς '((λ ([x : num]) x) (add1 5)))))
                 (set 6)))

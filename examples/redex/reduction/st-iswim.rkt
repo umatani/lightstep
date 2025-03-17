@@ -44,9 +44,11 @@
   [o² ∷= '+ '- '* '↑]
   [KWD ∷= .... (? o¹?) (? o²?)])
 
+;; M → 𝒫(X)
 (define/match (FV m) #:super orig-FV
   [`(λ [,X : ,T] ,M) (set-remove (FV M) X)])
 
+;; M X M → M
 (define/match (subst m₁ x₂ m₂) #:super orig-subst
   [(`(λ [,X₁ : ,T] ,M₁) X₂ M₂)
    #:when (eq? X₁ X₂)
@@ -55,10 +57,11 @@
    (let ([X₃ ((symbol-not-in (FV `(λ [,X₁ : ,T] ,M₁)) (FV M₂)) X₁)])
      `(λ [,X₃ : ,T] ,(subst (subst M₁ X₁ X₃) X₂ M₂)))])
 
-
+;; b → T
 (define/match (ℬ b)
   [(? b?) 'num])
 
+;; oⁿ List(T) → T
 (define/match (Δ oⁿ Ts)
   [('add1   '(num)) 'num]
   [('sub1   '(num)) 'num]
@@ -68,6 +71,7 @@
   [('* '(num num)) 'num]
   [('↑ '(num num)) 'num])
 
+;; Γ ⊢ M : T
 (define-reduction (⊢)
   [`(,Γ ,(? b? b))
    (ℬ b)]
@@ -88,8 +92,10 @@
    `(,B ...) ← (mapM (λ (m) (⊢ `(,Γ ,m))) M)
    (Δ oⁿ B)])
 
+;; (Γ M) → 𝒫(T)
 (define step-⊢ (call-with-values (λ () (⊢)) compose1))
 
+;; M → T
 (define (type-of M)
   (match (step-⊢ `(,(↦) ,M))
     [(set T) T]
@@ -122,6 +128,7 @@
             `(,□ ,M)
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
+;; oⁿ List(b) → V
 (define/match (δ o bs) #:super orig-δ
   [('iszero `(0))
    '(λ [x : num] (λ [y : num] x))]
@@ -129,19 +136,23 @@
    #:when (not (zero? n))
    '(λ [x : num] (λ [y : num] y))])
 
+;; M --> M
 (define-reduction (v) #:super [(orig-v)]
   [`((λ [,X : ,T] ,M) ,V)
    (subst M X V)])
 
+;; M --> M
 (define-reduction (⊢->v)
   #:do [(define →v (reducer-of (v)))]
   [(ECxt M)
    M′ ← (→v M)
    (ECxt M′)])
 
+;; M → 𝒫(M)
 (define step⊢->v (call-with-values (λ () (⊢->v)) compose1))
 (define ⊢->>v (compose1 car (repeated step⊢->v)))
 
+;; M → V
 (define/match (evalᵥˢ m)
   [M
    #:when (∅? (FV M))

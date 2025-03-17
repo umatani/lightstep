@@ -22,6 +22,7 @@
      `(op ,(? list? VEsOⁿ) ,(? list? MEs) ,(? κ?))
      `(set ,(? σ?) ,(? κ?))])
 
+;; (M E Σ κ) --> (M E Σ κ)
 (define-reduction (⊢->cesk)
   #:monad (StateT #f (StateT #f (NondetT ID)))
   #:do [(define get-Σ (bind get (compose1 return car)))
@@ -103,12 +104,14 @@
   (syntax-parser
     [(_ C E S K) #'(cons (cons `(,C ,E) S) K)]))
 
+;; (M E Σ κ) → 𝒫((M E Σ κ))
 (define step⊢->cesk (let-values ([(mrun reducer) (⊢->cesk)])
                       (match-λ
                        [(mkCESK M E Σ (? κ? κ))
                         (mrun κ Σ (reducer `(,M ,E)))])))
 (define ⊢->>cesk (compose1 car (repeated step⊢->cesk)))
 
+;; M → V
 (define/match (evalcesk m)
   [M
    #:when (∅? (FV M))

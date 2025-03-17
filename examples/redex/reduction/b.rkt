@@ -6,6 +6,7 @@
 ;;=============================================================================
 ;; Syntax
 
+;; B --> #t
 (define-reduction (∈B)
   ['t
    #t]
@@ -16,8 +17,10 @@
    #t ← (∈B b₁)
    #t])
 
+;; B → 𝒫(#t)
 (define run-∈B (call-with-values (λ () (∈B)) compose1))
 
+;; B → Boolean
 (define (B? B)
   (match (run-∈B B)
     [(set #t) #t]
@@ -35,6 +38,7 @@
 ;;=============================================================================
 ;; Semantics
 
+;; B --> B
 (define-reduction (r)
   [`(● f ,B₁)
    B₁
@@ -43,11 +47,13 @@
    't
    "b"])
 
+;; B --> B
 (define-reduction (≍r-v0) #:super [(r)]
   [B₁
    B₁
    "c"])
 
+;; B --> B
 (define-reduction (≍r r)
   [B₁
    B₂ ← (r B₁)
@@ -57,6 +63,7 @@
    B₁
    "c"])
 
+;; B → 𝒫(B)
 (define step-r (call-with-values (λ () (r)) compose1))
 (define ->>r (repeated step-r))
 
@@ -64,6 +71,7 @@
   (check-equal? (car (->>r '(● f (● f (● t f))))) (set 't))
   (check-equal? (car (->>r '(● f (● f (● f f))))) (set 'f)))
 
+;; B --> B
 (define-reduction (-->r) #:super [(r)]
   [`(● ,B₁ ,B₂)
    B₁′ ← (-->r B₁)
@@ -73,6 +81,7 @@
    B₂′ ← (-->r B₂)
    `(● ,B₁ ,B₂′)])
 
+;; B → 𝒫(B)
 (define step-->r (call-with-values (λ () (-->r)) compose1))
 (define -->>r (repeated step-->r))
 
@@ -82,15 +91,17 @@
   (check-equal? (car (-->>r '(● (● f t) f))) (set 't))
   (check-equal? (car (-->>r '(● f (● (● t f) f)))) (set 't)))
 
-
+;; B --> #t
 (define-reduction (∈R)
   ['t
    #t]
   ['f
    #t])
 
+;; B → 𝒫(#t)
 (define run-∈R (call-with-values (λ () (∈R)) compose1))
 
+;; B → Boolean
 (define (R? B)
   (match (run-∈R B)
     [(set #t) #t]
@@ -106,12 +117,14 @@
   (check-false (R? '(● (f) (t))))
   (check-false (R? "hello")))
 
+;; (B → 𝒫(B)) B → B
 (define ((evalᵣ -->) B)
   (match (--> B)
     [(set R) R]
     [(set _) (error "get stuck")]
     [_ (error "non-deterministic relation")]))
 
+;; B → B
 (define eval (evalᵣ (compose1 car -->>r)))
 
 (module+ test

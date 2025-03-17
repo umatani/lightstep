@@ -12,8 +12,10 @@
 (define-language E-ISWIM #:super orig-E-ISWIM
   [Mre ∷= `(,V ,V) `(,(? oⁿ?) ,V ...) `(err ,(? b?))])
 
+;; M --> M
 (define-reduction (ẽ) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)])
 
+;; M --> M
 (define-reduction (⊢->e)
   #:do [(define →ẽ (reducer-of (ẽ)))]
   [(ECxt M)
@@ -24,9 +26,11 @@
    `(err ,(? b? b)) ≔ e
    `(err ,b)])
 
+;; M → 𝒫(M)
 (define step⊢->e (call-with-values (λ () (⊢->e)) compose1))
 (define ⊢->>e (compose1 car (repeated step⊢->e)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalₑˢ m)
   [M
    #:when (∅? (FV M))

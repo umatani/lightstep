@@ -17,13 +17,17 @@
 (define-language H-ISWIM #:super orig-H-ISWIM
   [H ∷= (? list? λFCxts)])
 
+;; (M H FCxt) --> (M H FCxt)
 ;; to match the monad
 (define-inference (δ-rules) #:super [(orig-δ-rules δ)]
   #:monad (StateT #f (StateT #f (NondetT ID))))
 
+;; (M H FCxt) --> (M H FCxt)
+;; to match the monad
 (define-inference (δerr-rules) #:super [(orig-δerr-rules δ)]
   #:monad (StateT #f (StateT #f (NondetT ID))))
 
+;; (M H FCxt) --> (M H FCxt)
 (define-inference (⊢->chc-rules)
   #:monad (StateT #f (StateT #f (NondetT ID)))
   #:do [(define get-H (bind get (compose1 return car)))
@@ -128,12 +132,14 @@
   (syntax-parser
     [(_ M H FCxt) #'(cons (cons M H) FCxt)]))
 
+;; (M H FCxt) → 𝒫((M H FCxt))
 (define ⊢->chc (let-values ([(mrun reducer) (⊢->chc-rules)])
                  (match-λ
                   [(mkCHC M H FCxt)
                    (mrun FCxt H (reducer M))])))
 (define ⊢->>chc (compose1 car (repeated ⊢->chc)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalchc m)
   [M
    #:when (∅? (FV M))

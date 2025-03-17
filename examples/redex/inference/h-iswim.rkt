@@ -18,11 +18,13 @@
       `(catch ,M₁ with (λ ,X ,M₂))]
   [o² ∷= .... '/])
 
+;; M → 𝒫(X)
 (define/match (FV m) #:super orig-FV
   [`(throw ,(? b?)) ∅]
   [`(catch ,M₁ with (λ ,X ,M₂))
    (∪ (FV M₁) (FV `(λ ,X ,M₂)))])
 
+;; M X M → M
 (define/match (subst m₁ x₂ m₂) #:super orig-subst
   [(`(throw ,(? b? b)) X₂ M₂)
    `(throw ,b)]
@@ -49,19 +51,23 @@
                      `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...))
                      `(catch ,(? M? □) with (λ ,X ,M)))])))
 
+;; M --> M
 (define-inference (throw-rules)
   [#:when (not (equal? x `(throw ,b)))
    --------------------------------------------------
    `(,(and x (FCxt `(throw ,(? b? b)))) → (throw ,b))])
 
+;; M --> M
 (define-inference (return-rules)
   [---------------------------------
    `((catch ,V with (λ ,X ,M)) → ,V)])
 
+;; M --> M
 (define-inference (catch-rules)
   [------------------------------------------------------------
    `((catch (throw ,(? b? b)) with (λ ,X ,M)) → ((λ ,X ,M) ,b))])
 
+;; M --> M
 (define-inference (δerr-rules δ)
   [e ← (match (δ oⁿ b)
          [`(err ,(? b? b)) (return `(throw ,b))]
@@ -75,21 +81,26 @@
   [------------------------------
    `((,(? b? b) ,V) → (throw ,b))])
 
+;; M --> M
 (define-inference (h-rules) #:super [(βv-rules) (δ-rules δ) (δerr-rules δ)
                                                 (throw-rules)
                                                 (return-rules)
                                                 (catch-rules)])
 
+;; M → 𝒫(M)
 (define h (call-with-values (λ () (h-rules)) compose1))
 
+;; M --> M
 (define-inference (-->h-rules) #:super [(h-rules)]
   [`(,m → ,M′)
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
+;; M → 𝒫(M)
 (define -->h (call-with-values (λ () (-->h-rules)) compose1))
 (define -->>h (compose1 car (repeated -->h)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalₕ m)
   [M
    #:when (∅? (FV M))

@@ -27,6 +27,7 @@
                  `(set ,X ,□) ; NEW
                  ))]))
 
+;; M --> M
 (define-inference (⊢->s-rules)
   #:do [(define rs (reducer-of (s-rules)))]
   #:forms (.... [`(,i →s ,o) #:where o ← (rs i)])
@@ -39,9 +40,11 @@
    -------------------------------------------
    `((letrec ,Σ ,(E M)) → (letrec ,Σ ,(E M′)))])
 
+;; M → 𝒫(M)
 (define ⊢->s (call-with-values (λ () (⊢->s-rules)) compose1))
 (define ⊢->>s (compose1 car (repeated ⊢->s)))
 
+;; M → V
 (define/match (evalₛˢ m)
   [M
    #:when (∅? (FV M))

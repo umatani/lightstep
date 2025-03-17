@@ -24,9 +24,11 @@
                  `(catch ,□ with (λ ,X₁ (λ ,X₂ ,M))) ;; NEW
                  ))]))
 
+;; M --> M
 (define-reduction (c̃) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)
                                          (return-rule)])
 
+;; M --> M
 (define-reduction (⊢->c)
   #:do [(define →c̃ (reducer-of (c̃)))]
 
@@ -49,9 +51,11 @@
    #:when (not (equal? x `(throw ,b)))
    `(throw ,b)])
 
+;; M → 𝒫(M)
 (define step⊢->c (call-with-values (λ () (⊢->c)) compose1))
 (define ⊢->>c (compose1 car (repeated step⊢->c)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalcˢ m)
   [M
    #:when (∅? (FV M))

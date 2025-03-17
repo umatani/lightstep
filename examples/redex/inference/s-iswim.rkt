@@ -17,6 +17,7 @@
 (define-language S-ISWIM #:super orig-S-ISWIM
   [M ∷= .... `(letrec ,Σ ,M)])
 
+;; M → 𝒫(X)
 (define/match (FV m) #:super orig-FV
   [`(letrec ,Σ ,M)
    (let ([Xs (dom Σ)]
@@ -24,6 +25,7 @@
      (set-subtract (apply ∪ (FV M) (set-map FV Vs))
                    Xs))])
 
+;; M → 𝒫(X)
 (define/match (AV m) #:super orig-AV
   [`(letrec ,Σ ,M)
    (let ([Xs (dom Σ)]
@@ -31,10 +33,12 @@
      (set-subtract (apply ∪ (AV M) (set-map AV Vs))
                    Xs))])
 
+;; M List(X) List(M) → M
 (define/match (substs m xs ms)
   [(M '() '()) M]
   [(M (cons X Xs) (cons M′ Ms)) (substs (subst M X M′) Xs Ms)])
 
+;; M X M → M
 (define/match (subst m₁ x₂ m₂) #:super orig-subst
   [(`(letrec ,(and Σ (↦ [Xᵢ Vᵢ] ...)) ,M) X₂ M₂)
    (if (map-∈ X₂ Σ)
@@ -51,7 +55,6 @@
   (check-equal? (subst `(letrec ,(↦ ['x 1] ['y 2]) (+ x y z)) 'z 100)
                 `(letrec ,(↦ ['x 1] ['y 2]) (+ x y 100))))
 
-
 (define-nondet-match-expander Cxt
   (λ (stx)
     (syntax-case stx ()
@@ -65,11 +68,13 @@
                      `(letrec ,Σ ,(? M? □)) ; NEW
                      )])))
 
+;; Σ → Seq([(X V → Σ) X V])
 (define (split-Σ-cxt Σ)
   (define ((make-cxt x) x′ v)
     ((map-remove Σ x) x′ v))
   (sequence-map (λ (x v) (values (make-cxt x) x v)) (in-map Σ)))
 
+;; M --> M
 (define-inference (α-rules) #:super [(lam:α-rules)]
   [rename ≔ (apply symbol-not-in (FV M) (set-map FV (dom Σ)))
    (list Xᵢ X′ Σ′) ← (for/monad+ ([(cxt Xᵢ Mᵢ) (split-Σ-cxt Σ)])
@@ -80,17 +85,20 @@
    -------------------------------------------------------------
    `((letrec ,Σ ,M) → (letrec ,Σ″ ,(subst M Xᵢ X′)))            ])
 
+;; M → 𝒫(M)
 (define α (call-with-values (λ () (α-rules)) compose1))
 
 (module+ test
   ;(α `(letrec ,(↦ ['x 1] ['y 2]) (+ x y)))
   )
 
+;; M --> M
 (define-inference (-->α-rules) #:super [(α-rules)]
   [`(,m → ,M′) 
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
+;; M → 𝒫(M)
 (define -->α (call-with-values (λ () (-->α-rules)) compose1))
 
 (module+ test
@@ -99,6 +107,7 @@
   ;;            (+ x y))))
   )
 
+;; M --> M
 (define-inference (alloc)
   [#:when (∈ X (AV M))
    ------------------------------------------
@@ -116,6 +125,7 @@
                  `(set ,X ,□) ; NEW
                  ))]))
 
+;; M --> M
 (define-inference (lift-rules)
   [#:when (not (equal? x `(letrec ,Σ ,M)))
    rename ≔ (symbol-not-in (FV (E `(letrec ,Σ ,M))))
@@ -126,17 +136,20 @@
    `(,(and x (E `(letrec ,(and Σ (↦ [Xᵢ Vᵢ] ...)) ,M)))
      → (letrec ,Σ′ ,(E (substs M Xᵢ Yᵢ))))             ])
 
+;; M --> M
 (define-inference (deref-rules)
   [#:when (map-∈ X Σ)
    ----------------------------------------------
    `((letrec ,Σ ,(E X)) → (letrec ,Σ ,(E (Σ X))))])
 
+;; M --> M
 (define-inference (assign-rules)
   [#:when (map-∈ X Σ)
    ---------------------------------------------------------------
    `((letrec ,Σ ,(E `(set ,X ,V)))
      → (letrec ,(Σ X V) ,(E (Σ X))))])
 
+;; M --> M
 (define-inference (merge-rules)
   [rename ≔ (apply symbol-not-in
                    (dom Σ) (FV `(letrec ,Σ′ ,M))
@@ -148,11 +161,13 @@
    `((letrec ,Σ (letrec ,(and Σ′ (↦ [Xᵢ Vᵢ] ...)) ,M))
      → (letrec ,Σ″ ,(substs M Xᵢ Yᵢ)))                 ])
 
+;; M --> M
 (define-inference (βv-rule-rules)
   [#:when (not (∈ X (AV M)))
    ----------------------------------
    `(((λ ,X ,M) ,V) → ,(subst M X V))])
 
+;; M --> M
 (define-inference (s-rules) #:super [(βv-rule-rules) (δ-rules δ)
                                                      (alloc)
                                                      (deref-rules)
@@ -160,13 +175,16 @@
                                                      (lift-rules)
                                                      (merge-rules)])
 
+;; M → 𝒫(M)
 (define s (call-with-values (λ () (s-rules)) compose1))
 
+;; M --> M
 (define-inference (-->s-rules) #:super [(s-rules)]
   [`(,m → ,M′)
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
+;; M → 𝒫(M)
 (define -->s (call-with-values (λ () (-->s-rules)) compose1))
 (define -->>s (compose1 car (repeated -->s)))
 
@@ -177,6 +195,7 @@
                          0) #:limit 10)
                 (set `(letrec ,(↦ ['x 1] ['y 1]) 4))))
 
+;; M → V
 (define/match (evalₛ m)
   [M
    #:when (∅? (FV M))

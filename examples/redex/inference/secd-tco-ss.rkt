@@ -11,18 +11,21 @@
 
 (define-language SECD/TCO/SS #:super SECD)
 
+;; (((C ...) E) S D) --> (((C ...) E) S D)
 (define-inference (⊢->secd/tco/ss-rules) #:super [(⊢->secd/tco-rules)]
   [S ← get-S
    (put-S (cons `((λ ,X ,M) ,(restrict E (FV `(λ ,X ,M)))) S))
    ----------------------------------------------------------- "secd4"
    `((((λ ,X ,M) ,C ...) ,E) → ((,@C) ,E))                            ])
 
+;; (((C ...) E) S D) → 𝒫((((C ...) E) S D))
 (define ⊢->secd/tco/ss (let-values ([(mrun reducer) (⊢->secd/tco/ss-rules)])
                          (match-λ
                           [(mkSECD S E Cs D)
                            (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd/tco/ss (compose1 car (repeated ⊢->secd/tco/ss)))
 
+;; M → V
 (define/match (evalsecd/tco/ss m)
   [M
    #:when (∅? (FV M))

@@ -18,11 +18,13 @@
       `(catch ,M₁ with (λ ,X ,M₂))]
   [o² ∷= .... '/])
 
+;; M → 𝒫(X)
 (define/match (FV m) #:super orig-FV
   [`(throw ,(? b?)) ∅]
   [`(catch ,M₁ with (λ ,X ,M₂))
    (∪ (FV M₁) (FV `(λ ,X ,M₂)))])
 
+;; M X M → M
 (define/match (subst m₁ x₂ m₂) #:super orig-subst
   [(`(throw ,(? b? b)) X₂ M₂)
    `(throw ,b)]
@@ -49,19 +51,23 @@
                      `(,(? oⁿ?) ,V (... ...) ,(? M? □) ,M (... ...))
                      `(catch ,(? M? □) with (λ ,X ,M)))])))
 
+;; M --> M
 (define-reduction (throw-rule)
   [(and x (FCxt `(throw ,(? b? b))))
    #:when (not (equal? x `(throw ,b)))
    `(throw ,b)])
 
+;; M --> M
 (define-reduction (return-rule)
   [`(catch ,V with (λ ,X ,M))
    V])
 
+;; M --> M
 (define-reduction (catch-rule)
   [`(catch (throw ,(? b? b)) with (λ ,X ,M))
    `((λ ,X ,M) ,b)])
 
+;; M --> M
 (define-reduction (δerr-rule δ)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    e ← (match (δ oⁿ b)
@@ -75,21 +81,26 @@
   [`(,(? b? b) ,V)
    `(throw ,b)])
 
+;; M --> M
 (define-reduction (h) #:super [(βv-rule) (δ-rule δ) (δerr-rule δ)
                                          (throw-rule)
                                          (return-rule)
                                          (catch-rule)])
 
+;; M → 𝒫(M)
 (define step-h (call-with-values (λ () (h)) compose1))
 
+;; M --> M
 (define-reduction (-->h) #:super [(h)]
   [(Cxt m)
    M′ ← (-->h m)
    (Cxt M′)])
 
+;; M → 𝒫(M)
 (define step-->h (call-with-values (λ () (-->h)) compose1))
 (define -->>h (compose1 car (repeated step-->h)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalₕ m)
   [M
    #:when (∅? (FV M))

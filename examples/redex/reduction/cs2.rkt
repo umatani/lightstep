@@ -24,6 +24,7 @@
                  `(set ,X ,□) ; NEW
                  ))]))
 
+;; (M Σ) --> (M Σ)
 (define-reduction (⊢->cs) #:super [(orig-⊢->cs)]
   #:do [(define (substs-Σ Σ xs ms)
           (for/map ([(x v) (in-map Σ)])
@@ -37,13 +38,14 @@
    (E (substs M X′ Y))   
    "csR"])
 
-
+;; (M Σ) → 𝒫((M Σ))
 (define step⊢->cs (let-values ([(mrun reducer) (⊢->cs)])
                     (match-λ
                      [(mkCS M Σ)
                       (mrun Σ (reducer M))])))
 (define ⊢->>cs (compose1 car (repeated step⊢->cs)))
 
+;; M → V
 (define/match (evalcs m)
   [M
    #:when (∅? (FV M))

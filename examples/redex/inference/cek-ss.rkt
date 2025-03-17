@@ -10,6 +10,7 @@
 
 (define-language CEK/SS #:super CEK)
 
+;; (M E κ) --> (M E κ)
 (define-inference (⊢->cek/ss-rules) #:super [(⊢->cek-rules)]
   [κ ← get
    (put `(ar (,M₂ ,(restrict E (FV M₂))) ,κ))
@@ -33,12 +34,14 @@
    --------------------------------------------------------- "cek6"
    `((,V ,E) → (,M ,Eₘ))                                           ])
 
+;; (M E κ) → 𝒫((M E κ))
 (define ⊢->cek/ss (let-values ([(mrun reducer) (⊢->cek/ss-rules)])
                     (match-λ
                      [(mkCEK M E (? κ? κ))
                       (mrun κ (reducer `(,M ,E)))])))
 (define ⊢->>cek/ss (compose1 car (repeated ⊢->cek/ss)))
 
+;; M → V
 (define/match (evalcek/ss m)
   [M
    #:when (∅? (FV M))

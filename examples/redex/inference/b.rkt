@@ -6,6 +6,7 @@
 ;;=============================================================================
 ;; Syntax
 
+;; B --> #t
 (define-inference (∈B-rules)
   #:forms ([`(,i:i ∈ B) #:where #t ← (∈B-rules i)])
 
@@ -19,8 +20,10 @@
    ---------------------
    `((● ,b₀ ,b₁) ∈ B)   ])
 
+;; B → 𝒫(#t)
 (define ∈B (call-with-values (λ () (∈B-rules)) compose1))
 
+;; B → Boolean
 (define (B? B)
   (match (∈B B)
     [(set #t) #t]
@@ -38,6 +41,7 @@
 ;;=============================================================================
 ;; Semantics
 
+;; B --> B
 (define-inference (r-rules)
   [------------------ "a"
    `((● f ,B₁) → ,B₁)    ]
@@ -45,10 +49,12 @@
   [---------------- "b"
    `((● t ,B₁) → t)    ])
 
+;; B --> B
 (define-inference (≍r-v0-rules) #:super [(r-rules)]
   [------------ "c"
    `(,B₁ → ,B₁)    ])
 
+;; B --> B
 (define-inference (≍r-rules r)
   #:do [(define rr (reducer-of (r-rules)))]
   #:forms (.... [`(,i →′ ,o) #:where o ← (rr i)])
@@ -60,6 +66,7 @@
   [------------ "c"
    `(,B₁ → ,B₁)    ])
 
+;; B → 𝒫(B)
 (define ->>r (compose1 car (repeated (call-with-values
                                       (λ () (r-rules)) compose1))))
 
@@ -67,6 +74,7 @@
   (check-equal? (->>r '(● f (● f (● t f)))) (set 't))
   (check-equal? (->>r '(● f (● f (● f f)))) (set 'f)))
 
+;; B --> B
 (define-inference (-->r-rules) #:super [(r-rules)]
   [`(,B₁ → ,B₁′)
    -----------------------------
@@ -76,6 +84,7 @@
    -----------------------------
    `((● ,B₁ ,B₂) → (● ,B₁ ,B₂′))])
 
+;; B → 𝒫(B)
 (define -->r (call-with-values (λ () (-->r-rules)) compose1))
 (define -->>r (compose1 car (repeated -->r)))
 
@@ -85,7 +94,7 @@
   (check-equal? (-->>r '(● (● f t) f)) (set 't))
   (check-equal? (-->>r '(● f (● (● t f) f))) (set 't)))
 
-
+;; B --> #t
 (define-inference (∈R-rules)
   #:forms ([`(,i:i ∈ R) #:where #t ← (∈R-rules i)])
 
@@ -95,8 +104,10 @@
   [--------
    '(f ∈ R)])
 
+;; B → 𝒫(#t)
 (define ∈R (call-with-values (λ () (∈R-rules)) compose1))
 
+;; B → Boolean
 (define (R? B)
   (match (∈R B)
     [(set #t) #t]
@@ -112,12 +123,14 @@
   (check-false (R? '(● (f) (t))))
   (check-false (R? "hello")))
 
+;; (B → 𝒫(B)) B → B
 (define ((evalᵣ -->) B)
   (match (--> B)
     [(set R) R]
     [(set _) (error "get stuck")]
     [_ (error "non-deterministic relation")]))
 
+;; B → B
 (define eval (evalᵣ -->>r))
 
 (module+ test

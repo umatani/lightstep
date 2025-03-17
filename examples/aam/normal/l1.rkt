@@ -14,7 +14,9 @@
   (check-true (M? 5))
   (check-true (M? "five")))
 
+;; M --> M
 (define-inference (r₀′-rule) #:super [(r₀-rule)])
+;; M → 𝒫(M)
 (define r₀′ (call-with-values (λ () (r₀′-rule)) compose1))
 
 (module+ test
@@ -22,8 +24,11 @@
 
 ;; Redex cannot do as follows
 
+;; M → M
 (define/match (to-five m) #:super L₀:to-five)
+;; M --> M
 (define-reduction (r₁′-rule) #:super [(r₁-rule)])
+;; M → 𝒫(M)
 (define r₁′ (call-with-values (λ () (r₁′-rule)) compose1))
 
 (module+ test

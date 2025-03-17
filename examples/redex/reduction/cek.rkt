@@ -18,6 +18,7 @@
      `(op ,(? list? VEsOⁿ) ,(? list? MEs) ,(? κ? κ))]
   [E ∷= (? map? X→VE)])
 
+;; (M E κ) --> (M E κ)
 (define-reduction (⊢->cek)
   #:monad (StateT #f (NondetT ID))
 
@@ -71,12 +72,14 @@
   (syntax-parser
     [(_ M E κ) #'(cons `(,M ,E) κ)]))
 
+;; (M E κ) → 𝒫((M E κ))
 (define step⊢->cek (let-values ([(mrun reducer) (⊢->cek)])
                      (match-λ
                       [(mkCEK M E (? κ? κ))
                        (mrun κ (reducer `(,M ,E)))])))
 (define ⊢->>cek (compose1 car (repeated step⊢->cek)))
 
+;; M → V
 (define/match (evalcek m)
   [M
    #:when (∅? (FV M))

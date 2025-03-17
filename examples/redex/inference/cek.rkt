@@ -19,6 +19,7 @@
      `(op ,(? list? VEsOⁿ) ,(? list? MEs) ,(? κ? κ))]
   [E ∷= (? map? X→VE)])
 
+;; (M E κ) --> (M E κ)
 (define-inference (⊢->cek-rules)
   #:monad (StateT #f (NondetT ID))
 
@@ -65,12 +66,14 @@
   (syntax-parser
     [(_ M E κ) #'(cons `(,M ,E) κ)]))
 
+;; (M E κ) → 𝒫((M E κ))
 (define ⊢->cek (let-values ([(mrun reducer) (⊢->cek-rules)])
                  (match-λ
                   [(mkCEK M E (? κ? κ))
                    (mrun κ (reducer `(,M ,E)))])))
 (define ⊢->>cek (compose1 car (repeated ⊢->cek)))
 
+;; M → V
 (define/match (evalcek m)
   [M
    #:when (∅? (FV M))

@@ -17,6 +17,7 @@
   [D ∷= 'ϵ `(,S ,E ,(? list? Cs) ,D)]
   [V ∷= (? b?) `((λ ,X ,M) ,E)])
 
+;; (((C ...) E) S D) --> (((C ...) E) S D)
 (define-reduction (⊢->secd)
   #:monad (StateT #f (StateT #f (NondetT ID)))
   #:do [(define get-S (bind get (compose1 return car)))
@@ -92,12 +93,14 @@
     [(_ S E Cs D)
      #'(cons (cons `(,Cs ,E) S) D)]))
 
+;; (((C ...) E) S D) → 𝒫((((C ...) E) S D))
 (define step⊢->secd (let-values ([(mrun reducer) (⊢->secd)])
                       (match-λ
                        [(mkSECD S E Cs D)
                         (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd (compose1 car (repeated step⊢->secd)))
 
+;; M → V
 (define/match (evalsecd m)
   [M
    #:when (∅? (FV M))

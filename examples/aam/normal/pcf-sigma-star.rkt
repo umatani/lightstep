@@ -1,22 +1,22 @@
 #lang racket/base
-(require lightstep/base lightstep/syntax
-         (only-in "common.rkt" mmap-ext mmap-lookup)
+(require lightstep/base lightstep/syntax lightstep/inference
          (only-in "pcf.rkt" δ)
-         (only-in "pcf-rho.rkt" vρ)
-         (only-in "pcf-varsigma.rkt" -->vς)
+         (only-in "pcf-rho.rkt" vρ-rules)
+         (only-in "pcf-varsigma.rkt" -->vς-rules)
          (only-in "pcf-sigma.rkt" PCFσ injσ formals alloc)
-         (only-in "pcf-sigma-alloc.rkt"-->vσ/alloc))
-(module+ test (require rackunit))
+         (only-in "pcf-sigma-alloc.rkt"-->vσ/alloc-rules))
 
-;; TODO: monadic version
+(module+ test (require rackunit))
 
 ;;-----------------------------------------------------------------------------
 ;; 3.10 Heap-allocated continuations
 
 (define-language PCFσ* #:super PCFσ
   [K ∷= '() `(,F ,A)]
+  ; [Σ ∷= (? map? A→U)] range changed
   [U ∷= V K])
 
+;; σ → ([(X ∪ F) X] ...)
 (define/match (alloc* σ) #:super alloc
   [`(((if0 ,S₀ ,C₁ ,C₂) ,K) ,Σ)
    `(((if0 □ ,C₁ ,C₂) ,(gensym 'if0)))]
@@ -29,39 +29,57 @@
   ;; (alloc* `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) ()) ,(↦)))
   )
 
-(define-reduction (-->vσ*/alloc alloc*) #:super [(-->vσ/alloc alloc*)]
+;; σ --> σ
+(define-inference (-->vσ*/alloc-rules alloc*)
+  #:super [(-->vσ/alloc-rules alloc*)]
+  #:do [;; remove rules manually
+        (define-inference (-->vς″-rules) #:super [(-->vς′-rules)]
+          [#:when #f
+           --------------- "ev-if"
+           `(,x → ,(void))         ]
+          [#:when #f
+           --------------- "ev-app"
+           `(,x → ,(void))         ]
+          [#:when #f
+           --------------- "co-if"
+           `(,x → ,(void))         ]
+          [#:when #f
+           --------------- "co-app"
+           `(,x → ,(void))         ])
+        (define rvς″ (reducer-of (-->vς″-rules)))]
+
+  #:forms (.... [`(,i →vς″ ,o) #:where o ← (rvς″ i)])
+
+  ;; override with →vς″
+  [`(,ς →vς″ ,ς′)
+   ----------------------------- "ap"
+   `((,(? ς? ς) ,Σ) →  (,ς′ ,Σ))     ]
 
   ; Eval
-  [(and σ `(((if0 ,S₀ ,C₁ ,C₂) ,K) ,Σ))
-   ; where
-   `(,A) ≔ (alloc* σ)
-   ; -->
-   `((,S₀ ((if0 □ ,C₁ ,C₂) ,A)) ,(mmap-ext Σ `[,A ,K]))
-   "ev-if"]
+  [`(,A) ≔ (alloc* σ)
+   ------------------------------------------ "ev-if"
+   `(,(and σ `(((if0 ,S₀ ,C₁ ,C₂) ,K) ,Σ))
+     → ((,S₀ ((if0 □ ,C₁ ,C₂) ,A)) ,(Σ A K)))        ]
 
-  [(and σ `(((,V ... ,S ,C ...) ,K) ,Σ))
-   ; where
-   `(,A) ≔ (alloc* σ)
-   ; -->
-   `((,S ((,@V □ ,@C) ,A)) ,(mmap-ext Σ `[,A ,K]))
-   "ev-app"]
+  [`(,A) ≔ (alloc* σ)
+   ---------------------------------------- "ev-app"
+   `(,(and σ `(((,V ... ,S ,C ...) ,K) ,Σ))
+     → ((,S ((,@V □ ,@C) ,A)) ,(Σ A K)))            ]
 
   ; Continue
-  [`((,V ((if0 □ ,C₁ ,C₂) ,A)) ,Σ)
-   ; where
-   K ← (mmap-lookup Σ A)
-   ; -->
-   `(((if0 ,V ,C₁ ,C₂) ,K) ,Σ)
-   "co-if"]
+  [K ≔ (Σ A)
+   -------------------------------- "co-if"
+   `(((,V ((if0 □ ,C₁ ,C₂) ,A)) ,Σ)
+     → (((if0 ,V ,C₁ ,C₂) ,K) ,Σ))         ]
 
-  [`((,V ((,V₀ ... □ ,C₀ ...) ,A)) ,Σ)
-   ; where
-   K ← (mmap-lookup Σ A)
-   ; -->
-   `(((,@V₀ ,V ,@C₀) ,K) ,Σ)
-   "co-app"])
+  [K ≔ (Σ A)
+   ------------------------------------ "co-app"
+   `(((,V ((,V₀ ... □ ,C₀ ...) ,A)) ,Σ)
+     → (((,@V₀ ,V ,@C₀) ,K) ,Σ))                ])
 
-(define -->vσ* (call-with-values (λ () (-->vσ*/alloc alloc*)) compose1))
+;; σ → 𝒫(σ)
+(define -->vσ* (call-with-values (λ () (-->vσ*/alloc-rules alloc*)) compose1))
+(define -->>vσ* (compose1 car (repeated -->vσ*)))
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))

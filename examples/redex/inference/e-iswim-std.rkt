@@ -12,8 +12,10 @@
 (define-language E-ISWIM #:super orig-E-ISWIM
   [Mre ∷= `(,V ,V) `(,(? oⁿ?) ,V ...) `(err ,(? b?))])
 
+;; M --> M
 (define-inference (ẽ-rules) #:super [(βv-rules) (δ-rules δ) (δerr-rules δ)])
 
+;; M --> M
 (define-inference (⊢->e-rules)
   #:do [(define rẽ (reducer-of (ẽ-rules)))]
   #:forms (.... [`(,i →ẽ ,o) #:where o ← (rẽ i)])
@@ -27,9 +29,11 @@
    -------------------------------
    `(,(and x (ECxt e)) → (err ,b))])
 
+;; M → 𝒫(M)
 (define ⊢->e (call-with-values (λ () (⊢->e-rules)) compose1))
 (define ⊢->>e (compose1 car (repeated ⊢->e)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalₑˢ m)
   [M
    #:when (∅? (FV M))

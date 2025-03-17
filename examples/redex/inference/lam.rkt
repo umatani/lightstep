@@ -24,6 +24,7 @@
   (check-true (M? '(λ y (λ z y))))
   (check-true (M? '((λ y (y y)) (λ y (y y))))))
 
+;; M → 𝒫(X)
 (define/match (FV m)
   [X          (set X)]
   [`(λ ,X ,M) (set-remove (FV M) X)]
@@ -35,6 +36,7 @@
   (check-equal? (FV '(λ x (x y))) (set 'y))
   (check-equal? (FV '(z (λ z z))) (set 'z)))
 
+;; M X M → M
 (define/match (subst m₁ x m₂)
   [(X₁ X₂ M₂)
    #:when (eq? X₁ X₂)
@@ -67,6 +69,7 @@
                      `(,(? M? □) ,M)
                      `(,M ,(? M? □)))])))
 
+;; M --> M
 (define-inference (-->gen-rules reducer)
   #:forms (.... [`(,i →ᵣ ,o) #:where o ← (reducer i)])
 
@@ -74,13 +77,16 @@
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
+;; M --> M
 (define-inference (α-rules)
   [X₂ ≔ ((symbol-not-in (FV M)) X₁)
    ---------------------------------------- "α"
    `((λ ,X₁ ,M) → (λ ,X₂ ,(subst M X₁ X₂)))    ])
 
+;; M → 𝒫(M)
 (define α (call-with-values (λ () (α-rules)) compose1))
 
+;; M --> M
 (define-inference (-->α-rules) #:super [(-->gen-rules -->α-rules)]
   #:do [(define rα (reducer-of (α-rules)))]
   #:forms (.... [`(,i →α ,o) #:where o ← (rα i)])
@@ -89,14 +95,18 @@
    ------------ "α"
    `(,M → ,M′)     ])
 
+;; M → 𝒫(M)
 (define -->α (call-with-values (λ () (-->α-rules)) compose1))
 
+;; M --> M
 (define-inference (β-rules)
   [-------------------------------------- "β"
    `(((λ ,X ,M₁) ,M₂) → ,(subst M₁ X M₂))    ])
 
+;; M → 𝒫(M)
 (define β (call-with-values (λ () (β-rules)) compose1))
 
+;; M --> M
 (define-inference (-->β-rules) #:super [(-->gen-rules -->β-rules)]
   #:do [(define rβ (reducer-of (β-rules)))]
   #:forms (.... [`(,i →β ,o) #:where o ← (rβ i)])
@@ -105,16 +115,20 @@
    ------------ "β"
    `(,M → ,M′)     ])
 
+;; M → 𝒫(M)
 (define -->β (call-with-values (λ () (-->β-rules)) compose1))
 
+;; M --> M
 (define-inference (η-rules)
   [#:when (eq? X X′)
    #:when (not (∈ X (FV M)))
    ------------------------- "η"
    `((λ ,X (,M ,X′)) → ,M)      ])
 
+;; M → 𝒫(M)
 (define η (call-with-values (λ () (η-rules)) compose1))
 
+;; M --> M
 (define-inference (-->η-rules) #:super [(-->gen-rules -->η-rules)]
   #:do [(define rη (reducer-of (η-rules)))]
   #:forms (.... [`(,i →η ,o) #:where o ← (rη i)])
@@ -122,12 +136,16 @@
    ------------ "η"
    `(,M → ,M′)     ])
 
+;; M → 𝒫(M)
 (define -->η (call-with-values (λ () (-->η-rules)) compose1))
 
+;; M --> M
 (define-inference (n-rules) #:super [#;(α-rules) (β-rules) (η-rules)])
 
+;; M → 𝒫(M)
 (define n (call-with-values (λ () (n-rules)) compose1))
 
+;; M --> M
 (define-inference (-->n-rules) #:super [(-->gen-rules -->n-rules)]
   #:do [(define rn (reducer-of (n-rules)))]
   #:forms (.... [`(,i →n ,o) #:where o ← (rn i)])
@@ -135,8 +153,8 @@
    ------------ "n"
    `(,M → ,M′)     ])
 
+;; M → 𝒫(M)
 (define -->n (call-with-values (λ () (-->n-rules)) compose1))
-
 (define -->>n (compose1 car (repeated -->n)))
 
 (module+ test
@@ -152,6 +170,7 @@
 ;;=============================================================================
 ;; 3.3 Encoding Booleans
 
+;; M
 (define TRUE  '(λ x (λ y x)))
 (define FALSE '(λ x (λ y y)))
 (define IF    '(λ v (λ t (λ f ((v t) f)))))
@@ -163,7 +182,9 @@
 ;;=============================================================================
 ;; 3.4 Encoding Pairs
 
+;; M M → M
 (define (PAIR m n) `(λ s ((s ,m) ,n)))
+;; M
 (define MKPAIR `(λ x (λ y ,(PAIR 'x 'y))))
 (define FST `(λ p (p ,TRUE)))
 (define SND `(λ p (p ,FALSE)))
@@ -175,19 +196,21 @@
 ;;=============================================================================
 ;; 3.5 Encoding Numbers
 
+;; M → M
 (define (MKNUM n)
   (let loop ([n n]
              [body 'x])
     (if (zero? n)
       `(λ f (λ x ,body))
       (loop (sub1 n) `(f ,body)))))
-
+;; M
 (define ADD1 '(λ n (λ f (λ x (f ((n f) x))))))
 (define ADD `(λ n (λ m ((m ,ADD1) n))))
 (define ISZERO `(λ n ((n (λ x ,FALSE)) ,TRUE)))
-
+;; M → M
 (define (WRAP f) `(λ p ,(PAIR FALSE
                               `(((,IF (,FST p)) (,SND p)) (,f (,SND p))))))
+;; M
 (define SUB1 `(λ n (λ f (λ x (,SND ((n ,(WRAP 'f)) ,(PAIR TRUE 'x)))))))
 
 (module+ test
@@ -199,10 +222,10 @@
 ;;=============================================================================
 ;; 3.7 Recursion
 
+;; M
 (define MKMULT0 `(λ t (λ n (λ m
                              (((,IF (,ISZERO n)) ,(MKNUM 0))
                               ((,ADD m) ((t (,SUB1 n)) m)))))))
-
 (define MKMULT `(λ t (λ n (λ m
                             (((,IF (,ISZERO n)) ,(MKNUM 0))
                              ((,ADD m) (((t t) (,SUB1 n)) m)))))))
@@ -215,6 +238,7 @@
   ;(check-equal? (-->>n̅ `((,MULT ,(MKNUM 2)) ,(MKNUM 2))) (set (MKNUM 4)))
   )
 
+;; M
 (define MKMK '(λ k (λ t (t ((k k) t)))))
 (define MK `(,MKMK ,MKMK))
 
@@ -224,8 +248,8 @@
   (check-equal? (-->>n̅ `(((,MK ,MKMULT0) ,(MKNUM 1)) ,(MKNUM 2)))
                 (set (MKNUM 2))))
 
+;; M
 (define Y '(λ f ((λ x (f (x x))) (λ x (f (x x))))))
-
 (define SUM `(,Y (λ s (λ n (((,IF (,ISZERO n)) ,(MKNUM 0))
                             ((,ADD n) (s (,SUB1 n))))))))
 
@@ -237,8 +261,10 @@
 ;;=============================================================================
 ;; 3.9 Normal Forms and Reduction Strategies
 
+;; M
 (define Ω '((λ x (x x)) (λ x (x x))))
 
+;; M --> M
 (define-inference (-->n̅-rules)
   #:do [(define rβ (reducer-of (β-rules)))
         (define rη (reducer-of (η-rules)))]
@@ -270,8 +296,8 @@
    -------------------------------
    `((,M₁ ,M₂) →n̅ (,M₁ ,M₂′))     ])
 
+;; M → 𝒫(M)
 (define -->n̅ (call-with-values (λ () (-->n̅-rules)) compose1))
-
 (define -->>n̅ (compose1 car (repeated -->n̅)))
 
 (module+ test

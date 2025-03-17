@@ -17,6 +17,7 @@
 (define-language S-ISWIM #:super orig-S-ISWIM
   [M ∷= .... `(letrec ,Σ ,M)])
 
+;; M → 𝒫(X)
 (define/match (FV m) #:super orig-FV
   [`(letrec ,Σ ,M)
    (let ([Xs (dom Σ)]
@@ -24,6 +25,7 @@
      (set-subtract (apply ∪ (FV M) (set-map FV Vs))
                    Xs))])
 
+;; M → 𝒫(X)
 (define/match (AV m) #:super orig-AV
   [`(letrec ,Σ ,M)
    (let ([Xs (dom Σ)]
@@ -31,10 +33,12 @@
      (set-subtract (apply ∪ (AV M) (set-map AV Vs))
                    Xs))])
 
+;; M List(X) List(M) → M
 (define/match (substs m xs ms)
   [(M '() '()) M]
   [(M (cons X Xs) (cons M′ Ms)) (substs (subst M X M′) Xs Ms)])
 
+;; M X M → M
 (define/match (subst m₁ x₂ m₂) #:super orig-subst
   [(`(letrec ,(and Σ (↦ [Xᵢ Vᵢ] ...)) ,M) X₂ M₂)
    (if (map-∈ X₂ Σ)
@@ -65,11 +69,13 @@
                      `(letrec ,Σ ,(? M? □)) ; NEW
                      )])))
 
+;; Σ → Seq([(X V → Σ) X V])
 (define (split-Σ-cxt Σ)
   (define ((make-cxt x) x′ v)
     ((map-remove Σ x) x′ v))
   (sequence-map (λ (x v) (values (make-cxt x) x v)) (in-map Σ)))
 
+;; M --> M
 (define-reduction (α) #:super [(lam:α)]
   [`(letrec ,Σ ,M)
    rename ≔ (apply symbol-not-in (FV M) (set-map FV (dom Σ)))
@@ -80,17 +86,20 @@
                (values Xⱼ (subst Vⱼ Xᵢ X′)))
       ,(subst M Xᵢ X′))])
 
+;; M → 𝒫(M)
 (define step-α (call-with-values (λ () (α)) compose1))
 
 (module+ test
   ;(step-α `(letrec ,(↦ ['x 1] ['y 2]) (+ x y)))
   )
 
+;; M --> M
 (define-reduction (-->α) #:super [(α)]
   [(Cxt m)
    M′ ← (-->α m)
    (Cxt M′)])
 
+;; M → 𝒫(M)
 (define step-->α (call-with-values (λ () (-->α)) compose1))
 
 (module+ test
@@ -99,6 +108,7 @@
   ;;                (+ x y))))
   )
 
+;; M --> M
 (define-reduction (alloc)
   [`((λ ,X ,M) ,V)
    #:when (∈ X (AV M))
@@ -116,6 +126,7 @@
                  `(set ,X ,□) ; NEW
                  ))]))
 
+;; M --> M
 (define-reduction (lift)
   [(and x (E `(letrec ,(and Σ (↦ [Xᵢ Vᵢ] ...)) ,M)))
    #:when (not (equal? x `(letrec ,Σ ,M)))
@@ -125,16 +136,19 @@
                   (values Y (substs V Xᵢ Yᵢ)))
         ,(E (substs M Xᵢ Yᵢ))))])
 
+;; M --> M
 (define-reduction (deref)
   [`(letrec ,Σ ,(E X))
    #:when (map-∈ X Σ)
    `(letrec ,Σ ,(E (Σ X)))])
 
+;; M --> M
 (define-reduction (assign)
   [`(letrec ,Σ ,(E `(set ,X ,V)))
    #:when (map-∈ X Σ)
    `(letrec ,(Σ X V) ,(E (Σ X)))])
 
+;; M --> M
 (define-reduction (merge)
   [`(letrec ,Σ (letrec ,(and Σ′ (↦ [Xᵢ Vᵢ] ...)) ,M))
    rename ≔ (apply symbol-not-in
@@ -145,11 +159,13 @@
                       (values Y (substs V Xᵢ Yᵢ))))
         ,(substs M Xᵢ Yᵢ)))])
 
+;; M --> M
 (define-reduction (βv-rule)
   [`((λ ,X ,M) ,V)
    #:when (not (∈ X (AV M)))
    (subst M X V)])
 
+;; M --> M
 (define-reduction (s) #:super [(βv-rule) (δ-rule δ)
                                          (alloc)
                                          (deref)
@@ -157,13 +173,16 @@
                                          (lift)
                                          (merge)])
 
+;; M → 𝒫(M)
 (define step-s (call-with-values (λ () (s)) compose1))
 
+;; M --> M
 (define-reduction (-->s) #:super [(s)]
   [(Cxt m)
    M′ ← (-->s m)
    (Cxt M′)])
 
+;; M → 𝒫(M)
 (define step-->s (call-with-values (λ () (-->s)) compose1))
 (define -->>s (compose1 car (repeated step-->s)))
 
@@ -174,6 +193,7 @@
                          0) #:limit 10)
                 (set `(letrec ,(↦ ['x 1] ['y 1]) 4))))
 
+;; M → V
 (define/match (evalₛ m)
   [M
    #:when (∅? (FV M))

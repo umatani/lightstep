@@ -17,11 +17,14 @@
 (module+ test
   (check-equal? (r₀ 7) (set 5)))
 
+;; M → M
 (define/match (to-five m)
   [M 5])
+;; M --> M
 (define-inference (r₁-rule)
   [--------------------
    `(,M → ,(to-five M))])
+;; M → 𝒫(M)
 (define r₁ (call-with-values (λ () (r₁-rule)) compose1))
 
 (module+ test

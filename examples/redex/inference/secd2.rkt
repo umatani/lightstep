@@ -16,6 +16,7 @@
   [C ∷= '(ap) `(prim ,(? oⁿ?)) (? b? b) X `(,X (,C ...))]
   [V ∷= (? b?) `((λ ,X (,C ...)) ,E)])
 
+;; (((C ...) E) S D) --> (((C ...) E) S D)
 (define-inference (⊢->secd₂-rules) #:super [(⊢->secd-rules)]
 
   [(error "no such case")
@@ -38,12 +39,14 @@
    -------------------------------------------- "secd5"
    `((((ap) ,C ...) ,E) → ((,@C′) ,(E′ X V)))          ])
 
+;; (((C ...) E) S D) → 𝒫((((C ...) E) S D))
 (define ⊢->secd₂ (let-values ([(mrun reducer) (⊢->secd₂-rules)])
                    (match-λ
                     [(mkSECD S E Cs D)
                      (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd₂ (compose1 car (repeated ⊢->secd₂)))
 
+;; M → (C ...)
 (define/match (compile m)
   [X
    `(,X)]
@@ -60,6 +63,7 @@
   [`(,(? oⁿ? oⁿ) ,M ...)
    `(,@(append-map compile M) (prim ,oⁿ))])
 
+;; M → V
 (define/match (evalsecd₂ m)
   [M
    #:when (∅? (FV M))

@@ -15,13 +15,17 @@
 
 (define-language H-ISWIM #:super orig-H-ISWIM)
 
+;; (M ECxt) --> (M ECxt)
 ;; to match the monad
 (define-inference (δ-rules) #:super [(orig-δ-rules δ)]
   #:monad (StateT #f (NondetT ID)))
 
+;; (M ECxt) --> (M ECxt)
+;; to match the monad
 (define-inference (δerr-rules) #:super [(orig-δerr-rules δ)]
   #:monad (StateT #f (NondetT ID)))
 
+;; (M ECxt) --> (M ECxt)
 (define-inference (⊢->cc-rules) #:super [(orig-⊢->cc′-rules)]
   #:do [(define rδ    (reducer-of (δ-rules)))
         (define rδerr (reducer-of (δerr-rules)))]
@@ -64,12 +68,14 @@
    ----------------------------------------- "cc12"
    `((throw ,(? b? b)) →cc ((λ ,X ,M) ,b))         ])
 
+;; (M ECxt) → 𝒫((M ECxt))
 (define ⊢->cc (let-values ([(mrun reducer) (⊢->cc-rules)])
                 (match-λ
                  [(mkCC M ECxt)
                   (mrun ECxt (reducer M))])))
 (define ⊢->>cc (compose1 car (repeated ⊢->cc)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalcc+h m)
   [M
    #:when (∅? (FV M))

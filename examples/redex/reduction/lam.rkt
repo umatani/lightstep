@@ -24,6 +24,7 @@
   (check-true (M? '(λ y (λ z y))))
   (check-true (M? '((λ y (y y)) (λ y (y y))))))
 
+;; M → 𝒫(X)
 (define/match (FV m)
   [X          (set X)]
   [`(λ ,X ,M) (set-remove (FV M) X)]
@@ -35,6 +36,7 @@
   (check-equal? (FV '(λ x (x y))) (set 'y))
   (check-equal? (FV '(z (λ z z))) (set 'z)))
 
+;; M X M → M
 (define/match (subst m₁ x m₂)
   [(X₁ X₂ M₂)
    #:when (eq? X₁ X₂)
@@ -67,19 +69,23 @@
                      `(,(? M? □) ,M)
                      `(,M ,(? M? □)))])))
 
+;; M --> M
 (define-reduction (-->gen r)
   [(Cxt m)
    M′ ← (r m)
    (Cxt M′)])
 
+;; M --> M
 (define-reduction (α)
   [`(λ ,X₁ ,M)
    X₂ ≔ ((symbol-not-in (FV M)) X₁)
    `(λ ,X₂ ,(subst M X₁ X₂))
    "α"])
 
+;; M → 𝒫(M)
 (define step-α (call-with-values (λ () (α)) compose1))
 
+;; M --> M
 (define-reduction (-->α) #:super [(-->gen -->α)]
   #:do [(define →α (reducer-of (α)))]
   [M
@@ -87,15 +93,19 @@
    M′
    "α"])
 
+;; M → 𝒫(M)
 (define step-->α (call-with-values (λ () (-->α)) compose1))
 
+;; M --> M
 (define-reduction (β)
   [`((λ ,X ,M₁) ,M₂)
    (subst M₁ X M₂)
    "β"])
 
+;; M → 𝒫(M)
 (define step-β (call-with-values (λ () (β)) compose1))
 
+;; M --> M
 (define-reduction (-->β) #:super [(-->gen -->β)]
   #:do [(define →β (reducer-of (β)))]
   [M
@@ -103,8 +113,10 @@
    M′
    "β"])
 
+;; M → 𝒫(M)
 (define step-->β (call-with-values (λ () (-->β)) compose1))
 
+;; M --> M
 (define-reduction (η)
   [`(λ ,X (,M ,X′))
    #:when (eq? X X′)
@@ -112,8 +124,10 @@
    M
    "η"])
 
+;; M → 𝒫(M)
 (define step-η (call-with-values (λ () (η)) compose1))
 
+;; M --> M
 (define-reduction (-->η) #:super [(-->gen -->η)]
   #:do [(define →η (reducer-of (η)))]
   [M
@@ -121,12 +135,16 @@
    M′
    "η"])
 
+;; M → 𝒫(M)
 (define step-->η (call-with-values (λ () (-->η)) compose1))
 
+;; M --> M
 (define-reduction (n) #:super [#;(α) (β) (η)])
 
+;; M → 𝒫(M)
 (define step-n (call-with-values (λ () (n)) compose1))
 
+;; M --> M
 (define-reduction (-->n) #:super [(-->gen -->n)]
   #:do [(define →n (reducer-of (n)))]
   [M
@@ -134,8 +152,8 @@
    M′
    "n"])
 
+;; M → 𝒫(M)
 (define step-->n (call-with-values (λ () (-->n)) compose1))
-
 (define -->>n (compose1 car (repeated step-->n)))
 
 (module+ test
@@ -151,6 +169,7 @@
 ;;=============================================================================
 ;; 3.3 Encoding Booleans
 
+;; M
 (define TRUE  '(λ x (λ y x)))
 (define FALSE '(λ x (λ y y)))
 (define IF    '(λ v (λ t (λ f ((v t) f)))))
@@ -162,7 +181,9 @@
 ;;=============================================================================
 ;; 3.4 Encoding Pairs
 
+;; M M → M
 (define (PAIR m n) `(λ s ((s ,m) ,n)))
+;; M
 (define MKPAIR `(λ x (λ y ,(PAIR 'x 'y))))
 (define FST `(λ p (p ,TRUE)))
 (define SND `(λ p (p ,FALSE)))
@@ -174,19 +195,21 @@
 ;;=============================================================================
 ;; 3.5 Encoding Numbers
 
+;; M → M
 (define (MKNUM n)
   (let loop ([n n]
              [body 'x])
     (if (zero? n)
       `(λ f (λ x ,body))
       (loop (sub1 n) `(f ,body)))))
-
+;; M
 (define ADD1 '(λ n (λ f (λ x (f ((n f) x))))))
 (define ADD `(λ n (λ m ((m ,ADD1) n))))
 (define ISZERO `(λ n ((n (λ x ,FALSE)) ,TRUE)))
-
+;; M → M
 (define (WRAP f) `(λ p ,(PAIR FALSE
                               `(((,IF (,FST p)) (,SND p)) (,f (,SND p))))))
+;; M
 (define SUB1 `(λ n (λ f (λ x (,SND ((n ,(WRAP 'f)) ,(PAIR TRUE 'x)))))))
 
 (module+ test
@@ -198,10 +221,10 @@
 ;;=============================================================================
 ;; 3.7 Recursion
 
+;; M
 (define MKMULT0 `(λ t (λ n (λ m
                              (((,IF (,ISZERO n)) ,(MKNUM 0))
                               ((,ADD m) ((t (,SUB1 n)) m)))))))
-
 (define MKMULT `(λ t (λ n (λ m
                             (((,IF (,ISZERO n)) ,(MKNUM 0))
                              ((,ADD m) (((t t) (,SUB1 n)) m)))))))
@@ -214,6 +237,7 @@
   ;(check-equal? (-->>n̅ `((,MULT ,(MKNUM 2)) ,(MKNUM 2))) (set (MKNUM 4)))
   )
 
+;; M
 (define MKMK '(λ k (λ t (t ((k k) t)))))
 (define MK `(,MKMK ,MKMK))
 
@@ -223,8 +247,8 @@
   (check-equal? (-->>n̅ `(((,MK ,MKMULT0) ,(MKNUM 1)) ,(MKNUM 2)))
                 (set (MKNUM 2))))
 
+;; M
 (define Y '(λ f ((λ x (f (x x))) (λ x (f (x x))))))
-
 (define SUM `(,Y (λ s (λ n (((,IF (,ISZERO n)) ,(MKNUM 0))
                             ((,ADD n) (s (,SUB1 n))))))))
 
@@ -236,8 +260,10 @@
 ;;=============================================================================
 ;; 3.9 Normal Forms and Reduction Strategies
 
+;; M
 (define Ω '((λ x (x x)) (λ x (x x))))
 
+;; M --> M
 (define-reduction (-->n̅)
   #:do [(define →β (reducer-of (β)))
         (define →η (reducer-of (η)))]
@@ -261,8 +287,8 @@
    M₂′ ← (-->n̅ M₂)
    `(,M₁ ,M₂′)])
 
+;; M → 𝒫(M)
 (define step-->n̅ (call-with-values (λ () (-->n̅)) compose1))
-
 (define -->>n̅ (compose1 car (repeated step-->n̅)))
 
 (module+ test

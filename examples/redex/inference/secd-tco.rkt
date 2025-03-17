@@ -12,6 +12,7 @@
 
 (define-language SECD/TCO #:super SECD)
 
+;; (((C ...) E) S D) --> (((C ...) E) S D)
 (define-inference (⊢->secd/tco-rules) #:super [(⊢->secd-rules)]
   [`(,V ((λ ,X ,M) ,E′) ,V′ ...) ← get-S
    (put-S '())
@@ -25,12 +26,14 @@
    --------------------------------- "secd5-tc"
    `((((ap)) ,E) → ((,M) ,(E′ X V)))           ])
 
+;; (((C ...) E) S D) → 𝒫((((C ...) E) S D))
 (define ⊢->secd/tco (let-values ([(mrun reducer) (⊢->secd/tco-rules)])
                       (match-λ
                        [(mkSECD S E Cs D)
                         (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd/tco (compose1 car (repeated ⊢->secd/tco)))
 
+;; M → V
 (define/match (evalsecd/tco m)
   [M
    #:when (∅? (FV M))

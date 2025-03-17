@@ -197,8 +197,10 @@
                                      (syntax->list #'rules-of-super)))
 
      #:with (rule ...) (stx-map rescope
-                                #'(sup-rule ...
-                                            [pat _ ≔ rnam body ... e] ...))
+                                #'(sup-rule
+                                   ...
+                                   [pat _ ≔ rnam body ... e]
+                                   ...))
 
      #:with (do-body ...) (stx-map rescope
                                    #`(#,@#'do-bodies-of-super

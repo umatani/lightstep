@@ -19,6 +19,7 @@
              `(letrec ,x ,□)
              □)]))
 
+;; M --> M
 (define-reduction (⊢->s2)
   #:do [(define (substs-Σ Σ xs ms)
           (for/map ([(x v) (in-map Σ)])
@@ -59,9 +60,11 @@
    `(letrec ,(Σ X V) ,(E (Σ X)))
    "s2assignR"])
 
+;; M → 𝒫(M)
 (define step⊢->s2 (call-with-values (λ () (⊢->s2)) compose1))
 (define ⊢->>s2 (compose1 car (repeated step⊢->s2)))
 
+;; M → V
 (define/match (evalₛ₂ m)
   [M
    #:when (∅? (FV M))

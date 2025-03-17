@@ -10,6 +10,7 @@
 
 (define-language CEK/SS #:super CEK)
 
+;; (M E κ) --> (M E κ)
 (define-reduction (⊢->cek/ss) #:super [(⊢->cek)]
   [`((,M₁ ,M₂) ,E)
    κ ← get
@@ -37,12 +38,14 @@
    `(,M ,Eₘ)
    "cek6"])
 
+;; (M E κ) → 𝒫((M E κ))
 (define step⊢->cek/ss (let-values ([(mrun reducer) (⊢->cek/ss)])
                         (match-λ
                          [(mkCEK M E (? κ? κ))
                           (mrun κ (reducer `(,M ,E)))])))
 (define ⊢->>cek/ss (compose1 car (repeated step⊢->cek/ss)))
 
+;; M → V
 (define/match (evalcek/ss m)
   [M
    #:when (∅? (FV M))

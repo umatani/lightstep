@@ -24,15 +24,18 @@
             `(,□ ,M)
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
+;; M → 𝒫(X)
 (define/match (FV m) #:super orig-FV
   [`(err ,(? b?)) ∅])
 
+;; oⁿ List(b) → V
 (define/match (δ o bs) #:super orig-δ
   [('/ `(,(? number? m) 0))
    '(err 0)]
   [('/ `(,(? number? m) ,(? number? n)))
    (/ m n)])
 
+;; M --> V
 (define-reduction (δ-rule δ)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    v ← (match (δ oⁿ b)
@@ -40,6 +43,7 @@
          [V         (return V)])
    v])
 
+;; M --> M
 (define-reduction (δerr-rule δ)
   [`(,(? oⁿ? oⁿ) ,(? b? b) ...)
    e ← (match (δ oⁿ b)
@@ -53,26 +57,32 @@
   [`(,(? b? b) ,V)
    `(err ,b)])
 
+;; M --> M
 (define-reduction (error-rule)
   [(and x (ECxt e))
    #:when (not (equal? x e))
    `(err ,(? b? b)) ≔ e
    `(err ,b)])
 
+;; M --> M
 (define-reduction (w) #:super [(δ-rule δ) (βv-rule)])
 (define-reduction (f) #:super [(error-rule) (δerr-rule δ)])
 (define-reduction (e) #:super [(w) (f)])
 
+;; M → 𝒫(M)
 (define step-e (call-with-values (λ () (e)) compose1))
 
+;; M --> M
 (define-reduction (-->e) #:super [(e)]
   [(Cxt m)
    M′ ← (-->e m)
    (Cxt M′)])
 
+;; M → 𝒫(M)
 (define step-->e (call-with-values (λ () (-->e)) compose1))
 (define -->>e (compose1 car (repeated step-->e)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalₑ m)
   [M
    #:when (∅? (FV M))

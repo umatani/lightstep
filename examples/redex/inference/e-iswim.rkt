@@ -24,15 +24,18 @@
             `(,□ ,M)
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
+;; M → 𝒫(X)
 (define/match (FV m) #:super orig-FV
   [`(err ,(? b?)) ∅])
 
+;; oⁿ List(b) → V
 (define/match (δ o bs) #:super orig-δ
   [('/ `(,(? number? m) 0))
    '(err 0)]
   [('/ `(,(? number? m) ,(? number? n)))
    (/ m n)])
 
+;; M --> V
 (define-inference (δ-rules δ)
   [v ← (match (δ oⁿ b)
          [`(err ,(? b?)) mzero]
@@ -40,6 +43,7 @@
    -----------------------------------
    `((,(? oⁿ? oⁿ) ,(? b? b) ...) → ,v)])
 
+;; M --> M
 (define-inference (δerr-rules δ)
   [e ← (match (δ oⁿ b)
          [`(err ,(? b? b)) (return `(err ,b))]
@@ -53,26 +57,32 @@
   [----------------------------
    `((,(? b? b) ,V) → (err ,b))])
 
+;; M --> M
 (define-inference (error-rules)
   [#:when (not (equal? x e))
    `(err ,(? b? b)) ≔ e
    -------------------------
    `(,(and x (ECxt e)) → (err ,b))])
 
+;; M --> M
 (define-inference (w-rules) #:super [(δ-rules δ) (βv-rules)])
 (define-inference (f-rules) #:super [(error-rules) (δerr-rules δ)])
 (define-inference (e-rules) #:super [(w-rules) (f-rules)])
 
+;; M → 𝒫(M)
 (define e (call-with-values (λ () (e-rules)) compose1))
 
+;; M --> M
 (define-inference (-->e-rules) #:super [(e-rules)]
   [`(,m → ,M′)
    -----------------------
    `(,(Cxt m) → ,(Cxt M′))])
 
+;; M → 𝒫(M)
 (define -->e (call-with-values (λ () (-->e-rules)) compose1))
 (define -->>e (compose1 car (repeated -->e)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalₑ m)
   [M
    #:when (∅? (FV M))

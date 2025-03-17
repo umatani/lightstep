@@ -25,10 +25,12 @@
                  `(catch ,□ with (λ ,X ,M)) ;; NEW
                  ))]))
 
+;; M --> M
 (define-inference (h̃-rules) #:super [(βv-rules) (δ-rules δ) (δerr-rules δ)
                                                 (return-rules)
                                                 (catch-rules)])
 
+;; M --> M
 (define-inference (⊢->h-rules)
   #:do [(define rh̃ (reducer-of (h̃-rules)))]
   #:forms (.... [`(,i →h̃ ,o) #:where o ← (rh̃ i)])
@@ -58,9 +60,11 @@
    --------------------------------------------------
    `(,(and x (FCxt `(throw ,(? b? b)))) → (throw ,b))])
 
+;; M → 𝒫(M)
 (define ⊢->h (call-with-values (λ () (⊢->h-rules)) compose1))
 (define ⊢->>h (compose1 car (repeated ⊢->h)))
 
+;; M → (V ∪ ⊥)
 (define/match (evalₕˢ m)
   [M
    #:when (∅? (FV M))

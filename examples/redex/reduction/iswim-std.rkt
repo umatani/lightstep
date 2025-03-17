@@ -24,15 +24,18 @@
             `(,□ ,M)
             `(,(? oⁿ?) ,V (... ...) ,□ ,M (... ...)))]))
 
+;; M --> M
 (define-reduction (⊢->v)
   #:do [(define →v (reducer-of (v)))]
   [(E M)
    M′ ← (→v M)
    (E M′)])
 
+;; M → 𝒫(M)
 (define step⊢->v (call-with-values (λ () (⊢->v)) compose1))
 (define ⊢->>v (compose1 car (repeated step⊢->v)))
 
+;; M → V
 (define/match (evalᵥˢ m)
   [M
    #:when (∅? (FV M))

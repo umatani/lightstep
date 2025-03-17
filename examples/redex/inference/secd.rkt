@@ -18,6 +18,7 @@
   [D ∷= 'ϵ `(,S ,E ,(? list? Cs) ,D)]
   [V ∷= (? b?) `((λ ,X ,M) ,E)])
 
+;; (((C ...) E) S D) --> (((C ...) E) S D)
 (define-inference (⊢->secd-rules)
   #:monad (StateT #f (StateT #f (NondetT ID)))
   #:do [(define get-S (bind get (compose1 return car)))
@@ -75,7 +76,7 @@
    `((() ,E) → ((,@C′) ,E′))              ])
 
 (define-match-expander mkSECD
-  ;; '((`(,Cs ,E) S) D)
+  ;; '((`(,(C ...) ,E) S) D)
   (syntax-parser
     [(_ S E Cs D)
      #'(cons (cons `(,Cs ,E) S) D)])
@@ -83,12 +84,14 @@
     [(_ S E Cs D)
      #'(cons (cons `(,Cs ,E) S) D)]))
 
+;; (((C ...) E) S D) → 𝒫((((C ...) E) S D))
 (define ⊢->secd (let-values ([(mrun reducer) (⊢->secd-rules)])
                   (match-λ
                    [(mkSECD S E Cs D)
                     (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd (compose1 car (repeated ⊢->secd)))
 
+;; M → V
 (define/match (evalsecd m)
   [M
    #:when (∅? (FV M))

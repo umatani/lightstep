@@ -11,6 +11,7 @@
 
 (define-language SECD/TCO/SS #:super SECD)
 
+;; (((C ...) E) S D) --> (((C ...) E) S D)
 (define-reduction (⊢->secd/tco/ss) #:super [(⊢->secd/tco)]
   [`(((λ ,X ,M) ,C ...) ,E)
    S ← get-S
@@ -18,12 +19,14 @@
    `((,@C) ,E)
    "secd4"])
 
+;; (((C ...) E) S D) → 𝒫((((C ...) E) S D))
 (define step⊢->secd/tco/ss (let-values ([(mrun reducer) (⊢->secd/tco/ss)])
                              (match-λ
                               [(mkSECD S E Cs D)
                                (mrun D S (reducer `(,Cs ,E)))])))
 (define ⊢->>secd/tco/ss (compose1 car (repeated step⊢->secd/tco/ss)))
 
+;; M → V
 (define/match (evalsecd/tco/ss m)
   [M
    #:when (∅? (FV M))
