@@ -14,6 +14,7 @@
   (require (submod lightstep/transformers test))
   (require (submod lightstep/syntax test))
   (require (submod lightstep/inference test))
+  (require (submod lightstep/pmap test))
 
   (require (submod lightstep/examples/unit-tests scope2))
 
