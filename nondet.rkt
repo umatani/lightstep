@@ -3,7 +3,7 @@
  (for-syntax racket/base racket/syntax syntax/parse
              (only-in racket/syntax format-id)
              (only-in syntax/stx stx-map))
- (only-in "set.rkt" [-make set] [-∅ ∅] [-∅? ∅?])
+ (only-in "set.rkt" [-make set] [-∅ ∅] [-∅? ∅?] [→list set→list])
  (only-in "match.rkt" match)
  (only-in "transformers.rkt" ID StateT NondetT with-monad run-StateT))
 (provide NondetM nondet nondet-match define-nondet-match-expander)
@@ -119,15 +119,16 @@
   (check-equal? (nondet-match NondetM  (set 1 2 3)
                               [x x]
                               [(set a b c) (set (set a b) c)]
-                              [(set a ...) (apply + a)])
+                              [(set a ...) (apply + (set→list a))])
                 (set (set 1 (set 2 3)) (set 1 3 2) 6))
 
   (check-equal? (nondet-match NondetM (set 1 2 3)
                               [x (nondet-match NondetM x
                                                [(set a b c)
                                                 (set (set a b) c)])]
-                              [x (nondet-match NondetM x
-                                               [(set a ...) (apply + a)])])
+                              [x (nondet-match
+                                  NondetM x
+                                  [(set a ...) (apply + (set→list a))])])
                 (set (set 6) (set (set 1 (set 2 3)))))
   (check-equal? (nondet-match NondetM '(1 2 3)
                               [`(,x ...) x])

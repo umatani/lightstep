@@ -84,4 +84,9 @@
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))
-  (check-equal? (car ((repeated -->vσ*) (injσ fact-5))) (set 120)))
+
+  (check-equal? (-->>vσ* (injσ '((λ ([f : (num → num)])
+                                   ((λ ([_ : num]) (f 0)) (f 1)))
+                                 (λ ([z : num]) z)))) (set 0))
+
+  (check-equal? (-->>vσ* (injσ fact-5)) (set 120)))

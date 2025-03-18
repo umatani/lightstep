@@ -99,4 +99,4 @@
   ;(alloc `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) []) ,(↦)))
   ;(-->vσ `(((((λ ([y : num] [z : num]) y) ,(↦)) 5 7) []) ,(↦)))
 
-  (check-equal?  (car ((repeated -->vσ) (injσ fact-5))) (set 120)))
+  (check-equal? (car ((repeated -->vσ) (injσ fact-5))) (set 120)))

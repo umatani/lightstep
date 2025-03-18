@@ -51,7 +51,8 @@
   (syntax-rules (... ...)
     [(-make p ... q (... ...))
      (? set? (app (compose1 r:set->list repl-elems)
-                  (list-no-order p ... q (... ...))))]
+                  (and (list-no-order p ... z (... ...))
+                       (app (λ (_) (repl (r:list->set z))) q))))]
     [(-make p ...)
      (? set? (app (compose1 r:set->list repl-elems)
                   (list-no-order p ...)))])
@@ -148,4 +149,7 @@
   (define s (-make 1 2 3))
   (match s
     [(-make a b c) (list a b c)])
+
+  (match s
+    [(-make 3 b ...) b])
   )

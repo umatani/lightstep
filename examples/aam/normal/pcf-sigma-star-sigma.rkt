@@ -5,7 +5,8 @@
          (only-in "pcf-varsigma.rkt" -->vς-rules)
          (only-in "pcf-sigma.rkt" injσ)
          (only-in "pcf-sigma-star.rkt" [PCFσ* orig-PCFσ*] alloc*)
-         (only-in "pcf-sigma-sigma.rkt" -->vσ/Σ-rules))
+         (only-in "pcf-sigma-sigma.rkt" lookup-Σ-rules -->vσ/Σ-rules))
+(provide -->vσ*/Σ-rules)
 
 (module+ test (require rackunit))
 
@@ -52,24 +53,29 @@
      → ((,S ((,@V □ ,@C) ,A)) ,(ext-Σ Σ `(,A) `(,K))))         ]
 
   ; Continue
-  [K ≔ (lookup-Σ Σ A)
+  [K ← (lookup-Σ `(,Σ ,A))
    -------------------------------- "co-if"
    `(((,V ((if0 □ ,C₁ ,C₂) ,A)) ,Σ)
      → (((if0 ,V ,C₁ ,C₂) ,K) ,Σ))         ]
 
-  [K ≔ (lookup-Σ Σ A)
+  [K ← (lookup-Σ `(,Σ ,A))
    ------------------------------------ "co-app"
    `(((,V ((,V₀ ... □ ,C₀ ...) ,A)) ,Σ)
      → (((,@V₀ ,V ,@C₀) ,K) ,Σ))                ])
 
 ;; δ --> δ
 (define-inference (-->vσ*/alloc-rules alloc*)
-  #:super [(-->vσ*/Σ-rules alloc* ext lookup)])
+  #:super [(-->vσ*/Σ-rules alloc* ext (reducer-of (lookup-Σ-rules)))])
 
 ;; σ → 𝒫(σ)
 (define -->vσ* (call-with-values (λ () (-->vσ*/alloc-rules alloc*)) compose1))
+(define -->>vσ* (compose1 car (repeated -->vσ*)))
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))
 
-  (check-equal?  (car ((repeated -->vσ*) (injσ fact-5))) (set 120)))
+  (check-equal? (-->>vσ* (injσ '((λ ([f : (num → num)])
+                                   ((λ ([_ : num]) (f 0)) (f 1)))
+                                 (λ ([z : num]) z)))) (set 0))
+
+  (check-equal? (-->>vσ* (injσ fact-5)) (set 120)))

@@ -108,7 +108,7 @@
 
   ;; aam
   (require (submod lightstep/examples/aam/normal/l test))
-  (require (submod lightstep/examples/aam/normal/pcf test))
+  (require (except-in (submod lightstep/examples/aam/normal/pcf test) Ω))
   (require (submod lightstep/examples/aam/normal/pcf-t test))
   (require (submod lightstep/examples/aam/normal/pcf-bigstep test))
   (require (submod lightstep/examples/aam/normal/l0 test))
@@ -121,4 +121,6 @@
   (require (submod lightstep/examples/aam/normal/pcf-sigma-star test))
   (require (submod lightstep/examples/aam/normal/pcf-sigma-sigma test))
   (require (submod lightstep/examples/aam/normal/pcf-sigma-star-sigma test))
+  (require (submod lightstep/examples/aam/normal/pcf-sigma-o test))
+  (require (submod lightstep/examples/aam/normal/pcf-sigma-hat test))
   )

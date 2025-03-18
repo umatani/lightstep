@@ -9,10 +9,14 @@
                               [←list set←list] [→list set→list] [-∈ ∈] [-∪ ∪])
                      ;; racket/pretty
                      )
+         (prefix-in r: racket/set)
          (only-in racket/unit
                   define-signature unit import export link
                   compound-unit invoke-unit)
-         (only-in "set.rkt" [-make set] [-∅? ∅?] [-⊆ ⊆]
+         (only-in racket/match match match-define)
+         (only-in "set.rkt" [-make set] [-∅ ∅] [-∅? ∅?] [-⊆ ⊆] [-∪ set-∪]
+                  [-∈ set-∈]
+                  [-map set-map] [←list set←list] [-for/set for/set]
                   [-add set-add] [-subtract set-subtract])
          (only-in "transformers.rkt"
                   PowerO run-StateT define-monad with-monad
@@ -263,22 +267,79 @@
 ;;=============================================================================
 ;; reflexive and transitive closure
 
-(define ((repeated →) ς #:limit [limit #f])
-  (define-monad (NondetT (StateT PowerO ID)))
-  (define (search ς limit)
-    (if (and limit (<= limit 0))
-      (return ς)
-      (do sΣ′ ≔ (→ ς)
-          sΣ ← get
-          (cond
-            [(∅? sΣ′) (return ς)]
-            [(⊆ sΣ′ sΣ) mzero]
-            [(do (for/m+ ([ς′ (set-subtract sΣ′ sΣ)])
-                   (do (put (set-add sΣ ς′))
-                       (search ς′ (if limit
-                                    (sub1 limit)
-                                    #f)))))]))))
-  (run-StateT (set ς) (search ς limit)))
+(struct Queueof (head tail) #:transparent #:mutable
+  #:constructor-name Queue)
+
+(define (make-queue) (Queue '() '()))
+
+(define (queue-empty? q)
+  (and (null? (Queueof-head q)) (null? (Queueof-tail q))))
+
+(define (enqueue! q a)
+  (set-Queueof-tail! q (cons a (Queueof-tail q))))
+
+(define (dequeue! q)
+  (when (queue-empty? q)
+    (error 'dequeue! "queue is empty"))
+  (when (null? (Queueof-head q))
+    (set-Queueof-head! q (reverse (Queueof-tail q)))
+    (set-Queueof-tail! q '()))
+  (begin0
+      (car (Queueof-head q))
+    (set-Queueof-head! q (cdr (Queueof-head q)))))
+
+(define ((repeated →) ς-init #:limit [limit #f])
+  (define wl (make-queue))
+  (define immutables (r:mutable-set))
+  (define Σ (r:mutable-set))
+
+  (define (search)
+    (if (queue-empty? wl)
+      Σ
+      (let* ([x (dequeue! wl)])
+        (match-define (cons limit current) x)
+        (if (and limit (<= limit 0))
+          (r:set-add! immutables current)
+          (let ([nexts (→ current)])
+            (if (∅? nexts)
+              (r:set-add! immutables current)
+              (for ([ς′ nexts]
+                    #:unless (r:set-member? Σ ς′))
+                (enqueue! wl (cons (and limit (sub1 limit)) ς′))
+                (r:set-add! Σ ς′)))))
+        (search))))
+  (enqueue! wl (cons limit ς-init))
+  (r:set-add! Σ ς-init)
+  (search)
+  (cons (for/set ([ς immutables]) ς) (for/set ([ς Σ]) ς)))
+
+;;;; obsolete (problematic)
+
+(define ((repeated′ →) ς #:limit [limit #f])
+  (define-monad (StateT PowerO ID))
+  (define (step ς)
+    (do ςs′ ≔ (→ ς)
+        (if (∅? ςs′)
+          (return 'done)
+          (return ςs′))))
+  (define (loop ςs dones)
+    (match ςs
+      [(set) (return dones)]
+      [(set (cons limit ς) ςs′ ...)
+       (if (and limit (<= limit 0))
+         (loop ςs′ (set-add dones ς))
+         (do x ← (step ς)
+             (match x
+               ['done (loop ςs′ (set-add dones ς))]
+               [ςs″
+                (do sΣ ← get
+                    (loop (set-∪ ςs′
+                                 (for/set ([ς″ ςs″]
+                                           #:unless (set-∈ ς″ sΣ))
+                                   (put (set-add sΣ ς″))
+                                   (cons (and limit (sub1 limit)) ς″)))
+                          dones))])))]))
+  (run-StateT (set ς) (loop (set (cons limit ς)) ∅)))
 
 ;;=============================================================================
 ;; shortcuts

@@ -328,6 +328,8 @@
 (define -->ᵥ (call-with-values (λ () (-->ᵥ-rule)) compose1))
 
 (module+ test
+  (provide Ω)
+
   (check-equal? (-->ᵥ '((λ ([x : num]) x) (add1 5)))
                 (set '((λ ([x : num]) x) 6)))
   (check-equal? (car ((repeated -->ᵥ) '((λ ([x : num]) x) (add1 5))))

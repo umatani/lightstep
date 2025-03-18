@@ -4,7 +4,7 @@
          (only-in "pcf-rho.rkt" vρ-rules)
          (only-in "pcf-varsigma.rkt" -->vς-rules)
          (only-in "pcf-sigma.rkt" [PCFσ orig-PCFσ] injσ alloc))
-(provide -->vσ/Σ-rules)
+(provide lookup-Σ-rules -->vσ/Σ-rules)
 
 (module+ test (require rackunit))
 
@@ -12,6 +12,11 @@
 ;; 4.1 Abstracting over Σ (PCFσ)
 
 (define-language PCFσ #:super orig-PCFσ)
+
+;; (Σ A) --> U
+(define-inference (lookup-Σ-rules)
+  [--------------------------
+   `((,Σ ,A) → ,(Σ A))])
 
 ;; σ --> σ
 (define-inference (-->vσ/Σ-rules alloc ext-Σ lookup-Σ)
@@ -55,14 +60,14 @@
   [--------------- "discard-Σ-O"
    `((,O ,Σ) → ,O)              ]
 
-  [A ≔ (lookup ρ X)        V ≔ (lookup-Σ Σ A)
-     ------------------------------------------ "ρ-x"
-     `((((,X ,(? ρ? ρ)) ,K) ,Σ) → ((,V ,K) ,Σ))      ]
+  [A ≔ (lookup ρ X)    V ← (lookup-Σ `(,Σ ,A))
+   ------------------------------------------- "ρ-x"
+   `((((,X ,(? ρ? ρ)) ,K) ,Σ) → ((,V ,K) ,Σ))       ]
 
   [`(,A ...) ≔ (alloc σ)
    ----------------------------------------------------------------- "β"
    `(,(and σ `(((((λ ([,X : ,T] ...) ,M) ,(? ρ? ρ)) ,V ...) ,K) ,Σ))
-     → (((,M ,(ext ρ `(,X) `(,A))) ,K) ,(ext-Σ Σ `(,A) `(,V))))                        ]
+     → (((,M ,(ext ρ X A)) ,K) ,(ext-Σ Σ A V)))                         ]
 
   [`(,Aₐ ,A ...) ≔ (alloc σ)
    ------------------------------------------------------------------- "rec-β"
@@ -74,12 +79,17 @@
 
 ;; σ --> σ
 (define-inference (-->vσ/alloc-rules alloc) #:super
-  [(-->vσ/Σ-rules alloc ext lookup)])
+  [(-->vσ/Σ-rules alloc ext (reducer-of (lookup-Σ-rules)))])
 
 ;; σ → 𝒫(σ)
 (define -->vσ (call-with-values (λ () (-->vσ/alloc-rules alloc)) compose1))
+(define -->>vσ (compose1 car (repeated -->vσ)))
 
 (module+ test
   (require (only-in (submod "pcf.rkt" test) fact-5))
 
-  (check-equal?  (car ((repeated -->vσ) (injσ fact-5))) (set 120)))
+  (check-equal? (-->>vσ (injσ '((λ ([f : (num → num)])
+                                  ((λ ([_ : num]) (f 0)) (f 1)))
+                                (λ ([z : num]) z)))) (set 0))
+
+  (check-equal? (-->>vσ (injσ fact-5)) (set 120)))
