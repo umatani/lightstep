@@ -2,7 +2,7 @@
 (require (for-syntax racket/base syntax/parse)
          (prefix-in r: racket/set)
          (only-in racket/match define-match-expander))
-(provide -make (rename-out [set? ?]) -∅ -∅? -∈ -size =? -⊆ -∪
+(provide -make (rename-out [set? ?]) -∅ -∅? -∈ -size =? -⊆ -∪ -big-∪
          -add -remove -subtract -map -filter ->list <-list -for/set -in-set
          (rename-out [->list →list]
                      [<-list ←list]))
@@ -13,6 +13,7 @@
 ;;   ∅?      = set-∅?
 ;;   ∈       = set-∈
 ;;   ∪       = set-∪
+;;   big-∪   = set-big-∪
 ;;   ⊆       = set-⊆
 ;;   for/set = set-for/set
 ;;   in-set  = set-in-set
@@ -92,6 +93,10 @@
   (if (null? ss)
     -∅
     (repl (apply r:set-union (map repl-elems ss)))))
+
+;; 𝒫(𝒫(α)) → 𝒫(α)
+(define (-big-∪ ss)
+  (apply -∪ (->list ss)))
 
 ;; 𝒫(α) α → 𝒫(α)
 (define (-add s e)
