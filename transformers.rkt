@@ -5,9 +5,10 @@
          (only-in racket/match match-define define-match-expander)
          (only-in racket/unit define-signature define-unit import export)
          (only-in racket/sequence sequence-fold)
-         (only-in "map.rkt" [∅ m:∅] ⊔)
-         (only-in "match.rkt" match match-let match-λ)
-         (only-in "set.rkt" [∅ s:∅] set ∪ set-map list→set))
+         (only-in "set.rkt" [-∅ set-∅] [-make set] [-∪ ∪]
+                  [-map set-map] [←list set←list])
+         (only-in "map.rkt" [-∅ map-∅] [-∪ ⊔])
+         (only-in "match.rkt" match match-let match-λ))
 (provide (all-defined-out))
 
 (module+ test (require rackunit))
@@ -119,7 +120,8 @@
      (with-syntax ([return         (format-id #'M "return")]
                    [bind           (format-id #'M "bind")]
                    [do             (format-id #'M "do")]
-                   [for/monad+     (format-id #'M "for/monad+")]
+                   [for/m+         (format-id #'M "for/m+")]
+                   [m+             (format-id #'M "m+")]
                    [ask            (format-id #'M "ask")]
                    [local          (format-id #'M "local")]
                    [tell           (format-id #'M "tell")]
@@ -131,6 +133,8 @@
                    [mzero          (format-id #'M "mzero")]
                    [mplus          (format-id #'M "mplus")]
                    [mconcat        (format-id #'M "mconcat")]
+                   [mapM           (format-id #'M "mapM")]
+                   [sequenceM      (format-id #'M "sequenceM")]
                    [monoid-functor (format-id #'M "monoid-functor")])
        #'(begin
            (define M′ M)
@@ -164,7 +168,7 @@
              (hash-ref effects 'fail   (monad-fail #f #f)))
            (match-define (monad-nondet mzero mplus)
              (hash-ref effects 'nondet (monad-nondet #f #f)))
-           (define-syntax (for/monad+ stx)
+           (define-syntax (for/m+ stx)
              (syntax-case stx ()
                [(_ clauses . defs+exprs)
                 (with-syntax ([original stx])
@@ -172,10 +176,20 @@
                       ([m mzero])
                       clauses
                       (mplus m (let () . defs+exprs))))]))
+           (define (m+ seq) (for/m+ ([x seq]) (return x)))
            (define-syntax (mconcat stx)
              (syntax-case stx ()
                [(_) #'mzero]
-               [(_ xM . bs) #'(mplus xM (mconcat . bs))]))))]))
+               [(_ xM . bs) #'(mplus xM (mconcat . bs))]))
+           (define (mapM f as)
+             (foldr (λ (a r)
+                      (do x  ← (f a)
+                          xs ← r
+                          (return (cons x xs))))
+                    (return '())
+                    as))
+           (define (sequenceM as)
+             (mapM (λ (a) a) as))))]))
 
 (define-syntax-rule (with-monad M e)
   (let () (define-monad M) e))
@@ -216,7 +230,7 @@
 (define PowerO
   (monoid
    ;; ozero
-   s:∅
+   set-∅
    ;; oplus
    ∪))
 
@@ -224,7 +238,7 @@
 (define (FinMapO O)
   (monoid
    ;; ozero
-   m:∅
+   map-∅
    ;; oplus
    (λ (m₁ m₂) (⊔ m₁ m₂ #:combine (with-monoid O oplus)))))
 
@@ -930,7 +944,7 @@
                                        ;; hijack
                                        (λ (xM)
                                          (do (cons xs o) ← (hijack xM)
-                                             (return (list→set
+                                             (return (set←list
                                                       (set-map
                                                        (λ (x) (cons x o))
                                                        xs)))))))))
@@ -1006,16 +1020,16 @@
   ;; NondetT(StateT[FinMap](ID))(a) = [k⇰v] → (℘(a),[k⇰v])
   (check-equal?
    (run-StateT
-    m:∅
+    map-∅
     (with-monad (NondetT (StateT (FinMapO MaxO) ID))
-      (do (mplus (put (m:∅ 'k 2)) (put (m:∅ 'k 3)))
+      (do (mplus (put (map-∅ 'k 2)) (put (map-∅ 'k 3)))
           x ← (mplus get mzero)
           (mplus (return (+ (x 'k) 10)) (return (+ (x 'k) 20))))))
-   (cons (set 13 23) (m:∅ 'k 3)))
+   (cons (set 13 23) (map-∅ 'k 3)))
   ;; NondetT(ID)(a) = ℘(a)
   (check-equal?
    (with-monad (NondetT ID)
-     (for/monad+ ([x (list 1 2 3 4 5)])
+     (for/m+ ([x (list 1 2 3 4 5)])
        (return x)))
    (set 1 2 3 4 5))
   ;; NondetT(ID)(a) = ℘(a)
@@ -1023,7 +1037,7 @@
    (with-monad (FailT (StateT #f (NondetT ID)))
      (run-StateT
       0
-      (mplus (for/monad+ ([x (list 1 2 3)])
+      (mplus (for/m+ ([x (list 1 2 3)])
                (return x))
              fail)))
    (set (cons (failure) 0) (cons 1 0) (cons 2 0) (cons 3 0))))
@@ -1082,9 +1096,9 @@
 
   (define (mrun m)
     (run-StateT
-     (m:∅ 'κ (set 0)) ; (FinMapO PowerO)
+     (map-∅ 'κ (set 0)) ; (FinMapO PowerO)
      (run-StateT
-      (m:∅ 'cont (set 1)) ; (FinMapO PowerO)
+      (map-∅ 'cont (set 1)) ; (FinMapO PowerO)
       (run-StateT
        'σ
        (run-StateT
@@ -1113,8 +1127,8 @@
                          (list 'env′ 'ξ′)
                          'foo)
                         'σ))
-                  (m:∅ 'cont (set 1)))
-                 ((m:∅ 'κ (set 0)) 'bar (set 'a 'b 'c)))))
+                  (map-∅ 'cont (set 1)))
+                 ((map-∅ 'κ (set 0)) 'bar (set 'a 'b 'c)))))
 
 
 
@@ -1201,9 +1215,10 @@
   ;;         (mplus (return (+ x 10)) (return (+ x 20))))))
 
   ;; ; NondetT(StateT[FinMap](ID))(a) = [k⇰v] → (℘(a),[k⇰v])
-  (run-StateT m:∅
+  (run-StateT map-∅
     (with-monad (NondetT (StateT (FinMapO MaxO) ID))
-      (do (mplus (mplus (put (m:∅ 'k 2)) (put (m:∅ 'k 3))) (put (m:∅ 'k 4)))
+      (do (mplus (mplus (put (map-∅ 'k 2)) (put (map-∅ 'k 3)))
+                 (put (map-∅ 'k 4)))
           x ← get
           (mplus (return (+ (x 'k) 10)) (return (+ (x 'k) 20))))))
   )

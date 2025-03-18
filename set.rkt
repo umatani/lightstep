@@ -2,18 +2,33 @@
 (require (for-syntax racket/base syntax/parse)
          (prefix-in r: racket/set)
          (only-in racket/match define-match-expander))
-(provide set set? ∅ ∅? ∈ size set=? ∪ set-add set-remove set-subtract ⊆
-         set-map set-filter set->list list->set for/set in-set
-         (rename-out [set->list set→list]
-                     [list->set list→set]))
+(provide -make (rename-out [set? ?]) -∅ -∅? -∈ -size =? -⊆ -∪
+         -add -remove -subtract -map -filter ->list <-list -for/set -in-set
+         (rename-out [->list →list]
+                     [<-list ←list]))
+;; provided from lightstep/base with prefix `set-'
+;; also, aliases are provided from lightstep/base:
+;;   set     = set-make
+;;   ∅       = set-∅
+;;   ∅?      = set-∅?
+;;   ∈       = set-∈
+;;   ∪       = set-∪
+;;   ⊆       = set-⊆
+;;   for/set = set-for/set
+;;   in-set  = set-in-set
+
 
 ;; ============================================================================
 ;; Finite set: 𝒫(α)
 
+;; α → Boolean
 (struct repl (elems)
   #:transparent  ;; for equal?
   #:property prop:sequence
-  (lambda (s) (in-set s))
+  (λ (s) (-in-set s))
+  #:property
+  prop:procedure
+  (λ (s x) (-∈ x s))
   #:methods gen:custom-write
   [(define (write-proc s port mode)
      (when mode (write-string "{" port))
@@ -31,102 +46,101 @@
      (when mode (write-string "}" port)))])
 
 ;; α ... → 𝒫(α)
-(define-match-expander set
+(define-match-expander -make
   (syntax-rules (... ...)
-    [(set p ... q (... ...))
+    [(-make p ... q (... ...))
      (? set? (app (compose1 r:set->list repl-elems)
                   (list-no-order p ... q (... ...))))]
-    [(set p ...)
+    [(-make p ...)
      (? set? (app (compose1 r:set->list repl-elems)
                   (list-no-order p ...)))])
-  (syntax-id-rules (set)
-    [(set p ...) (repl (r:set p ...))]
-    [set (λ args (repl (apply r:set args)))]))
+  (syntax-id-rules (-make)
+    [(-make p ...) (repl (r:set p ...))]
+    [-make (λ args (repl (apply r:set args)))]))
 
 ;; Any → Boolean
 (define set? repl?)
 
 ;; 𝒫(α)
-(define ∅ (set))
+(define -∅ (-make))
 
 ;; 𝒫(α) → Boolean
-(define (∅? s)
+(define (-∅? s)
   (r:set-empty? (repl-elems s)))
 
 ;; α 𝒫(α) → Boolean
 ;;   𝒫(α) → Seq(α)
-(define ∈
+(define -∈
   (case-λ
    [(e s) (r:set-member? (repl-elems s) e)]
-   [(  s) (in-set s)]))
+   [(  s) (-in-set s)]))
 
 ;; 𝒫(α) → Nat
-(define (size s)
+(define (-size s)
   (r:set-count (repl-elems s)))
 
 ;; 𝒫(α) 𝒫(α) → Boolean
-(define (set=? s s′)
+(define (=? s s′)
   (r:set=? (repl-elems s) (repl-elems s′)))
 
+;; 𝒫(α) 𝒫(α) → 𝒫(α)
+(define (-⊆ s s′)
+  (r:subset? (repl-elems s) (repl-elems s′)))
+
 ;; 𝒫(α) ... → 𝒫(α)
-(define (∪ . ss)
+(define (-∪ . ss)
   (if (null? ss)
-    ∅
+    -∅
     (repl (apply r:set-union (map repl-elems ss)))))
 
 ;; 𝒫(α) α → 𝒫(α)
-(define (set-add s e)
+(define (-add s e)
   (repl (r:set-add (repl-elems s) e)))
 
 ;; 𝒫(α) α → 𝒫(α)
-(define (set-remove s e)
+(define (-remove s e)
   (repl (r:set-remove (repl-elems s) e)))
 
 ;; 𝒫(α) ... → 𝒫(α)
-(define (set-subtract . ss)
+(define (-subtract . ss)
   (repl (apply r:set-subtract (map repl-elems ss))))
 
-;; 𝒫(α) 𝒫(α) → 𝒫(α)
-(define (⊆ s s′)
-  (r:subset? (repl-elems s) (repl-elems s′)))
-
 ;; (α → β) 𝒫(α) → List(β)
-(define (set-map f s)
+(define (-map f s)
   (r:set-map (repl-elems s) f))
 
 ;; (α → Boolean) 𝒫(α) → 𝒫(α)
-(define (set-filter p s)
-  (for/set ([x (∈ s)]
-            #:when (p x))
+(define (-filter p s)
+  (-for/set ([x (-∈ s)]
+             #:when (p x))
     x))
 
 ;; 𝒫(α) → List(α)
-(define (set->list s)
+(define (->list s)
   (r:set->list (repl-elems s)))
 
 ;; List(α) → 𝒫(α)
-(define (list->set l)
+(define (<-list l)
   (repl (r:list->set l)))
 
 ;; ... α ... → 𝒫(α)
-(define-syntax (for/set stx)
+(define-syntax (-for/set stx)
   (syntax-parse stx
     [(_ clauses defs+exprs ...+)
      (with-syntax ([original stx])
-       #'(for/fold/derived original ([s ∅]) clauses
+       #'(for/fold/derived original ([s -∅]) clauses
            (let ([v (let () defs+exprs ...)])
-             (set-add s v))))]))
+             (-add s v))))]))
 
 ;; 𝒫(α) → Seq(α)
-(define (in-set s)
+(define (-in-set s)
   (r:in-set (repl-elems s)))
-
 
 
 (module+ test
   (require (only-in "match.rkt" match))
 
-  (define s (set 1 2 3))
+  (define s (-make 1 2 3))
   (match s
-    [(set a b c) (list a b c)])
+    [(-make a b c) (list a b c)])
   )

@@ -2,9 +2,11 @@
 (require (for-syntax racket/base syntax/parse
                      (only-in racket/syntax define/with-syntax format-id)
                      (only-in syntax/stx stx-map)
-                     (only-in "map.rkt" ↦ for/map ⊔ [∈ map-∈] in-map))
+                     (only-in "map.rkt"
+                              [-make ↦]  [-∈ map-∈] [-∪ ⊔]
+                              [-for/map for/map] [-in-map in-map]))
          (only-in racket/list check-duplicates)
-         (only-in "set.rkt" ∈ ∪)
+         (only-in "set.rkt" [-∈ ∈] [-∪ ∪])
          (only-in racket/match define-match-expander)
          (only-in "match.rkt" match match-λ category-id?)
          (only-in "nondet.rkt" define-nondet-match-expander nondet))

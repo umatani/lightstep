@@ -3,7 +3,7 @@
  (for-syntax racket/base racket/syntax syntax/parse
              (only-in racket/syntax format-id)
              (only-in syntax/stx stx-map))
- (only-in "set.rkt" set ∅ ∅?)
+ (only-in "set.rkt" [-make set] [-∅ ∅] [-∅? ∅?])
  (only-in "match.rkt" match)
  (only-in "transformers.rkt" ID StateT NondetT with-monad run-StateT))
 (provide NondetM nondet nondet-match define-nondet-match-expander)

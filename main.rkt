@@ -118,4 +118,7 @@
   (require (submod lightstep/examples/aam/normal/pcf-sigma test))
   (require (submod lightstep/examples/aam/normal/pcf-sigma-alloc test))
   (require (submod lightstep/examples/aam/normal/pcf-sigma-star test))
+  (require (submod lightstep/examples/aam/normal/pcf-sigma-star test))
+  (require (submod lightstep/examples/aam/normal/pcf-sigma-sigma test))
+  (require (submod lightstep/examples/aam/normal/pcf-sigma-star-sigma test))
   )

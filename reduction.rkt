@@ -5,13 +5,15 @@
                      (only-in racket/list check-duplicates)
                      (only-in racket/match match match-define)
                      (only-in syntax/stx stx-map)
-                     (only-in "set.rkt" set list→set set→list ∈ ∪)
+                     (only-in "set.rkt" [-make set]
+                              [←list set←list] [→list set→list] [-∈ ∈] [-∪ ∪])
                      ;; racket/pretty
                      )
          (only-in racket/unit
                   define-signature unit import export link
                   compound-unit invoke-unit)
-         (only-in "set.rkt" set ∅? ⊆ set-add set-subtract)
+         (only-in "set.rkt" [-make set] [-∅? ∅?] [-⊆ ⊆]
+                  [-add set-add] [-subtract set-subtract])
          (only-in "transformers.rkt"
                   PowerO run-StateT define-monad with-monad
                   ID ReaderT WriterT StateT FailT NondetT)
@@ -88,14 +90,14 @@
 
   (define (get-supers-info orig-stx rids argss)
     (define (merge-M Ms)
-      (match (list→set (syntax->datum Ms))
+      (match (set←list (syntax->datum Ms))
         [(set _) (car (syntax->list Ms))]
         [_ (raise-syntax-error
             #f "inconsistent monad specs" orig-stx Ms)]))
     (define (merge-mrun mruns)
       (car (syntax->list mruns)))
     (define (merge-imports importss) ;; TODO: check duplicates?
-      (set→list (apply ∪ (stx-map (compose1 list→set syntax->list) importss))))
+      (set→list (apply ∪ (stx-map (compose1 set←list syntax->list) importss))))
     (define (merge-rules ruless)
       (syntax-parse ruless
         [(((~and rule (_ _ _ rnam _ ...)) ...) ...)
@@ -160,7 +162,7 @@
      #:do [(define (rescope stx)
              (replace-lexical-context #'rid stx))
            (define overridden?
-             (let ([rnams (list→set (syntax->datum #'(rnam ...)))])
+             (let ([rnams (set←list (syntax->datum #'(rnam ...)))])
                (syntax-parser
                  [(_ _ _ rnam _ ...)
                   (∈ (syntax-e #'rnam) rnams)])))]
@@ -191,7 +193,7 @@
      #:with imports (stx-map rescope #`(#,@#'imports-of-super
                                         #,@#'(opts.import ...)))
 
-     #:with (sup-rule ...) (let ([rnams (list→set
+     #:with (sup-rule ...) (let ([rnams (set←list
                                          (syntax->datum #'(rnam ...)))])
                              (filter (compose1 not overridden?)
                                      (syntax->list #'rules-of-super)))
@@ -271,11 +273,11 @@
           (cond
             [(∅? sΣ′) (return ς)]
             [(⊆ sΣ′ sΣ) mzero]
-            [(do (for/monad+ ([ς′ (set-subtract sΣ′ sΣ)])
+            [(do (for/m+ ([ς′ (set-subtract sΣ′ sΣ)])
                    (do (put (set-add sΣ ς′))
                        (search ς′ (if limit
-                                     (sub1 limit)
-                                     #f)))))]))))
+                                    (sub1 limit)
+                                    #f)))))]))))
   (run-StateT (set ς) (search ς limit)))
 
 ;;=============================================================================

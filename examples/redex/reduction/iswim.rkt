@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base)
          lightstep/base lightstep/syntax
-         (only-in lightstep/monad mapM)
          (prefix-in lam: (only-in "lam.rkt" LAM FV subst)))
 (provide ISWIM FV subst βv-rule δ δ-rule v Cxt)
 

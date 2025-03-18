@@ -79,7 +79,7 @@
 (define-reduction (α) #:super [(lam:α)]
   [`(letrec ,Σ ,M)
    rename ≔ (apply symbol-not-in (FV M) (set-map FV (dom Σ)))
-   (list Xᵢ X′ Σ′) ← (for/monad+ ([(cxt Xᵢ Mᵢ) (split-Σ-cxt Σ)])
+   (list Xᵢ X′ Σ′) ← (for/m+ ([(cxt Xᵢ Mᵢ) (split-Σ-cxt Σ)])
                       (do X′ ≔ (rename Xᵢ)
                           (return (list Xᵢ X′ (cxt X′ Mᵢ)))))
    `(letrec ,(for/map ([(Xⱼ Vⱼ) (in-map Σ′)])

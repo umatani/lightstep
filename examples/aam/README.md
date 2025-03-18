@@ -13,3 +13,7 @@
 * 3.8 Heap-allocated bindings [[normal](normal/pcf-sigma.rkt)/monadic]
 * 3.9 Abstracting over alloc [[normal](normal/pcf-sigma-alloc.rkt)/monadic]
 * 3.10 Heap-allocated continuations [[normal](normal/pcf-sigma-star.rkt)/monadic]
+* 4.1 Abstracting over Σ (PCFσ) [[normal](normal/pcf-sigma-sigma.rkt)/monadic]
+* 4.1 Abstracting over Σ (PCFσ*) [[normal](normal/pcf-sigma-star-sigma.rkt)/monadic]
+* 4.2 Set-based heap [[normal](normal/pcf-o.rkt)/monadic]
+* 4.3 Make it finite [[normal](normal/pcf-hat.rkt)/monadic]

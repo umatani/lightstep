@@ -249,7 +249,7 @@
          (~@ . ropts) rule′ ...)]))
 
 (module+ test
-  (require "set.rkt")
+  (require (only-in "set.rkt" [-make set]))
 
   (define-inference (r)
     #:forms ([`(,I:i → ,O:o) #:where O ← (r I)])

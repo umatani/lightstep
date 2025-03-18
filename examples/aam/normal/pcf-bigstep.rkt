@@ -1,6 +1,5 @@
 #lang racket/base
 (require lightstep/base lightstep/syntax lightstep/inference
-         (only-in lightstep/monad mapM)
          (only-in "pcf.rkt" PCF δ))
 (provide PCF⇓)
 

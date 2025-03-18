@@ -11,7 +11,7 @@
 (define-language PCF₆ #:super PCF₅)
 
 ;; selectの置き換え， ≔<2> を ← に．
-(define select list→set)
+(define select set←list)
 
 (define-reduction (-->PCF₆ ≔<1> ≔<2>) #:super [(-->PCF₅ ≔<1> ≔<2>)])
 

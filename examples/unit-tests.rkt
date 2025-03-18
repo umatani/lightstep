@@ -413,7 +413,7 @@
   #:monad (StateT #f (NondetT ID))
   [x
    σ ← get
-   s ← (for/monad+ ([s σ]) (return s))
+   s ← (for/m+ ([s σ]) (return s))
    (put ∅)
    (list s x)])
 (define -->101 (call-with-values

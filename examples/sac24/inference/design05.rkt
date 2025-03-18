@@ -31,8 +31,8 @@
   [KWD ∷= .... 'amb])
 
 (define/match (subst n x m) #:super orig:subst
-  [(`(amb ,M ...) X M)
-   `(amb ,@(map (λ (e) (subst e X M)) M))])
+  [(`(amb ,M′ ...) X M)
+   `(amb ,@(map (λ (e) (subst e X M)) M′))])
 
 (define-match-expander E
   (syntax-parser
