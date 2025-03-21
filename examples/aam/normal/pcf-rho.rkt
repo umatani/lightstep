@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base (only-in syntax/parse syntax-parser))
          lightstep/base lightstep/syntax lightstep/inference
-         (only-in racket/match define-match-expander)
          (only-in "pcf.rkt" δ)
          (only-in "pcf-bigstep.rkt" PCF⇓))
 (provide PCFρ vρ-rules injρ)

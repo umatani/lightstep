@@ -3,8 +3,11 @@
                      (only-in racket/syntax format-id)
                      (only-in racket/list splitf-at)
                      (only-in syntax/stx stx-map))
-         (only-in racket/match [match r:match]))
-(provide match match* match-λ match-λ* match-let
+         racket/stxparam
+         (only-in racket/match
+                  [match r:match] ==
+                  [define-match-expander r:define-match-expander]))
+(provide match match* match-λ match-λ* match-let == define-match-expander
          define/match
          (rename-out [match-λ match-lambda] [match-λ* match-lambda*])
          (for-syntax category-id? category-id→pred-id
@@ -60,7 +63,7 @@
 
   (define (convert-category-id pat)
     (syntax-parse pat
-      #:literals [quote quasiquote]
+      #:literals [quote quasiquote ==]
       [(quote x) #'(quote x)]
       [(quasiquote qp)
        #`(quasiquote #,(convert-category-id/quasi #'qp))]
@@ -68,8 +71,15 @@
        (if (category-id? #'x)
          #`(? #,(category-id→pred-id #'x) x)
          #'x)]
+      [((~datum ?) e x:id)
+       #'(? e x)]
       [((~datum ?) e p ...)
-       #'(? e p ...)]
+       #:with (p′ ...) (stx-map convert-category-id #'(p ...))
+       #'(? e p′ ...)]
+      [(== e:expr)
+       #'(== e)]
+      [(== e:expr eq)
+       #'(== e eq)]
       [(p₁:id p ...)
        #:with (p′ ...) (stx-map convert-category-id #'(p ...))
        #'(p₁ p′ ...)]
@@ -81,8 +91,16 @@
 (define-syntax (match stx)
   (syntax-parse stx
     [(_ expr [pat . rest] ...)
-     #:with (pat′ ...) (stx-map convert-category-id #'(pat ...))
+     #:with (pat′ ...) (stx-map convert-category-id
+                                #'(pat ...))
      #'(r:match expr [pat′ . rest] ...)]))
+
+(define-syntax (define-match-expander stx)
+  (syntax-parse stx
+    [(_ x:id matcher)
+     #'(r:define-match-expander x matcher)]
+    [(_ x:id matcher builder)
+     #'(r:define-match-expander x matcher builder)]))
 
 
 (define-syntax (match* stx)

@@ -3,7 +3,6 @@
          lightstep/base lightstep/syntax lightstep/transformers
          lightstep/inference
          (only-in racket/list append-map)
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" FV δ)
          (only-in "secd.rkt" SECD  ⊢->secd-rules mkSECD))
 

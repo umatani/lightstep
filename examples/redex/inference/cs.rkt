@@ -2,7 +2,6 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
          lightstep/inference
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM [FV orig-FV] [subst orig-subst] δ))
 (provide S-ISWIM AV FV subst E ⊢->cs-rules mkCS LET SEQ)
 
@@ -94,14 +93,14 @@
    ---------------------------------------------------- "csfiₛ"
    `(,(E `((λ ,X ,M) ,V)) → ,(E (subst M X X′)))               ]
 
-  [(↦ [x V]) ← get
-   ------------------------- "cs!"
-   `(,(E (? X? x)) → ,(E V))      ]
+  [(↦ [(== X) V] _ ...) ← get
+   -------------------------- "cs!"
+   `(,(E X) → ,(E V))              ]
 
-  [(and Σ (↦ [x V′])) ← get
-   (put (Σ x V))
-   ------------------------------------- "cs="
-   `(,(E `(set ,(? X? x) ,V)) → ,(E V′))      ]
+  [(and Σ (↦ [(== X) V′] _ ...)) ← get
+   (put (Σ X V))
+   ----------------------------------- "cs="
+   `(,(E `(set ,X ,V)) → ,(E V′))           ]
 
   [--------------------------------------------- "csffi"
    `(,(E `(,(? oⁿ? oⁿ) ,V ...)) → ,(E (δ oⁿ V)))        ])

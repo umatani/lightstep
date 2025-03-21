@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" βv-rule)
          (only-in "e-iswim.rkt" δ δ-rule)
          (only-in "h-iswim.rkt" return-rule δerr-rule)

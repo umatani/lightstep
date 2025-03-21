@@ -2,7 +2,6 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
          lightstep/inference
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM FV δ))
 (provide SECD ⊢->secd-rules mkSECD)
 
@@ -41,10 +40,10 @@
    --------------------------------------- "secd1"
    `(((,(? b? b) ,C ...) ,E) → ((,@C) ,E))        ]
 
-  [(↦ [x V]) ≔ E
+  [(↦ [(== X) V] _ ...) ≔ E
    S ← get-S        (put-S (cons V S))
-   --------------------------------------- "secd2"
-   `(((,(? X? x) ,C ...) ,E) → ((,@C), E))        ]
+   ----------------------------------- "secd2"
+   `(((,X ,C ...) ,E) → ((,@C), E))           ]
 
   [----------------------------------------------------------------- "secdPA"
    `((((,(? oⁿ? oⁿ) ,M ...) ,C ...) ,E) → ((,@M (prim ,oⁿ) ,@C) ,E))         ]

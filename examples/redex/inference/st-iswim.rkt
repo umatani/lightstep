@@ -2,7 +2,6 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax
          lightstep/inference
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" [FV orig-FV] [subst orig-subst]
                   [v-rules orig-v-rules] [δ orig-δ]))
 (provide ST-ISWIM FV subst ℬ Δ ⊢-rules v-rules δ)
@@ -87,7 +86,7 @@
    `(,Γ ⊢ (λ [,X : ,T] ,M) : (,T → ,T′))]
 
   [`(,Γ ⊢ ,M₁ : (,T → ,T′))
-   `(,Γ ⊢ ,M₂ : ,(? (λ (t) (equal? t T))))
+   `(,Γ ⊢ ,M₂ : ,(== T))
    ------------------------------------------
    `(,Γ ⊢ (,M₁ ,M₂) : ,T′)                   ]
 

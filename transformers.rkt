@@ -2,13 +2,13 @@
 (require (for-syntax racket/base
                      (only-in racket/syntax format-id)
                      (only-in syntax/parse syntax-parse))
-         (only-in racket/match match-define define-match-expander)
+         (only-in racket/match match-define)
          (only-in racket/unit define-signature define-unit import export)
          (only-in racket/sequence sequence-fold)
          (only-in "set.rkt" [-∅ set-∅] [-make set] [-∪ ∪]
                   [-map set-map] [←list set←list])
          (only-in "map.rkt" [-∅ map-∅] [-∪ ⊔])
-         (only-in "match.rkt" match match-let match-λ))
+         (only-in "match.rkt" match match-let match-λ define-match-expander))
 (provide (all-defined-out))
 
 (module+ test (require rackunit))
@@ -181,13 +181,14 @@
              (syntax-case stx ()
                [(_) #'mzero]
                [(_ xM . bs) #'(mplus xM (mconcat . bs))]))
-           (define (mapM f as)
-             (foldr (λ (a r)
-                      (do x  ← (f a)
-                          xs ← r
-                          (return (cons x xs))))
+           (define (mapM f . ass)
+             (apply foldr (λ as.r (match as.r
+                                    [`(,a (... ...) ,r)
+                                     (do x  ← (apply f a)
+                                         xs ← r
+                                         (return (cons x xs)))]))
                     (return '())
-                    as))
+                    ass))
            (define (sequenceM as)
              (mapM (λ (a) a) as))))]))
 

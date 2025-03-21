@@ -7,8 +7,7 @@
                               [-for/map for/map] [-in-map in-map]))
          (only-in racket/list check-duplicates)
          (only-in "set.rkt" [-∈ ∈] [-∪ ∪])
-         (only-in racket/match define-match-expander)
-         (only-in "match.rkt" match match-λ category-id?)
+         (only-in "match.rkt" match match-λ category-id? define-match-expander)
          (only-in "nondet.rkt" define-nondet-match-expander nondet))
 (provide define-language cxt1 cxt nondet-cxt unique symbol-not-in)
 

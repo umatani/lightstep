@@ -2,7 +2,6 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
          lightstep/inference
-         (only-in racket/match define-match-expander)
          (only-in "cc.rkt" □)
          (only-in "e-iswim.rkt" δ [δ-rules orig-δ-rules])
          (only-in "h-iswim.rkt"

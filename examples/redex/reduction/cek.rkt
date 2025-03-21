@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM FV δ))
 (provide CEK ⊢->cek mkCEK)
 
@@ -61,8 +60,8 @@
    `(,M ,Eₘ)
    "cek6"]
 
-  [`(,(? X? x) ,E)
-   (↦ [x `(,V ,E′)]) ≔ E
+  [`(,X ,E)
+   (↦ [(== X) `(,V ,E′)] _ ...) ≔ E
    `(,V ,E′)
    "cek7"])
 

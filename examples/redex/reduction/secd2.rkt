@@ -2,7 +2,6 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
          (only-in racket/list append-map)
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" FV δ)
          (only-in "secd.rkt" SECD  ⊢->secd mkSECD))
 

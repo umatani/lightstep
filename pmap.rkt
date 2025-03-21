@@ -1,20 +1,29 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
-         (only-in racket/match define-match-expander)
          (only-in racket/generator in-generator yield)
-         (rename-in (prefix-in set "set.rkt"))
-         (rename-in (prefix-in map "map.rkt") [map-in-map in-map]))
+         (only-in "match.rkt" define-match-expander)
+         (rename-in (prefix-in set "set.rkt")
+                    [set-for/set for/set]
+                    [set-in-set in-set])
+         (rename-in (prefix-in map "map.rkt")
+                    [map-in-map in-map]))
 (provide -make -make/p -∅ -∈ -∈/p -dom -rng -rng/p -size =? -restrict
          -map -map/p -filter -filter/p -∪ -update -add1 -add
-         -remove1 -remove ->phash <-hash <-phash ->list ->plist
-         <-list <-plist -for/pmap -for/pmap/p -in-pmap -in-pmap/p
-         (rename-out [->phash →phash]
-                     [<-hash  ←hash]
-                     [<-phash ←phash]
+         -remove1 -remove <-map ->set ->pset <-set <-pset
+         ->list ->plist <-list <-plist ->phash <-hash <-phash
+         -for/pmap -for/pmap/p -in-pmap -in-pmap/p
+         (rename-out [<-map   ←map]
+                     [->set   →set]
+                     [->pset  →pset]
+                     [<-set   ←set]
+                     [<-pset  ←pset]
                      [->list  →list]
                      [->plist →plist]
                      [<-list  ←list]
-                     [<-plist ←plist]))
+                     [<-plist ←plist]
+                     [->phash →phash]
+                     [<-hash  ←hash]
+                     [<-phash ←phash]))
 ;; provided from lightstep/base with prefix `pmap-'
 ;; also, aliases are provided from lightstep/base:
 ;;   p↦         = pmap-make
@@ -24,6 +33,17 @@
 ;;   for/pmap/p = pmap-for/pmap/p
 ;;   in-pmap    = pmap-in-pmap
 ;;   in-pmap/p  = pmap-in-pmap/p
+;;   map->pmap  = pmap<-map
+;;   map→pmap   = pmap←map
+;;   set<-pmap  = pmap->set
+;;   set←pmap   = pmap→set
+;;   pset<-pmap = pmap->pset
+;;   pset←pmap  = pmap→pset
+;;   set->pmap  = pmap<-set
+;;   set→pmap   = pmap←set
+;;   pset->pmap = pmap<-pset
+;;   pset→pmap  = pmap←pset
+
 
 (module+ test (require rackunit))
 
@@ -44,7 +64,7 @@
 (define-match-expander -make/p
   (λ (stx)
     (syntax-case stx (... ...)
-      [(_ [k vs] (... ...)) #'(map-make [k vs] (... ...))]
+      [(_ [k vs] ... m (... ...)) #'(map-make [k vs] ... m (... ...))]
       [(_ [k vs] ...)       #'(map-make [k vs] ...)]))
   (λ (stx)
     (syntax-case stx ()
@@ -111,46 +131,55 @@
   (apply map-∪ m₁ #:combine cod-⊔ mₙ))
 
 ;; (α ↦ 𝒫(β)) α (𝒫(β) → 𝒫(β)) [𝒫(β) | (→ 𝒫(β))] → (α ↦ 𝒫(β))
-(define (-update m k f [o (λ () set-∅)])
-  (map-update m k f o))
-
-;; (α ↦ 𝒫(β)) α β → (α ↦ 𝒫(β))
-(define (-add1 m k v)
-  (-update m k (λ (vs′) (set-add vs′ v))))
-
-;; (α ↦ 𝒫(β)) α 𝒫(β) → (α ↦ 𝒫(β))
-(define (-add m k vs)
-  (-update m k (λ (vs′) (set-∪ vs′ vs))))
-
-;; TODO: empty-check
-;; (α ↦ 𝒫(β)) α β → (α ↦ 𝒫(β))
-(define (-remove1 m k v)
-  (let ([m′ (-update m k (λ (vs′) (set-remove vs′ v)))])
-    (if (set-∅? (m′ k))
+(define (-update m k f [o (λ () set-∅)] #:check-∅? [check-∅? #t])
+  (let ([m′ (map-update m k f o)])
+    (if (and check-∅? (set-∅? (m′ k)))
       (-remove m′ k)
       m′)))
 
-;; TODO: empty-check
+;; (α ↦ 𝒫(β)) α β → (α ↦ 𝒫(β))
+(define (-add1 m k v)
+  (-update m k (λ (vs′) (set-add vs′ v)) #:check-∅? #f))
+
+;; (α ↦ 𝒫(β)) α 𝒫(β) → (α ↦ 𝒫(β))
+(define (-add m k vs)
+  (-update m k (λ (vs′) (set-∪ vs′ vs)) #:check-∅? #f))
+
+;; (α ↦ 𝒫(β)) α β → (α ↦ 𝒫(β))
+(define (-remove1 m k v)
+  (-update m k (λ (vs′) (set-remove vs′ v))))
+
 ;; (α ↦ 𝒫(β)) α      → (α ↦ 𝒫(β))
 ;; (α ↦ 𝒫(β)) α 𝒫(β) → (α ↦ 𝒫(β))
 (define -remove
   (case-λ
    [(m k) (map-remove m k)]
-   [(m k vs) (let ([m′ (-update m k (λ (vs′) (set-subtract vs′ vs)))])
-               (if (set-∅? (m′ k))
-                 (-remove m′ k)
-                 m′))]))
+   [(m k vs) (-update m k (λ (vs′) (set-subtract vs′ vs)))]))
 
-;; (α ↦ 𝒫(β)) → Hash(α, 𝒫(β))
-(define ->phash map->hash)
-
-;; Hash(α, β) → (α ↦ 𝒫(β))
-(define (<-hash h)
-  (-for/pmap ([(k v) (in-hash h)])
+;; (α ↦ β) → (α ↦ 𝒫(β))
+(define (<-map m)
+  (-for/pmap ([(k v) (in-map m)])
     (values k v)))
 
-;; Hash(α, 𝒫(β)) → (α ↦ 𝒫(β))
-(define <-phash map<-hash)
+;; (α ↦ 𝒫(β)) → 𝒫([α . β])
+(define (->set m)
+  (for/set ([(k v) (-in-pmap m)])
+    (cons k v)))
+
+;; (α ↦ 𝒫(β)) → 𝒫([α . 𝒫(β)])
+(define (->pset m)
+  (for/set ([(k vs) (-in-pmap/p m)])
+    (cons k vs)))
+
+;; 𝒫([α . β]) → (α ↦ 𝒫(β))
+(define (<-set s)
+  (-for/pmap ([x (in-set s)])
+    (values (car x) (cdr x))))
+
+;; 𝒫([α . 𝒫(β)]) → (α ↦ 𝒫(β))
+(define (<-pset s)
+  (-for/pmap/p ([x (in-set s)])
+    (values (car x) (cdr x))))
 
 ;; (α ↦ 𝒫(β)) → List([α . β])
 (define (->list m)
@@ -170,6 +199,17 @@
   (-for/pmap/p ([kvs (in-list kvss)])
     (values (car kvs) (cdr kvs))))
 
+;; (α ↦ 𝒫(β)) → Hash(α, 𝒫(β))
+(define ->phash map->hash)
+
+;; Hash(α, β) → (α ↦ 𝒫(β))
+(define (<-hash h)
+  (-for/pmap ([(k v) (in-hash h)])
+    (values k v)))
+
+;; Hash(α, 𝒫(β)) → (α ↦ 𝒫(β))
+(define <-phash map<-hash)
+
 ;; ... (values α β) ... → (α ↦ 𝒫(β))
 (define-syntax (-for/pmap stx)
   (syntax-parse stx
@@ -178,7 +218,7 @@
      (with-syntax ([original stx])
        #'(for/fold/derived original ([m -∅]) (clause ...)
            (let-values ([(k v) (let () defs+exprs ...)])
-             (-update m k (λ (vs′) (cod-⊔ vs′ v))))))]))
+             (-update m k (λ (vs′) (cod-⊔ vs′ v)) #:check-∅? #f))))]))
 
 ;; ... (values α 𝒫(β)) ... → (α ↦ 𝒫(β))
 (define-syntax (-for/pmap/p stx)
@@ -188,7 +228,7 @@
      (with-syntax ([original stx])
        #'(for/fold/derived original ([m -∅]) (clause ...)
            (let-values ([(k vs) (let () defs+exprs ...)])
-             (-update m k (λ (vs′) (cod-⊔ vs′ vs))))))]))
+             (-update m k (λ (vs′) (cod-⊔ vs′ vs)) #:check-∅? #f))))]))
 
 ;; (α ↦ 𝒫(β)) → Seq([α β])
 (define (-in-pmap m)
@@ -207,8 +247,11 @@
   (require (only-in "set.rkt" [-make set] [-for/set for/set]))
 
   (define m (-make/p ['x (set 1 2 3)] ['y (set 2 4 5)]))
-  (check-equal? (match m [(-make/p ['y vs]) vs]) (set 2 4 5))
-  ;; (match m [(↦p [k v] ...) (list k v)])
+  (check-equal? (match m [(-make/p ['y vs] _ ...) vs]) (set 2 4 5))
+  ;; (match m [(-make/p [k v] ...) (list k v)])
+
+  ;; TODO: fix
+  ;; (match m [(-make/p ['y (set x y ...)] m ...) (list x y m)])
 
   (check-true  (-∈ 'x m))
   (check-false (-∈/p 'z m))
@@ -244,10 +287,9 @@
   ;;                [cons 'z (set 5 6 7)]))
   ;; (->list m)
   ;; (->plist m)
-  ;; (for ([(k v) (in-pmap m)])
+  ;; (for ([(k v) (-in-pmap m)])
   ;;   (printf "~s ↦ ~s\n" k v))
-
-  ;; (for ([(k v) (in-pmap/p m)])
+  ;; (for ([(k v) (-in-pmap/p m)])
   ;;   (printf "~s ↦ ~s\n" k v))
   )
 

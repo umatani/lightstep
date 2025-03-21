@@ -17,3 +17,4 @@
 * 4.1 Abstracting over Σ (PCFσ*) [[normal](normal/pcf-sigma-star-sigma.rkt)/monadic]
 * 4.2 Set-based heap [[normal](normal/pcf-o.rkt)/monadic]
 * 4.3 Make it finite [[normal](normal/pcf-hat.rkt)/monadic]
+* 4.4 Soundness [[normal](normal/soundness.rkt)/monadic]

@@ -1,5 +1,8 @@
 #lang racket
 
+(require "misc.rkt")
+(provide (all-from-out "misc.rkt"))
+
 (require (rename-in (prefix-in set "set.rkt")
                     [set-make    set]
                     [set-for/set for/set]))
@@ -14,7 +17,9 @@
 (provide (all-from-out "map.rkt")
          (rename-out [map-dom dom] [map-rng rng] [map-∪ ⊔]
                      [map-restrict restrict]
-                     [map-in-map in-map]))
+                     [map-in-map in-map]
+                     [map<-set set->map] [map←set set→map]
+                     [map->set set<-map] [map→set set←map]))
 
 (require (rename-in (prefix-in pmap "pmap.rkt")
                     [pmap-make       p↦]
@@ -24,7 +29,17 @@
 (provide (all-from-out "pmap.rkt")
          (rename-out [pmap-∪         p⊔]
                      [pmap-in-pmap   in-pmap]
-                     [pmap-in-pmap/p in-pmap/p]))
+                     [pmap-in-pmap/p in-pmap/p]
+                     [pmap<-map      map->pmap]
+                     [pmap←map       map→pmap]
+                     [pmap->set      set<-pmap]
+                     [pmap→set       set←pmap]
+                     [pmap->pset     pset<-pmap]
+                     [pmap→pset      pset←pmap]
+                     [pmap<-set      set->pmap]
+                     [pmap←set       set→pmap]
+                     [pmap<-pset     pset->pmap]
+                     [pmap←pset      pset→pmap]))
 
 (require "match.rkt")
 (provide (all-from-out "match.rkt"))

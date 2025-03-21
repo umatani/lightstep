@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM FV δ))
 (provide SECD ⊢->secd mkSECD)
 
@@ -42,8 +41,8 @@
    `((,@C) ,E)
    "secd1"]
 
-  [`((,(? X? x) ,C ...) ,E)
-   (↦ [x V]) ≔ E
+  [`((,X ,C ...) ,E)
+   (↦ [(== X) V] _ ...) ≔ E
    S ← get-S
    (put-S (cons V S))
    `((,@C) ,E)

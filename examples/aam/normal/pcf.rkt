@@ -2,8 +2,7 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/inference
          (only-in racket/list split-at)
-         (only-in racket/sequence sequence-map)
-         (only-in racket/match define-match-expander))
+         (only-in racket/sequence sequence-map))
 (provide PCF δ)
 
 (module+ test (require rackunit))
@@ -32,15 +31,17 @@
          `(if0 ,N ,M₁ ,M₂)])
 
 (module+ test
-  (provide fact-5)
+  (provide FACT fact-5)
 
-  (define fact-5
-    '((μ [fact : (num → num)]
+  (define (FACT x)
+    `((μ [fact : (num → num)]
          (λ ([n : num])
            (if0 n
                 1
                 (* n (fact (sub1 n))))))
-      5))
+      ,x))
+
+  (define fact-5 (FACT 5))
 
   (check-true (M? fact-5)))
 

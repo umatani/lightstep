@@ -1,9 +1,10 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          (prefix-in r: racket/set)
-         (only-in racket/match define-match-expander))
+         (only-in "match.rkt" define-match-expander))
 (provide -make (rename-out [set? ?]) -∅ -∅? -∈ -size =? -⊆ -∪ -big-∪
-         -add -remove -subtract -map -filter ->list <-list -for/set -in-set
+         -add -remove -subtract -map -filter ->list <-list
+         -for/set -in-set
          (rename-out [->list →list]
                      [<-list ←list]))
 ;; provided from lightstep/base with prefix `set-'
@@ -50,15 +51,14 @@
 (define-match-expander -make
   (syntax-rules (... ...)
     [(-make p ... q (... ...))
-     (? set? (app (compose1 r:set->list repl-elems)
-                  (and (list-no-order p ... z (... ...))
-                       (app (λ (_) (repl (r:list->set z))) q))))]
+     (? set? (app ->list
+                  (list-no-order p ... q (... ...))))]
     [(-make p ...)
-     (? set? (app (compose1 r:set->list repl-elems)
-                  (list-no-order p ...)))])
+     (? set? (app ->list (list-no-order p ...)))])
   (syntax-id-rules (-make)
     [(-make p ...) (repl (r:set p ...))]
     [-make (λ args (repl (apply r:set args)))]))
+
 
 ;; Any → Boolean
 (define set? repl?)
@@ -121,6 +121,15 @@
              #:when (p x))
     x))
 
+;; 𝒫([α . β]) → (α ↦ β)
+(define (->map s)
+  (void))
+
+;; (α ↦ β) → 𝒫([α . β])
+;; List(α) → 𝒫(α)
+(define (<-map l)
+  (void))
+
 ;; 𝒫(α) → List(α)
 (define (->list s)
   (r:set->list (repl-elems s)))
@@ -151,5 +160,5 @@
     [(-make a b c) (list a b c)])
 
   (match s
-    [(-make 3 b ...) b])
+    [(-make x y ...) (list x y)])
   )

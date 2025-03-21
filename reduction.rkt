@@ -260,12 +260,19 @@
                           (define mrun #,mrun)
                           (values mrun reducer))
      ;; TODO: invoke-unit with import-sig-specs?
+     ;;   to construct parameterized unit instances
      (if (null? (syntax->list import-sigs))
        #'(invoke-unit (unit body ...))
        #'(unit body ...))]))
 
 ;;=============================================================================
 ;; reflexive and transitive closure
+
+;; TODO: #:trace option
+;;   return 𝒫(List(ς)) instead of 𝒫(ς)
+;; TODO: ->graph function
+;;   from traces, construct the overall graph in the ς space
+;;   it is better to label each edge with rname
 
 (struct Queueof (head tail) #:transparent #:mutable
   #:constructor-name Queue)

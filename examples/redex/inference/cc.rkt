@@ -2,7 +2,6 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
          lightstep/inference
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" [ISWIM orig-ISWIM] FV subst δ))
 (provide ECxt □ ⊢->cc′-rules mkCC)
 
@@ -22,8 +21,7 @@
                  `(,(? oⁿ?) ,V ... ,□ ,M ...)))]))
 
 (define-match-expander □
-  (syntax-parser [(□:id) #'(? (λ (x) (equal? x #()))
-                             (app (λ (x) (λ () x)) □))])
+  (syntax-parser [(□:id) #'(and (== #()) (app (λ (x) (λ () x)) □))])
   (syntax-parser [(_:id) #'#()]))
 
 ;; (M ECxt) --> (M ECxt)

@@ -1,27 +1,34 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          (only-in racket/hash hash-union)
-         (only-in racket/match define-match-expander)
          (only-in racket/mutability immutable-hash?)
-         (only-in "set.rkt" [-for/set for/set] [-∈ set-∈]))
+         (only-in "match.rkt" define-match-expander)
+         (only-in "misc.rkt" unzip)
+         (only-in "set.rkt" [-∈ set-∈] [-for/set for/set] [-in-set in-set]))
 (provide -make (rename-out [map? ?]) -∅ -∅? -∈ -size =? -dom -rng
          -∪ -update -remove -map -filter -restrict
-         ->list <-list <-hash -for/map -in-map
-         (rename-out [->list     →list]
+         ->set <-set ->list <-list <-hash
+         -for/map -in-map
+         (rename-out [->set      →set]
+                     [<-set      ←set]
+                     [->list     →list]
                      [<-list     ←list]
                      [repl->hash ->hash]
                      [repl->hash →hash]
                      [<-hash     ←hash]))
 ;; provided from lightstep/base with prefix `map-'
 ;; also, aliases are provided from lightstep/base:
-;;   ↦ = map-make
-;;   dom = map-dom
-;;   rng = map-rng
-;;   ⊔ = map-∪
+;;   ↦        = map-make
+;;   dom      = map-dom
+;;   rng      = map-rng
+;;   ⊔        = map-∪
 ;;   restrict = map-restrict
-;;   for/map = map-for/map
-;;   in-map = map-in-map
-
+;;   for/map  = map-for/map
+;;   in-map   = map-in-map
+;;   set->map = map<-set
+;;   set→map  = map←set
+;;   set<-map = map->set
+;;   set←map  = map→set
 
 ;; ============================================================================
 ;; Finite map: α ↦ β
@@ -69,14 +76,14 @@
 (define-match-expander -make
   (λ (stx)
     (syntax-case stx (... ...)
-      [(_ (x y) (... ...))
-       #'(? map? (app (λ (x) (for/fold ([kvs (cons '() '())])
-                                       ([kv (->list x)])
-                               (cons (cons (car kv) (car kvs))
-                                     (cons (cdr kv) (cdr kvs)))))
-                      (cons x y)))]
+      [(_ (x y) ... [xs ys] (... ...))
+       #'(? map? (app ->list
+                      (list-no-order `(,x . ,y) ... (cons xs ys) (... ...))))]
+      [(_ (x y) ... m (... ...))
+       #'(? map? (app ->list
+                      (list-no-order `(,x . ,y) ... m (... ...))))]
       [(_ (x y) ...)
-       #'(? map? (app repl->hash (hash* (x y) ...)))]))
+       #'(? map? (app repl->hash (hash (x y) ...)))]))
   (λ (stx)
     (syntax-case stx ()
       [(_ (x y) ...)
@@ -146,6 +153,16 @@
 (define (-restrict m ks)
   (-filter (λ (k _) (set-∈ k ks)) m))
 
+;; (α ↦ β) → 𝒫([α . β])
+(define (->set m)
+  (for/set ([(k v) (-in-map m)])
+    (cons k v)))
+
+;; 𝒫([α . β]) → (α ↦ β)
+(define (<-set s)
+  (-for/map ([x (in-set s)])
+    (values (car x) (cdr x))))
+
 ;; (α ↦ β) → List([α . β])
 (define (->list m)
   (hash->list (repl->hash m)))
@@ -173,6 +190,10 @@
 
 (module+ test
   (require rackunit)
+  (require (only-in "set.rkt" [-make set] [? set?]
+                    [->list set->list] [<-list set<-list]))
+  (require (only-in "match.rkt" match))
+
   (define r -∅)
   (check-equal? ((r 'x 1) 'x) 1)
   (check-equal? ((r 'x 1) 'y 2) ((r 'y 2) 'x 1))
@@ -181,4 +202,9 @@
   (check-true
    (let ([l (for/list ([(k v) (-∈ ((r 'x 1) 'y 2))])
               (cons k v))])
-     (not (not (and (member (cons 'y 2) l) (member (cons 'x 1) l)))))))
+     (not (not (and (member (cons 'y 2) l) (member (cons 'x 1) l))))))
+
+  ;; (define pm (-make ['x (set 1 2 3)] ['y (set 2 4 5)]))
+  ;; (match pm
+  ;;   [(-make ['x (and s (set 1 t ...))] _ ...) t])
+  )

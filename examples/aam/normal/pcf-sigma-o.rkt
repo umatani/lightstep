@@ -6,7 +6,7 @@
          (only-in "pcf-sigma.rkt" injσ)
          (only-in "pcf-sigma-star.rkt" [PCFσ* orig-PCFσ*] alloc*)
          (only-in "pcf-sigma-star-sigma.rkt" -->vσ*/Σ-rules))
-(provide lookup-Σ-rules ext-Σ)
+(provide lookup-Σ-rules ext-Σ -->vσ∘ -->>vσ∘)
 
 (module+ test (require rackunit))
 

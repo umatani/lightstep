@@ -2,7 +2,6 @@
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/transformers
          lightstep/inference
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM FV δ))
 (provide CEK ⊢->cek-rules mkCEK)
 
@@ -56,9 +55,9 @@
    ------------------------------------------------ "cek6"
    `((,V ,E) → (,M ,Eₘ))                                  ]
 
-  [(↦ [x `(,V ,E′)]) ≔ E
-   ---------------------------- "cek7"
-   `((,(? X? x) ,E) → (,V ,E′))       ])
+  [(↦ [(== X) `(,V ,E′)] _ ...) ≔ E
+   -------------------------------- "cek7"
+   `((,X ,E) → (,V ,E′))                  ])
 
 (define-match-expander mkCEK
   (syntax-parser

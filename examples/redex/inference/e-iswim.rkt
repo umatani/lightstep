@@ -1,7 +1,6 @@
 #lang racket/base
 (require (for-syntax racket/base syntax/parse)
          lightstep/base lightstep/syntax lightstep/inference
-         (only-in racket/match define-match-expander)
          (only-in "iswim.rkt" ISWIM [FV orig-FV] subst [δ orig-δ] βv-rules Cxt))
 (provide E-ISWIM ECxt FV δ δ-rules δerr-rules)
 

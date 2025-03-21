@@ -119,7 +119,7 @@
   (check-equal? (nondet-match NondetM  (set 1 2 3)
                               [x x]
                               [(set a b c) (set (set a b) c)]
-                              [(set a ...) (apply + (set→list a))])
+                              [(set a ...) (apply + a)])
                 (set (set 1 (set 2 3)) (set 1 3 2) 6))
 
   (check-equal? (nondet-match NondetM (set 1 2 3)
@@ -128,7 +128,7 @@
                                                 (set (set a b) c)])]
                               [x (nondet-match
                                   NondetM x
-                                  [(set a ...) (apply + (set→list a))])])
+                                  [(set a ...) (apply + a)])])
                 (set (set 6) (set (set 1 (set 2 3)))))
   (check-equal? (nondet-match NondetM '(1 2 3)
                               [`(,x ...) x])
